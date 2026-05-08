@@ -22,6 +22,8 @@ the host supports them:
 | Intent | Prompt alias | Native command where supported | Loads |
 |---|---|---|---|
 | Refine a rough product idea | `Use local flow: idea` | `/idea` | `idea-refine` |
+| Product requirements | `Use local flow: pm` | `/pm` | `pm-flow` |
+| AI agent workflow design | `Use local flow: agent` | `/agent` | `agent-flow` |
 | Turn an idea into a buildable spec | `Use local flow: spec` | `/spec` | `spec-driven-development` |
 | Design the experience | `Use local flow: design` | `/design` | `design-flow` |
 | Break a spec into tasks | `Use local flow: plan` | `/plan` | `planning-and-task-breakdown` |
@@ -52,6 +54,8 @@ Create one self-contained project folder before starting real work:
 bin/dev-flow init <project-name>
 bin/dev-flow status <project-name>
 bin/dev-flow next <project-name>
+bin/dev-flow phase <project-name> pm "Write PRD and product acceptance criteria"
+bin/dev-flow phase <project-name> agent "Design agent workflow and evals"
 bin/dev-flow phase <project-name> spec "Write SPEC.md from the approved idea"
 bin/dev-flow reference-check <project-name> --required
 bin/dev-flow design-check <project-name>
@@ -92,6 +96,8 @@ Use these folders while running the workflow:
 
 ```text
 work/<project-name>/ideas/
+work/<project-name>/product/
+work/<project-name>/agent/
 work/<project-name>/specs/
 work/<project-name>/design/
 work/<project-name>/design/references/
@@ -110,6 +116,8 @@ Every phase should produce a named artifact:
 | Phase | Required output |
 |---|---|
 | Idea | `work/<project-name>/ideas/idea-brief.md` |
+| Product | `work/<project-name>/product/PRD.md`, `USER_STORIES.md`, `ACCEPTANCE.md` |
+| Agent | `work/<project-name>/agent/AGENT_SPEC.md`, `WORKFLOW.md`, `TOOLS_AND_PERMISSIONS.md`, `EVALS.md` |
 | Spec | `work/<project-name>/specs/SPEC.md` |
 | Design | `work/<project-name>/design/DESIGN.md`, `VISUAL_SYSTEM.md`, `SCREEN_ACCEPTANCE.md` |
 | Plan | `work/<project-name>/tasks/PLAN.md` |

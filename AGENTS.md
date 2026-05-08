@@ -11,13 +11,15 @@ calls for them.
 Use this lifecycle for non-trivial product or engineering work:
 
 1. Idea: `agent-skills/skills/idea-refine/SKILL.md`
-2. Spec: `agent-skills/skills/spec-driven-development/SKILL.md`
-3. Design: `agent-skills/skills/design-flow/SKILL.md`
-4. Plan: `agent-skills/skills/planning-and-task-breakdown/SKILL.md`
-5. Build: `agent-skills/skills/incremental-implementation/SKILL.md`
-6. Test: `agent-skills/skills/test-driven-development/SKILL.md`
-7. Review: `agent-skills/skills/code-review-and-quality/SKILL.md`
-8. Ship: `agent-skills/skills/shipping-and-launch/SKILL.md`
+2. Product: `agent-skills/skills/pm-flow/SKILL.md` when PRDs, user stories, scope, or metrics are needed
+3. Agent workflow: `agent-skills/skills/agent-flow/SKILL.md` when AI agents or automations are involved
+4. Spec: `agent-skills/skills/spec-driven-development/SKILL.md`
+5. Design: `agent-skills/skills/design-flow/SKILL.md`
+6. Plan: `agent-skills/skills/planning-and-task-breakdown/SKILL.md`
+7. Build: `agent-skills/skills/incremental-implementation/SKILL.md`
+8. Test: `agent-skills/skills/test-driven-development/SKILL.md`
+9. Review: `agent-skills/skills/code-review-and-quality/SKILL.md`
+10. Ship: `agent-skills/skills/shipping-and-launch/SKILL.md`
 
 For debugging, load `agent-skills/skills/debugging-and-error-recovery/SKILL.md`.
 For UI work, also load `agent-skills/skills/frontend-ui-engineering/SKILL.md`.
@@ -36,6 +38,8 @@ Use `bin/dev-flow` to inspect the local workflow pack:
 bin/dev-flow list
 bin/dev-flow show spec
 bin/dev-flow show design
+bin/dev-flow command pm
+bin/dev-flow command agent
 bin/dev-flow command build
 bin/dev-flow agent product-designer
 bin/dev-flow agent ui-quality-reviewer
@@ -94,6 +98,8 @@ at the workspace root.
 - Context loading rules: `work/<project-name>/.dev-flow/context.md`
 - Apps and source roots: `work/<project-name>/apps/`, `work/<project-name>/packages/`, or another project-local directory.
 - Ideas: `work/<project-name>/ideas/`
+- Product artifacts: `work/<project-name>/product/`
+- Agent workflow artifacts: `work/<project-name>/agent/`
 - Specs: `work/<project-name>/specs/`
 - Design requirements and visual artifacts: `work/<project-name>/design/`
 - Reference images and screenshots: `work/<project-name>/design/references/`, `work/<project-name>/design/mocks/`, `work/<project-name>/design/screenshots/`
@@ -106,6 +112,8 @@ at the workspace root.
 Expected phase outputs:
 
 - Idea: `work/<project-name>/ideas/idea-brief.md`
+- Product: `work/<project-name>/product/PRD.md`, `USER_STORIES.md`, `ACCEPTANCE.md`
+- Agent: `work/<project-name>/agent/AGENT_SPEC.md`, `WORKFLOW.md`, `TOOLS_AND_PERMISSIONS.md`, `EVALS.md`
 - Spec: `work/<project-name>/specs/SPEC.md`
 - Design: `work/<project-name>/design/DESIGN.md`, `work/<project-name>/design/VISUAL_SYSTEM.md`, `work/<project-name>/design/SCREEN_ACCEPTANCE.md`
 - Plan: `work/<project-name>/tasks/PLAN.md`

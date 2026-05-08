@@ -5,12 +5,12 @@
 Skills encode the workflows, quality gates, and best practices that senior engineers use when building software. These ones are packaged so AI agents follow them consistently across every phase of development.
 
 ```
-  DEFINE         DESIGN          PLAN           BUILD          VERIFY        SHIP
- ┌──────┐      ┌──────┐      ┌──────┐      ┌──────┐      ┌──────┐      ┌──────┐
- │ Idea │ ───▶ │  UX  │ ───▶ │ Plan │ ───▶ │ Code │ ───▶ │ Test │ ───▶ │  Go  │
- │ Spec │      │Visual│      │Tasks │      │ Impl │      │  QA  │      │ Live │
- └──────┘      └──────┘      └──────┘      └──────┘      └──────┘      └──────┘
-  /idea /spec  /design        /plan         /build        /review       /ship
+  DEFINE              DESIGN          PLAN           BUILD          VERIFY        SHIP
+ ┌──────────┐       ┌──────┐      ┌──────┐      ┌──────┐      ┌──────┐      ┌──────┐
+ │Idea/PM/  │ ───▶  │ UX & │ ───▶ │ Plan │ ───▶ │ Code │ ───▶ │ Test │ ───▶ │  Go  │
+ │Agent/Spec│       │Visual│      │Tasks │      │ Impl │      │  QA  │      │ Live │
+ └──────────┘       └──────┘      └──────┘      └──────┘      └──────┘      └──────┘
+ /idea /pm /agent /spec /design   /plan         /build        /review       /ship
 ```
 
 ---
@@ -25,6 +25,8 @@ prompt aliases depending on what the host supports.
 | What you're doing | Command | Key principle |
 |-------------------|---------|---------------|
 | Refine the idea | `/idea` | Clarify before spec |
+| Define product requirements | `/pm` | Product scope before design/code |
+| Design AI agent workflows | `/agent` | Workflow/tools/evals before prompts/code |
 | Define what to build | `/spec` | Spec before code |
 | Design the experience | `/design` | UX before task breakdown |
 | Plan how to build it | `/plan` | Small, atomic tasks |

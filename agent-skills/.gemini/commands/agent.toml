@@ -1,0 +1,2 @@
+description = "Design AI agent workflows, tools, permissions, prompts, memory, recovery, and evaluations"
+prompt = "Use local flow: agent\n\nDesign the AI agent workflow for the current project. Invoke agent-flow and save outputs under work/<project-name>/agent/."
