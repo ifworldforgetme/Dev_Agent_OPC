@@ -13,7 +13,7 @@ Each skill is a Markdown file (`SKILL.md`) that describes a specific engineering
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/addyosmani/agent-skills.git
+git clone <this-repository-url>
 ```
 
 ### 2. Choose a skill
@@ -101,10 +101,14 @@ Load an agent definition when you need specialized review. For example, ask your
 
 ## Using Commands
 
-The `.claude/commands/` directory contains slash commands for Claude Code:
+The `.claude/commands/` and `.gemini/commands/` directories contain
+host-specific commands. The `commands/` directory contains platform-neutral
+command prompts for Codex, OpenClaw, OpenCode, and other hosts that can use
+custom command snippets.
 
 | Command | Skill Invoked |
 |---------|---------------|
+| `/idea` | idea-refine |
 | `/spec` | spec-driven-development |
 | `/design` | design-flow |
 | `/plan` | planning-and-task-breakdown |

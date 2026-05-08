@@ -5,8 +5,10 @@ Specialist personas that play a single role with a single perspective. Each pers
 | Persona | Role | Best for |
 |---------|------|----------|
 | [code-reviewer](code-reviewer.md) | Senior Staff Engineer | Five-axis review before merge |
+| [product-designer](product-designer.md) | Product Designer | Customer-facing UX, visual systems, references, and screen acceptance |
 | [security-auditor](security-auditor.md) | Security Engineer | Vulnerability detection, OWASP-style audit |
 | [test-engineer](test-engineer.md) | QA Engineer | Test strategy, coverage analysis, Prove-It pattern |
+| [ui-quality-reviewer](ui-quality-reviewer.md) | UI Quality Reviewer | Screenshot-based visual review before customer-facing delivery |
 
 ## How personas relate to skills and commands
 
@@ -26,6 +28,8 @@ The user (or a slash command) is the orchestrator. **Personas do not call other 
 Pick this when you want one perspective on the current change and the user is in the loop.
 
 - "Review this PR" → invoke `code-reviewer` directly
+- "Design the app flow from these references" → invoke `product-designer` directly
+- "Check whether this UI looks ready to ship" → invoke `ui-quality-reviewer` directly
 - "Are there security issues in `auth.ts`?" → invoke `security-auditor` directly
 - "What tests are missing for the checkout flow?" → invoke `test-engineer` directly
 

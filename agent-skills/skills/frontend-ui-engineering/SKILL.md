@@ -1,6 +1,6 @@
 ---
 name: frontend-ui-engineering
-description: Builds production-quality UIs. Use when building or modifying user-facing interfaces. Use when creating components, implementing layouts, managing state, or when the output needs to look and feel production-quality rather than AI-generated.
+description: Builds and visually verifies production-quality UIs. Use when building, modifying, or reviewing user-facing interfaces, components, layouts, responsive states, accessibility, screenshot evidence, or visual polish where the output must look product-grade rather than AI-generated.
 ---
 
 # Frontend UI Engineering
@@ -16,8 +16,10 @@ Build production-quality user interfaces that are accessible, performant, and vi
 - Implementing responsive layouts
 - Adding interactivity or state management
 - Fixing visual or UX issues
+- Reviewing implemented UI against references, design requirements, screenshots, or responsive acceptance criteria
 
 For substantial UI or mobile product changes, load `design-flow` before implementation planning so information architecture, platform interaction requirements, and visual direction are explicit before code is written.
+For customer-facing UI, do not start implementation until `DESIGN.md`, `VISUAL_SYSTEM.md`, and `SCREEN_ACCEPTANCE.md` exist under `work/<project-name>/design/`.
 
 ## Component Architecture
 
@@ -297,6 +299,20 @@ function useToggleTask() {
 ## See Also
 
 For detailed accessibility requirements and testing tools, see `references/accessibility-checklist.md`.
+For screenshot-based visual review, load `references/visual-qa-rubric.md`.
+
+## Visual QA
+
+After implementing customer-facing UI, verify it against the design contract:
+
+1. Read `work/<project-name>/design/DESIGN.md`, `VISUAL_SYSTEM.md`, and `SCREEN_ACCEPTANCE.md`.
+2. Review references under `work/<project-name>/design/references/`, `mocks/`, `screenshots/`, and `reference-links.md`.
+3. Capture screenshots under `work/<project-name>/reviews/visual-screenshots/` for the required breakpoints and key states.
+4. Check console/runtime errors when the platform supports it.
+5. Save `work/<project-name>/reviews/VISUAL_QA.md` with findings by severity, screenshots reviewed, fixes made or required, and residual risks.
+6. Run `bin/dev-flow visual-check <project-name>` when this workspace helper is available.
+
+Blocking visual issues include text overlap, clipped controls, unusable mobile or desktop layout, missing required states, inaccessible primary actions, and output that ignores provided reference direction.
 
 ## Common Rationalizations
 
@@ -316,6 +332,8 @@ For detailed accessibility requirements and testing tools, see `references/acces
 - No keyboard navigation testing
 - Color as the sole indicator of state (red/green without text or icons)
 - Generic "AI look" (purple gradients, oversized cards, stock layouts)
+- No screenshot evidence for customer-facing UI
+- Implementation that ignores `SCREEN_ACCEPTANCE.md`
 
 ## Verification
 
@@ -328,3 +346,6 @@ After building UI:
 - [ ] Loading, error, and empty states all handled
 - [ ] Follows the project's design system (spacing, colors, typography)
 - [ ] No accessibility warnings in dev tools or axe-core
+- [ ] Customer-facing UI has screenshot evidence under `work/<project-name>/reviews/visual-screenshots/`
+- [ ] `VISUAL_QA.md` exists for customer-facing UI
+- [ ] `bin/dev-flow visual-check <project-name>` passes when available

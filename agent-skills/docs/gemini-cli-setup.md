@@ -6,16 +6,15 @@
 
 Gemini CLI has a native skills system that auto-discovers `SKILL.md` files in `.gemini/skills/` or `.agents/skills/` directories. Each skill activates on demand when it matches your task.
 
-**Install from the repo:**
+**Install from this wrapper repository:**
 
 ```bash
-gemini skills install https://github.com/addyosmani/agent-skills.git --path skills
+bin/dev-flow install gemini --scope user
 ```
 
 **Or install from a local clone:**
 
 ```bash
-git clone https://github.com/addyosmani/agent-skills.git
 gemini skills install /path/to/agent-skills/skills/
 ```
 
@@ -107,10 +106,11 @@ This is useful when you want to ensure a specific workflow is followed without w
 
 ## Slash Commands
 
-The repo ships 8 slash commands under `.gemini/commands/` that map to the development lifecycle. Gemini CLI auto-discovers them when you run from the project root.
+The repo ships lifecycle commands under `.gemini/commands/` that map to the development lifecycle. Gemini CLI auto-discovers them when you run from the project root.
 
 | Command | What it does |
 |---------|--------------|
+| `/idea` | Refine a rough idea into a focused brief |
 | `/spec` | Write a structured spec before writing code |
 | `/design` | Create UX, interaction, and visual design requirements |
 | `/planning` | Break work into small, verifiable tasks |

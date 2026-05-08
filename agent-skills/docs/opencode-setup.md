@@ -4,21 +4,23 @@ This guide explains how to use Agent Skills with OpenCode in a way that closely 
 
 ## Overview
 
-OpenCode supports custom `/commands`, but does not have a native plugin system or automatic skill routing like Claude Code.
+OpenCode supports custom command-style prompts in some setups, but does not have
+the same native plugin system or automatic skill routing model as Claude Code.
 
-Instead, we achieve parity through:
+We achieve parity through:
 
 - A strong system prompt (`AGENTS.md`)
 - The built-in `skill` tool
 - Consistent skill discovery from the `/skills` directory
+- Generated `.opencode/commands/` snippets where the current OpenCode setup supports them
 
 This creates an **agent-driven workflow** where skills are selected and executed automatically.
 
-While it is possible to recreate `/spec`, `/plan`, and other commands in OpenCode, this integration intentionally uses an agent-driven approach instead:
+The recommended integration still uses an agent-driven approach first:
 
 - Skills are selected automatically based on intent
 - Workflows are enforced via `AGENTS.md`
-- No manual command invocation is required
+- Manual command invocation is optional
 
 This more closely matches how Claude Code behaves in practice, where skills are triggered automatically rather than manually.
 
@@ -29,7 +31,7 @@ This more closely matches how Claude Code behaves in practice, where skills are 
 1. Clone the repository:
 
 ```bash
-git clone https://github.com/addyosmani/agent-skills.git
+git clone <this-repository-url>
 ```
 
 2. Open the project in OpenCode.
@@ -73,7 +75,7 @@ Examples:
 
 The user does **not** need to explicitly request skills.
 
-### 3. Lifecycle Mapping (Implicit Commands)
+### 3. Lifecycle Mapping
 
 The development lifecycle is encoded implicitly:
 
@@ -85,7 +87,9 @@ The development lifecycle is encoded implicitly:
 - REVIEW → `code-review-and-quality`
 - SHIP → `shipping-and-launch`
 
-This replaces slash commands like `/spec`, `/plan`, etc.
+This works even when slash commands are unavailable. If your OpenCode setup
+loads `.opencode/commands/`, the generated command snippets provide explicit
+entry points like `/spec`, `/plan`, and `/build`.
 
 ---
 
@@ -147,7 +151,7 @@ These rules are enforced via `AGENTS.md`.
 
 ## Limitations
 
-- No native slash commands (handled via intent mapping instead)
+- Slash-command behavior is setup-dependent (intent mapping remains the fallback)
 - No plugin system (handled via prompt + structure)
 - Skill invocation depends on model compliance
 

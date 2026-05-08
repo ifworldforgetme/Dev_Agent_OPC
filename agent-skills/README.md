@@ -10,17 +10,21 @@ Skills encode the workflows, quality gates, and best practices that senior engin
  │ Idea │ ───▶ │  UX  │ ───▶ │ Plan │ ───▶ │ Code │ ───▶ │ Test │ ───▶ │  Go  │
  │ Spec │      │Visual│      │Tasks │      │ Impl │      │  QA  │      │ Live │
  └──────┘      └──────┘      └──────┘      └──────┘      └──────┘      └──────┘
-  /spec        /design        /plan         /build        /review       /ship
+  /idea /spec  /design        /plan         /build        /review       /ship
 ```
 
 ---
 
 ## Commands
 
-8 slash commands that map to the development lifecycle. Each one activates the right skills automatically.
+Lifecycle commands map the development phases to the right skills. Claude Code
+and Gemini CLI use host-specific command files. Other hosts can use the
+platform-neutral prompts in `commands/` as slash commands, snippets, or explicit
+prompt aliases depending on what the host supports.
 
 | What you're doing | Command | Key principle |
 |-------------------|---------|---------------|
+| Refine the idea | `/idea` | Clarify before spec |
 | Define what to build | `/spec` | Spec before code |
 | Design the experience | `/design` | UX before task breakdown |
 | Plan how to build it | `/plan` | Small, atomic tasks |
@@ -39,24 +43,16 @@ Skills also activate automatically based on what you're doing — designing an A
 <details>
 <summary><b>Claude Code (recommended)</b></summary>
 
-**Marketplace install:**
-
-```
-/plugin marketplace add addyosmani/agent-skills
-/plugin install agent-skills@addy-agent-skills
-```
-
-> **SSH errors?** The marketplace clones repos via SSH. If you don't have SSH keys set up on GitHub, either [add your SSH key](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/adding-a-new-ssh-key-to-your-github-account) or use the full HTTPS URL to force the HTTPS cloning:
-> ```bash
-> /plugin marketplace add https://github.com/addyosmani/agent-skills.git
-> /plugin install agent-skills@addy-agent-skills
-> ```
-
-**Local / development:**
+**Install from this wrapper repository:**
 
 ```bash
-git clone https://github.com/addyosmani/agent-skills.git
-claude --plugin-dir /path/to/agent-skills
+bin/dev-flow install claude-code --scope user
+```
+
+**Use as a local Claude plugin during development:**
+
+```bash
+claude --plugin-dir /path/to/dev-flow-agent-skills/agent-skills
 ```
 
 </details>
@@ -73,17 +69,33 @@ Copy any `SKILL.md` into `.cursor/rules/`, or reference the full `skills/` direc
 
 Install as native skills for auto-discovery, or add to `GEMINI.md` for persistent context. See [docs/gemini-cli-setup.md](docs/gemini-cli-setup.md).
 
-**Install from the repo:**
+**Install from this wrapper repository:**
 
 ```bash
-gemini skills install https://github.com/addyosmani/agent-skills.git --path skills
+bin/dev-flow install gemini --scope user
 ```
 
 **Install from a local clone:**
 
 ```bash
-gemini skills install ./agent-skills/skills/
+gemini skills install ./agent-skills/skills/ --scope workspace
 ```
+
+</details>
+
+<details>
+<summary><b>Codex App/CLI</b></summary>
+
+Package or install from this wrapper repository:
+
+```bash
+bin/dev-flow package-adapters
+bin/dev-flow install codex --scope user
+```
+
+Codex consumes the generated `skills/` folders natively. The generated
+`commands/` folder contains reusable prompt shortcuts for Codex environments
+that support custom commands or snippets.
 
 </details>
 
@@ -97,9 +109,27 @@ Add skill contents to your Windsurf rules configuration. See [docs/windsurf-setu
 <details>
 <summary><b>OpenCode</b></summary>
 
-Uses agent-driven skill execution via AGENTS.md and the `skill` tool.
+Uses agent-driven skill execution via AGENTS.md and the `skill` tool. The
+wrapper also packages `.opencode/skills`, `.opencode/agents`, and
+`.opencode/commands`.
 
 See [docs/opencode-setup.md](docs/opencode-setup.md).
+
+</details>
+
+<details>
+<summary><b>OpenClaw</b></summary>
+
+Package or install the OpenClaw adapter from this wrapper repository:
+
+```bash
+bin/dev-flow package-adapters
+bin/dev-flow install openclaw --scope user
+```
+
+The adapter includes skills, personas, shared references, and platform-neutral
+command snippets. Native slash-command behavior depends on the OpenClaw host
+version and configuration.
 
 </details>
 
@@ -126,9 +156,9 @@ Skills are plain Markdown - they work with any agent that accepts system prompts
 
 ---
 
-## All 21 Skills
+## Skills
 
-The commands above are the entry points. Under the hood, they activate these 21 skills — each one a structured workflow with steps, verification gates, and anti-rationalization tables. You can also reference any skill directly.
+The commands above are the entry points. Under the hood, they activate the skills below — each one a structured workflow with steps, verification gates, and anti-rationalization tables. You can also reference any skill directly.
 
 ### Define - Clarify what to build
 
@@ -136,7 +166,7 @@ The commands above are the entry points. Under the hood, they activate these 21 
 |-------|-------------|----------|
 | [idea-refine](skills/idea-refine/SKILL.md) | Structured divergent/convergent thinking to turn vague ideas into concrete proposals | You have a rough concept that needs exploration |
 | [spec-driven-development](skills/spec-driven-development/SKILL.md) | Write a PRD covering objectives, commands, structure, code style, testing, and boundaries before any code | Starting a new project, feature, or significant change |
-| [design-flow](skills/design-flow/SKILL.md) | Create UX, interaction, platform, and visual design requirements after spec and before task breakdown | Building user-facing apps, websites, dashboards, or mobile experiences |
+| [design-flow](skills/design-flow/SKILL.md) | Create UX, reference intake, visual system, and screen acceptance requirements after spec and before task breakdown | Building customer-facing apps, websites, dashboards, or mobile experiences |
 
 ### Plan - Break it down
 
@@ -152,7 +182,7 @@ The commands above are the entry points. Under the hood, they activate these 21 
 | [test-driven-development](skills/test-driven-development/SKILL.md) | Red-Green-Refactor, test pyramid (80/15/5), test sizes, DAMP over DRY, Beyonce Rule, browser testing | Implementing logic, fixing bugs, or changing behavior |
 | [context-engineering](skills/context-engineering/SKILL.md) | Feed agents the right information at the right time - rules files, context packing, MCP integrations | Starting a session, switching tasks, or when output quality drops |
 | [source-driven-development](skills/source-driven-development/SKILL.md) | Ground every framework decision in official documentation - verify, cite sources, flag what's unverified | You want authoritative, source-cited code for any framework or library |
-| [frontend-ui-engineering](skills/frontend-ui-engineering/SKILL.md) | Component architecture, design systems, state management, responsive design, WCAG 2.1 AA accessibility | Building or modifying user-facing interfaces |
+| [frontend-ui-engineering](skills/frontend-ui-engineering/SKILL.md) | Component architecture, design systems, responsive design, accessibility, and screenshot-based visual QA | Building, modifying, or visually reviewing user-facing interfaces |
 | [api-and-interface-design](skills/api-and-interface-design/SKILL.md) | Contract-first design, Hyrum's Law, One-Version Rule, error semantics, boundary validation | Designing APIs, module boundaries, or public interfaces |
 
 ### Verify - Prove it works
@@ -190,8 +220,10 @@ Pre-configured specialist personas for targeted reviews:
 | Agent | Role | Perspective |
 |-------|------|-------------|
 | [code-reviewer](agents/code-reviewer.md) | Senior Staff Engineer | Five-axis code review with "would a staff engineer approve this?" standard |
+| [product-designer](agents/product-designer.md) | Product Designer | Reference-driven UX, visual systems, and screen acceptance |
 | [test-engineer](agents/test-engineer.md) | QA Specialist | Test strategy, coverage analysis, and the Prove-It pattern |
 | [security-auditor](agents/security-auditor.md) | Security Engineer | Vulnerability detection, threat modeling, OWASP assessment |
+| [ui-quality-reviewer](agents/ui-quality-reviewer.md) | UI Quality Reviewer | Screenshot-based visual fidelity, responsiveness, and polish review |
 
 ---
 
@@ -243,7 +275,7 @@ Every skill follows a consistent anatomy:
 
 ```
 agent-skills/
-├── skills/                            # 21 core skills (SKILL.md per directory)
+├── skills/                            # Core skills (SKILL.md per directory)
 │   ├── idea-refine/                   #   Define
 │   ├── spec-driven-development/       #   Define
 │   ├── design-flow/                   #   Design
@@ -266,11 +298,12 @@ agent-skills/
 │   ├── documentation-and-adrs/        #   Ship
 │   ├── shipping-and-launch/           #   Ship
 │   └── using-agent-skills/            #   Meta: how to use this pack
-├── agents/                            # 3 specialist personas
+├── agents/                            # Specialist personas
+├── commands/                          # Platform-neutral command prompts
 ├── references/                        # 4 supplementary checklists
 ├── hooks/                             # Session lifecycle hooks
-├── .claude/commands/                  # 8 slash commands (Claude Code)
-├── .gemini/commands/                  # 8 slash commands (Gemini CLI)
+├── .claude/commands/                  # Claude Code slash commands
+├── .gemini/commands/                  # Gemini CLI commands
 └── docs/                              # Setup guides per tool
 ```
 

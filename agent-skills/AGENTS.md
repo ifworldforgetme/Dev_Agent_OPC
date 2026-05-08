@@ -4,16 +4,20 @@ This file provides guidance to AI coding agents (Claude Code, Cursor, Copilot, A
 
 ## Repository Overview
 
-A collection of skills for Claude.ai and Claude Code for senior software engineers. Skills are packaged instructions and scripts that extend Claude and your coding agents capabilities.
+A cross-agent workflow pack for senior software engineering. Skills are packaged
+instructions, references, and optional scripts that extend Claude, Codex,
+Gemini, OpenCode, OpenClaw, and other compatible coding agents.
 
-## OpenCode Integration
+## OpenCode and OpenClaw Integration
 
-OpenCode uses a **skill-driven execution model** powered by the `skill` tool and this repository's `/skills` directory.
+OpenCode and OpenClaw integrations use a **skill-driven execution model**
+powered by installed `SKILL.md` folders, command snippets when the host supports
+them, and this repository's lifecycle rules.
 
 ### Core Rules
 
 - If a task matches a skill, you MUST invoke it
-- Skills are located in `skills/<skill-name>/SKILL.md`
+- Skills are located in `skills/<skill-name>/SKILL.md` or the host's native skill directory
 - Never implement directly if a skill applies
 - Always follow the skill instructions exactly (do not partially apply them)
 
@@ -21,26 +25,26 @@ OpenCode uses a **skill-driven execution model** powered by the `skill` tool and
 
 The agent should automatically map user intent to skills:
 
-- Feature / new functionality → `spec-driven-development`, `design-flow` for user-facing work, then `incremental-implementation`, `test-driven-development`
+- Feature / new functionality → `spec-driven-development`, `design-flow` for user-facing work, then `planning-and-task-breakdown`, `incremental-implementation`, `test-driven-development`
 - Planning / breakdown → `planning-and-task-breakdown`
 - Bug / failure / unexpected behavior → `debugging-and-error-recovery`
 - Code review → `code-review-and-quality`
 - Refactoring / simplification → `code-simplification`
 - API or interface design → `api-and-interface-design`
-- UX or visual design before planning → `design-flow`
-- UI implementation work → `frontend-ui-engineering`
+- UX, visual design, reference intake, or screen acceptance before planning → `design-flow`
+- UI implementation, visual polish, or screenshot-based UI QA → `frontend-ui-engineering`
+- Customer-facing UI with no references → ask for reference images/software unless the user explicitly delegates visual direction
 
-### Lifecycle Mapping (Implicit Commands)
+### Lifecycle Mapping
 
-OpenCode does not support slash commands like `/spec` or `/plan`.
-
-Instead, the agent must internally follow this lifecycle:
+Some hosts support custom slash commands and some only support prompt snippets or
+intent mapping. In all cases, the agent must internally follow this lifecycle:
 
 - DEFINE → `spec-driven-development`
-- DESIGN → `design-flow`
+- DESIGN → `design-flow` (reference intake, visual system, screen acceptance)
 - PLAN → `planning-and-task-breakdown`
 - BUILD → `incremental-implementation` + `test-driven-development`
-- VERIFY → `debugging-and-error-recovery`
+- VERIFY → `debugging-and-error-recovery`; for customer-facing UI also `frontend-ui-engineering` visual QA
 - REVIEW → `code-review-and-quality`
 - SHIP → `shipping-and-launch`
 
@@ -72,12 +76,12 @@ This ensures OpenCode behaves similarly to Claude Code with full workflow enforc
 This repo has three composable layers. They have different jobs and should not be confused:
 
 - **Skills** (`skills/<name>/SKILL.md`) — workflows with steps and exit criteria. The *how*. Mandatory hops when an intent matches.
-- **Personas** (`agents/<role>.md`) — roles with a perspective and an output format. The *who*.
-- **Slash commands** (`.claude/commands/*.md`) — user-facing entry points. The *when*. The orchestration layer.
+- **Personas** (`agents/<role>.md`) — roles with a perspective and an output format. The *who*. Use `product-designer` for customer-facing UX/design and `ui-quality-reviewer` for screenshot-based UI review.
+- **Commands** (`commands/*.md`, `.claude/commands/*.md`, `.gemini/commands/*.toml`) — user-facing entry points. The *when*. The orchestration layer.
 
-Composition rule: **the user (or a slash command) is the orchestrator. Personas do not invoke other personas.** A persona may invoke skills.
+Composition rule: **the user, a command, or host intent mapping is the orchestrator. Personas do not invoke other personas.** A persona may invoke skills.
 
-The only multi-persona orchestration pattern this repo endorses is **parallel fan-out with a merge step** — used by `/ship` to run `code-reviewer`, `security-auditor`, and `test-engineer` concurrently and synthesize their reports. Do not build a "router" persona that decides which other persona to call; that's the job of slash commands and intent mapping.
+The only multi-persona orchestration pattern this repo endorses is **parallel fan-out with a merge step** — used by `/ship` or the `ship` command to run `code-reviewer`, `security-auditor`, and `test-engineer` concurrently and synthesize their reports. Do not build a "router" persona that decides which other persona to call; that's the job of commands and intent mapping.
 
 See [agents/README.md](agents/README.md) for the decision matrix and [references/orchestration-patterns.md](references/orchestration-patterns.md) for the full pattern catalog.
 
@@ -91,9 +95,9 @@ See [agents/README.md](agents/README.md) for the decision matrix and [references
 skills/
   {skill-name}/           # kebab-case directory name
     SKILL.md              # Required: skill definition
-    scripts/              # Required: executable scripts
+    references/           # Optional: loaded only when needed
+    scripts/              # Optional: executable scripts
       {script-name}.sh    # Bash scripts (preferred)
-  {skill-name}.zip        # Required: packaged for distribution
 ```
 
 ### Naming Conventions
@@ -101,7 +105,7 @@ skills/
 - **Skill directory**: `kebab-case` (e.g. `web-quality`)
 - **SKILL.md**: Always uppercase, always this exact filename
 - **Scripts**: `kebab-case.sh` (e.g., `deploy.sh`, `fetch-logs.sh`)
-- **Zip file**: Must match directory name exactly: `{skill-name}.zip`
+- **Zip file**: Only create release zips when packaging for a surface that requires them.
 
 ### SKILL.md Format
 
@@ -156,32 +160,41 @@ Skills are loaded on-demand — only the skill name and description are loaded a
 
 ### Script Requirements
 
-- Use `#!/bin/bash` shebang
+- Scripts are optional. Add them only when deterministic execution is better than instructions.
+- Use `#!/usr/bin/env bash` shebang for Bash scripts
 - Use `set -e` for fail-fast behavior
 - Write status messages to stderr: `echo "Message" >&2`
 - Write machine-readable output (JSON) to stdout
 - Include a cleanup trap for temp files
 - Reference the script path as `/mnt/skills/user/{skill-name}/scripts/{script}.sh`
 
-### Creating the Zip Package
+### Packaging
 
 After creating or updating a skill:
 
 ```bash
-cd skills
-zip -r {skill-name}.zip {skill-name}/
+../bin/dev-flow package-adapters
+```
+
+This creates adapter folders for Codex, Claude Code, Gemini CLI, OpenClaw, and OpenCode from the canonical `skills/`, `agents/`, `commands/`, and `references/` directories.
+
+For direct installation from the repository root, use:
+
+```bash
+../bin/dev-flow install codex --scope user
+../bin/dev-flow install claude-code --scope project
+../bin/dev-flow install gemini --scope project
+../bin/dev-flow install openclaw --scope user
+../bin/dev-flow install opencode --scope project
 ```
 
 ### End-User Installation
 
 Document these two installation methods for users:
 
-**Claude Code:**
-```bash
-cp -r skills/{skill-name} ~/.claude/skills/
-```
-
-**claude.ai:**
-Add the skill to project knowledge or paste SKILL.md contents into the conversation.
-
-If the skill requires network access, instruct users to add required domains at `claude.ai/settings/capabilities`.
+- Codex App/CLI: copy skill folders to `~/.codex/skills/`; command snippets go under the generated `commands/` folder when the host supports them
+- Claude Code: copy skill folders to `~/.claude/skills/` or project `.claude/skills/`; copy `.claude/commands/` for slash commands
+- Claude.ai/API: upload or package each skill separately for that surface
+- Gemini CLI: use the generated Gemini extension folder
+- OpenClaw: copy skills to `~/.openclaw/skills/`, `~/.agents/skills/`, or workspace `skills/`; install command snippets where supported
+- OpenCode: copy skills to `.opencode/skills/` or `~/.config/opencode/skills/`; copy `.opencode/commands/` where supported

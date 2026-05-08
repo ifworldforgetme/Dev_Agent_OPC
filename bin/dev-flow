@@ -10,9 +10,19 @@ Usage:
   bin/dev-flow list
   bin/dev-flow show <alias-or-skill>
   bin/dev-flow path <alias-or-skill>
-  bin/dev-flow command <spec|design|plan|build|test|review|code-simplify|ship>
-  bin/dev-flow agent <code-reviewer|test-engineer|security-auditor>
+  bin/dev-flow command <idea|spec|design|plan|build|test|review|ship|debug|ui|api|security|code-simplify>
+  bin/dev-flow agent <code-reviewer|product-designer|test-engineer|security-auditor|ui-quality-reviewer>
   bin/dev-flow refs
+  bin/dev-flow install <codex|claude-code|gemini|openclaw|opencode> [--scope project|user] [--dest path]
+  bin/dev-flow init <project-name>
+  bin/dev-flow status <project-name>
+  bin/dev-flow phase <project-name> <idea|spec|design|plan|build|test|review|ship> [task]
+  bin/dev-flow next <project-name>
+  bin/dev-flow reference-check <project-name> [--required]
+  bin/dev-flow design-check <project-name> [--allow-no-reference]
+  bin/dev-flow visual-check <project-name>
+  bin/dev-flow check <project-name>
+  bin/dev-flow package-adapters [output-dir]
 
 Aliases:
   idea      -> idea-refine
@@ -28,6 +38,221 @@ Aliases:
   security  -> security-and-hardening
   ship      -> shipping-and-launch
 EOF
+}
+
+project_path() {
+  local name="${1:-}"
+  if [[ -z "$name" || "$name" == *"/"* || "$name" == "." || "$name" == ".." ]]; then
+    echo "Invalid project name: ${name:-<missing>}" >&2
+    echo "Use a simple folder name, for example: hotel-agent-workbench" >&2
+    exit 1
+  fi
+  echo "$ROOT/work/$name"
+}
+
+state_path() {
+  echo "$(project_path "${1:-}")/.dev-flow/state.env"
+}
+
+require_project() {
+  local dir
+  dir="$(project_path "${1:-}")"
+  if [[ ! -d "$dir" ]]; then
+    echo "Unknown project: ${1:-<missing>}" >&2
+    echo "Create it first with: bin/dev-flow init <project-name>" >&2
+    exit 1
+  fi
+}
+
+load_project_state() {
+  local state
+  state="$(state_path "${1:-}")"
+  if [[ -f "$state" ]]; then
+    # shellcheck disable=SC1090
+    source "$state"
+  fi
+  CURRENT_PHASE="${CURRENT_PHASE:-idea}"
+  CURRENT_TASK="${CURRENT_TASK:-Refine the initial idea}"
+  BLOCKERS="${BLOCKERS:-none}"
+  LAST_VERIFICATION="${LAST_VERIFICATION:-not run}"
+}
+
+is_valid_phase() {
+  case "${1:-}" in
+    idea|spec|design|plan|build|test|review|ship) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+write_project_state() {
+  local project="$1"
+  local phase="$2"
+  local task="$3"
+  local blockers="$4"
+  local verification="$5"
+  local state
+  state="$(state_path "$project")"
+  mkdir -p "$(dirname "$state")"
+  {
+    printf 'PROJECT_NAME=%q\n' "$project"
+    printf 'CURRENT_PHASE=%q\n' "$phase"
+    printf 'CURRENT_TASK=%q\n' "$task"
+    printf 'BLOCKERS=%q\n' "$blockers"
+    printf 'LAST_VERIFICATION=%q\n' "$verification"
+  } > "$state"
+}
+
+write_if_missing() {
+  local path="$1"
+  local content="$2"
+  if [[ ! -e "$path" ]]; then
+    mkdir -p "$(dirname "$path")"
+    printf '%s\n' "$content" > "$path"
+  fi
+}
+
+next_prompt_for_phase() {
+  case "${1:-idea}" in
+    idea)
+      echo "Use local flow: idea"
+      echo "Goal: refine the rough idea and save the result under work/<project>/ideas/."
+      ;;
+    spec)
+      echo "Use local flow: spec"
+      echo "Goal: turn the approved idea into work/<project>/specs/SPEC.md."
+      ;;
+    design)
+      echo "Use local flow: design"
+      echo "Goal: define UX, interaction, visual, and platform requirements under work/<project>/design/."
+      echo "Before designing customer-facing UI, run: bin/dev-flow reference-check <project> --required"
+      ;;
+    plan)
+      echo "Use local flow: plan"
+      echo "Goal: break the approved spec/design into verifiable tasks under work/<project>/tasks/."
+      ;;
+    build)
+      echo "Use local flow: build"
+      echo "Goal: implement the next task slice, then run bin/dev-flow check <project>."
+      ;;
+    test)
+      echo "Use local flow: test"
+      echo "Goal: add or run proof for the implemented slice."
+      ;;
+    review)
+      echo "Use local flow: review"
+      echo "Goal: review correctness, readability, architecture, security, and performance."
+      ;;
+    ship)
+      echo "Use local flow: ship"
+      echo "Goal: prepare launch notes, rollback notes, and release evidence."
+      ;;
+    *)
+      echo "Unknown phase: ${1:-<missing>}"
+      echo "Valid phases: idea, spec, design, plan, build, test, review, ship"
+      ;;
+  esac
+}
+
+count_reference_assets() {
+  local dir="$1"
+  find "$dir/design/references" "$dir/design/mocks" "$dir/design/screenshots" \
+    -type f \( \
+      -iname '*.png' -o -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.webp' -o \
+      -iname '*.gif' -o -iname '*.heic' -o -iname '*.pdf' -o -iname '*.fig' \
+    \) 2>/dev/null | wc -l | tr -d ' '
+}
+
+count_reference_links() {
+  local path="$1/design/reference-links.md"
+  if [[ ! -f "$path" ]]; then
+    echo 0
+    return
+  fi
+  awk '
+    /^## References/ { found = 1; next }
+    found && $0 !~ /^[[:space:]]*$/ && $0 !~ /^#/ && $0 !~ /^<!--/ { count++ }
+    END { print count + 0 }
+  ' "$path"
+}
+
+count_visual_screenshots() {
+  local dir="$1"
+  find "$dir/reviews/visual-screenshots" \
+    -type f \( \
+      -iname '*.png' -o -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.webp' -o \
+      -iname '*.gif' -o -iname '*.heic' -o -iname '*.pdf' \
+    \) 2>/dev/null | wc -l | tr -d ' '
+}
+
+has_content() {
+  local path="$1"
+  [[ -s "$path" ]] && [[ "$(wc -l < "$path" | tr -d ' ')" -ge 5 ]]
+}
+
+copy_skill_dirs() {
+  local target="$1"
+  local skill_dir
+  local name
+  mkdir -p "$target"
+  if [[ -d "$PACK/skills" ]]; then
+    for skill_dir in "$PACK/skills"/*; do
+      [[ -d "$skill_dir" ]] || continue
+      name="$(basename "$skill_dir")"
+      mkdir -p "$target/$name"
+      cp -R "$skill_dir/." "$target/$name/"
+    done
+  fi
+}
+
+copy_agent_dirs() {
+  local target="$1"
+  mkdir -p "$target"
+  if [[ -d "$PACK/agents" ]]; then
+    find "$PACK/agents" -mindepth 1 -maxdepth 1 -type f -name '*.md' -exec cp {} "$target" \;
+  fi
+}
+
+copy_reference_dirs() {
+  local target="$1"
+  if [[ -d "$PACK/references" ]]; then
+    mkdir -p "$target/references"
+    cp -R "$PACK/references/." "$target/references/"
+  fi
+}
+
+copy_command_dirs() {
+  local target="$1"
+  mkdir -p "$target"
+  if [[ -d "$PACK/commands" ]]; then
+    cp -R "$PACK/commands/." "$target/"
+  fi
+}
+
+copy_claude_commands() {
+  local target="$1"
+  mkdir -p "$target"
+  if [[ -d "$PACK/.claude/commands" ]]; then
+    cp -R "$PACK/.claude/commands/." "$target/"
+  fi
+}
+
+copy_gemini_commands() {
+  local target="$1"
+  mkdir -p "$target"
+  if [[ -d "$PACK/.gemini/commands" ]]; then
+    cp -R "$PACK/.gemini/commands/." "$target/"
+  fi
+}
+
+embed_shared_references() {
+  local skills_dir="$1"
+  local skill_dir
+  [[ -d "$skills_dir" && -d "$PACK/references" ]] || return 0
+  for skill_dir in "$skills_dir"/*; do
+    [[ -d "$skill_dir" ]] || continue
+    mkdir -p "$skill_dir/references"
+    cp -R "$PACK/references/." "$skill_dir/references/"
+  done
 }
 
 skill_name() {
@@ -48,6 +273,144 @@ skill_name() {
   esac
 }
 
+normalize_target() {
+  case "${1:-}" in
+    claude|claude-code) echo "claude-code" ;;
+    codex|gemini|openclaw|opencode) echo "${1:-}" ;;
+    *) echo "" ;;
+  esac
+}
+
+default_install_dest() {
+  local target="$1"
+  local scope="$2"
+  case "$scope:$target" in
+    project:codex) echo "$ROOT/.codex" ;;
+    user:codex) echo "${CODEX_HOME:-$HOME/.codex}" ;;
+    project:claude-code) echo "$ROOT/.claude" ;;
+    user:claude-code) echo "$HOME/.claude" ;;
+    project:gemini) echo "$ROOT/.gemini/extensions/dev-flow-quality" ;;
+    user:gemini) echo "$HOME/.gemini/extensions/dev-flow-quality" ;;
+    project:openclaw) echo "$ROOT/.openclaw" ;;
+    user:openclaw) echo "$HOME/.openclaw" ;;
+    project:opencode) echo "$ROOT/.opencode" ;;
+    user:opencode) echo "$HOME/.config/opencode" ;;
+    *) return 1 ;;
+  esac
+}
+
+write_gemini_extension_manifest() {
+  local target="$1"
+  cat > "$target/gemini-extension.json" <<'EOF'
+{
+  "name": "dev-flow-quality",
+  "version": "0.1.0",
+  "description": "Agent skills and personas for lifecycle-driven software delivery",
+  "contextFileName": "GEMINI.md",
+  "plan": {
+    "directory": ".gemini/plans"
+  }
+}
+EOF
+  cat > "$target/GEMINI.md" <<'EOF'
+# Dev Flow Quality
+
+Use the bundled skills for lifecycle-driven software delivery. For customer-facing UI, design-flow owns reference intake and screen acceptance; frontend-ui-engineering owns implementation and visual QA.
+EOF
+}
+
+install_adapter() {
+  local target_raw="${1:-}"
+  local target
+  target="$(normalize_target "$target_raw")"
+  if [[ -z "$target" ]]; then
+    echo "Unknown install target: ${target_raw:-<missing>}" >&2
+    echo "Targets: codex, claude-code, gemini, openclaw, opencode" >&2
+    exit 1
+  fi
+
+  local scope="project"
+  local dest=""
+  shift || true
+  while [[ "$#" -gt 0 ]]; do
+    case "$1" in
+      --scope)
+        scope="${2:-}"
+        shift 2
+        ;;
+      --scope=*)
+        scope="${1#--scope=}"
+        shift
+        ;;
+      --dest)
+        dest="${2:-}"
+        shift 2
+        ;;
+      --dest=*)
+        dest="${1#--dest=}"
+        shift
+        ;;
+      *)
+        echo "Unknown install option: $1" >&2
+        usage >&2
+        exit 1
+        ;;
+    esac
+  done
+
+  if [[ "$scope" != "project" && "$scope" != "user" ]]; then
+    echo "Invalid scope: $scope" >&2
+    echo "Use --scope project or --scope user." >&2
+    exit 1
+  fi
+  if [[ -z "$dest" ]]; then
+    dest="$(default_install_dest "$target" "$scope")"
+  fi
+
+  case "$target" in
+    codex)
+      copy_skill_dirs "$dest/skills"
+      copy_agent_dirs "$dest/agents"
+      copy_reference_dirs "$dest"
+      copy_command_dirs "$dest/commands"
+      embed_shared_references "$dest/skills"
+      ;;
+    claude-code)
+      copy_skill_dirs "$dest/skills"
+      copy_agent_dirs "$dest/agents"
+      copy_reference_dirs "$dest"
+      copy_claude_commands "$dest/commands"
+      embed_shared_references "$dest/skills"
+      ;;
+    gemini)
+      mkdir -p "$dest"
+      copy_skill_dirs "$dest/skills"
+      copy_agent_dirs "$dest/agents"
+      copy_reference_dirs "$dest"
+      copy_gemini_commands "$dest/commands"
+      embed_shared_references "$dest/skills"
+      write_gemini_extension_manifest "$dest"
+      ;;
+    openclaw)
+      copy_skill_dirs "$dest/skills"
+      copy_agent_dirs "$dest/agents"
+      copy_reference_dirs "$dest"
+      copy_command_dirs "$dest/commands"
+      embed_shared_references "$dest/skills"
+      ;;
+    opencode)
+      copy_skill_dirs "$dest/skills"
+      copy_agent_dirs "$dest/agents"
+      copy_reference_dirs "$dest"
+      copy_command_dirs "$dest/commands"
+      embed_shared_references "$dest/skills"
+      ;;
+  esac
+
+  echo "Installed $target adapter under $dest"
+  echo "Scope: $scope"
+}
+
 skill_path() {
   local name
   name="$(skill_name "${1:-}")"
@@ -56,7 +419,7 @@ skill_path() {
 
 require_pack() {
   if [[ ! -d "$PACK" ]]; then
-    echo "Missing $PACK. Clone https://github.com/addyosmani/agent-skills first." >&2
+    echo "Missing $PACK. Restore the canonical agent-skills/ directory before running dev-flow." >&2
     exit 1
   fi
 }
@@ -68,7 +431,7 @@ case "$cmd" in
   list)
     find "$PACK/skills" -mindepth 2 -maxdepth 2 -name SKILL.md \
       | sed "s#^$PACK/skills/##; s#/SKILL.md\$##" \
-      | sort
+      | sort -u
     ;;
   show)
     path="$(skill_path "${2:-}")"
@@ -90,7 +453,7 @@ case "$cmd" in
     ;;
   command)
     name="${2:-}"
-    path="$PACK/.claude/commands/$name.md"
+    path="$PACK/commands/$name.md"
     if [[ -z "$name" || ! -f "$path" ]]; then
       echo "Unknown command: ${name:-<missing>}" >&2
       usage >&2
@@ -108,8 +471,319 @@ case "$cmd" in
     fi
     cat "$path"
     ;;
+  install)
+    install_adapter "${2:-}" "${@:3}"
+    ;;
   refs)
     find "$PACK/references" -maxdepth 1 -type f -name '*.md' | sort
+    ;;
+  init)
+    project="${2:-}"
+    dir="$(project_path "$project")"
+    mkdir -p "$dir"/{ideas,specs,design,tasks,reviews,ship,apps,packages,bin,.dev-flow}
+    mkdir -p "$dir/design"/{references,mocks,screenshots}
+    mkdir -p "$dir/reviews/visual-screenshots"
+    write_if_missing "$dir/.dev-flow/state.env" "PROJECT_NAME=\"$project\"
+CURRENT_PHASE=\"idea\"
+CURRENT_TASK=\"Refine the initial idea\"
+BLOCKERS=\"none\"
+LAST_VERIFICATION=\"not run\""
+    write_if_missing "$dir/.dev-flow/context.md" "# Context Loading: $project
+
+Load only the files needed for the current phase.
+
+- Idea: read \`ideas/\` and relevant user notes.
+- Spec: read approved idea artifacts and existing app files if present.
+- Design: read \`specs/SPEC.md\`, \`design/reference-intake.md\`, user-provided references, existing screens, and platform constraints.
+- Plan: read approved spec/design and inspect likely source boundaries.
+- Build: read the assigned task, nearby source files, and tests.
+- Review: read the diff, tests, and quality-gate output.
+- Ship: read review results, verification evidence, and launch notes.
+
+Do not bulk-load \`agent-skills/\` or unrelated project folders."
+    write_if_missing "$dir/design/reference-intake.md" "# Reference Intake: $project
+
+Use this before customer-facing UI design or visual polish.
+
+## Reference Assets
+- Put screenshots, reference images, Figma exports, mood boards, or product captures in:
+  - \`design/references/\`
+  - \`design/mocks/\`
+  - \`design/screenshots/\`
+
+## Reference Software
+- Put product names, app store links, websites, Figma links, or competitor notes in \`design/reference-links.md\`.
+
+## Decision
+- If reference assets or software are provided, extract visual patterns before designing: layout density, navigation model, component style, spacing, typography, color, motion, and tone.
+- If this is customer-facing UI and no reference is provided, ask the user for examples unless the user has explicitly delegated visual direction.
+- If the user delegates visual direction, create a short reference board first and save it under \`design/\` before implementation planning."
+    write_if_missing "$dir/design/reference-links.md" "# Reference Links: $project
+
+Add user-provided reference apps, websites, Figma links, screenshots descriptions, or competitor notes below.
+
+## References"
+    write_if_missing "$dir/tasks/status.md" "# Project Status: $project
+
+## Current State
+- Phase: idea
+- Current task: Refine the initial idea
+- Blockers: none
+- Last verification: not run
+
+## Phase Checklist
+- [ ] Idea approved
+- [ ] Spec approved
+- [ ] Design approved
+- [ ] Plan approved
+- [ ] Build slices complete
+- [ ] Tests and quality gates pass
+- [ ] Review complete
+- [ ] Ship package ready
+
+## Human Review Gates
+- Requirement confirmation
+- Customer-facing visual direction when no reference image/software is provided
+- High-risk architecture decisions
+- Security, payment, permissions, or data deletion behavior
+- Production launch approval"
+    write_if_missing "$dir/tasks/quality-gates.md" "# Quality Gates: $project
+
+Project-specific verification belongs here. Keep commands runnable from this project
+folder and mirror them in \`bin/check\` when they become stable.
+
+## Default Gate
+- [ ] Required workflow folders exist
+- [ ] Status ledger exists
+- [ ] Context loading guidance exists
+- [ ] Reference intake exists for customer-facing UI work
+
+## Add When The Project Has Code
+- [ ] Lint
+- [ ] Type check
+- [ ] Unit tests
+- [ ] Build
+- [ ] Browser or device smoke test, when user-facing
+- [ ] \`bin/dev-flow design-check $project\`, before implementation planning for customer-facing UI
+- [ ] \`bin/dev-flow visual-check $project\`, before delivery for customer-facing UI"
+    write_if_missing "$dir/bin/check" "#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT=\"\$(cd \"\$(dirname \"\${BASH_SOURCE[0]}\")/..\" && pwd)\"
+
+required_dirs=(ideas specs design design/references design/mocks design/screenshots tasks reviews reviews/visual-screenshots ship apps packages .dev-flow)
+for d in \"\${required_dirs[@]}\"; do
+  [[ -d \"\$ROOT/\$d\" ]] || { echo \"Missing directory: \$d\" >&2; exit 1; }
+done
+
+required_files=(.dev-flow/state.env .dev-flow/context.md design/reference-intake.md design/reference-links.md tasks/status.md tasks/quality-gates.md)
+for f in \"\${required_files[@]}\"; do
+  [[ -f \"\$ROOT/\$f\" ]] || { echo \"Missing file: \$f\" >&2; exit 1; }
+done
+
+echo \"Default workflow gate passed for \$(basename \"\$ROOT\").\""
+    chmod +x "$dir/bin/check"
+    echo "Initialized $dir"
+    echo "Next: bin/dev-flow next $project"
+    ;;
+  status)
+    project="${2:-}"
+    require_project "$project"
+    dir="$(project_path "$project")"
+    load_project_state "$project"
+    echo "Project: $project"
+    echo "Path: $dir"
+    echo "Phase: $CURRENT_PHASE"
+    echo "Current task: $CURRENT_TASK"
+    echo "Blockers: $BLOCKERS"
+    echo "Last verification: $LAST_VERIFICATION"
+    echo
+    echo "Artifacts:"
+    find "$dir" -maxdepth 2 -type f \
+      | sed "s#^$dir/##" \
+      | sort
+    ;;
+  phase)
+    project="${2:-}"
+    phase="${3:-}"
+    task="${4:-}"
+    require_project "$project"
+    if ! is_valid_phase "$phase"; then
+      echo "Invalid phase: ${phase:-<missing>}" >&2
+      echo "Valid phases: idea, spec, design, plan, build, test, review, ship" >&2
+      exit 1
+    fi
+    load_project_state "$project"
+    if [[ -z "$task" ]]; then
+      task="$CURRENT_TASK"
+    fi
+    write_project_state "$project" "$phase" "$task" "$BLOCKERS" "$LAST_VERIFICATION"
+    dir="$(project_path "$project")"
+    {
+      echo
+      echo "## Update $(date -u '+%Y-%m-%dT%H:%M:%SZ')"
+      echo "- Phase: $phase"
+      echo "- Current task: $task"
+    } >> "$dir/tasks/status.md"
+    echo "Updated $project to phase: $phase"
+    echo "Next: bin/dev-flow next $project"
+    ;;
+  next)
+    project="${2:-}"
+    require_project "$project"
+    load_project_state "$project"
+    echo "Project: $project"
+    echo "Current phase: $CURRENT_PHASE"
+    echo
+    next_prompt_for_phase "$CURRENT_PHASE"
+    ;;
+  reference-check)
+    project="${2:-}"
+    mode="${3:-}"
+    require_project "$project"
+    dir="$(project_path "$project")"
+    assets="$(count_reference_assets "$dir")"
+    links="$(count_reference_links "$dir")"
+    total=$((assets + links))
+    echo "Project: $project"
+    echo "Reference assets: $assets"
+    echo "Reference links/software notes: $links"
+    if [[ "$total" -gt 0 ]]; then
+      echo "Reference intake passed."
+      echo "Use these references in design requirements and visual QA."
+      exit 0
+    fi
+    echo "No reference assets or reference software found."
+    echo "For customer-facing UI, ask the user for reference images, screenshots, Figma links, app names, or websites before design."
+    echo "If the user delegates visual direction, create a reference board under work/$project/design/ before implementation planning."
+    if [[ "$mode" == "--required" ]]; then
+      exit 1
+    fi
+    ;;
+  design-check)
+    project="${2:-}"
+    mode="${3:-}"
+    require_project "$project"
+    dir="$(project_path "$project")"
+    failures=0
+    if [[ "$mode" != "--allow-no-reference" ]]; then
+      assets="$(count_reference_assets "$dir")"
+      links="$(count_reference_links "$dir")"
+      if [[ $((assets + links)) -eq 0 ]]; then
+        echo "Missing references: add reference assets/software or rerun with --allow-no-reference after user delegates visual direction." >&2
+        failures=$((failures + 1))
+      fi
+    fi
+    for file in design/DESIGN.md design/VISUAL_SYSTEM.md design/SCREEN_ACCEPTANCE.md; do
+      if ! has_content "$dir/$file"; then
+        echo "Missing or too thin: $file" >&2
+        failures=$((failures + 1))
+      fi
+    done
+    if [[ "$failures" -gt 0 ]]; then
+      echo "Design check failed for $project." >&2
+      exit 1
+    fi
+    echo "Design check passed for $project."
+    ;;
+  visual-check)
+    project="${2:-}"
+    require_project "$project"
+    dir="$(project_path "$project")"
+    failures=0
+    for file in design/DESIGN.md design/VISUAL_SYSTEM.md design/SCREEN_ACCEPTANCE.md reviews/VISUAL_QA.md; do
+      if ! has_content "$dir/$file"; then
+        echo "Missing or too thin: $file" >&2
+        failures=$((failures + 1))
+      fi
+    done
+    screenshots="$(count_visual_screenshots "$dir")"
+    if [[ "$screenshots" -eq 0 ]]; then
+      echo "Missing visual screenshot evidence under reviews/visual-screenshots/." >&2
+      failures=$((failures + 1))
+    fi
+    if [[ "$failures" -gt 0 ]]; then
+      echo "Visual check failed for $project." >&2
+      exit 1
+    fi
+    echo "Visual check passed for $project with $screenshots screenshot artifact(s)."
+    ;;
+  check)
+    project="${2:-}"
+    require_project "$project"
+    dir="$(project_path "$project")"
+    if [[ ! -x "$dir/bin/check" ]]; then
+      echo "Missing executable quality gate: $dir/bin/check" >&2
+      exit 1
+    fi
+    (cd "$dir" && ./bin/check)
+    ;;
+  package-adapters)
+    out="${2:-dist/dev-flow-native}"
+    if [[ -e "$out" ]]; then
+      echo "Output already exists: $out" >&2
+      echo "Choose a new output directory." >&2
+      exit 1
+    fi
+    mkdir -p "$out"
+
+    copy_skill_dirs "$out/codex/skills"
+    copy_agent_dirs "$out/codex/agents"
+    copy_reference_dirs "$out/codex"
+    copy_command_dirs "$out/codex/commands"
+    embed_shared_references "$out/codex/skills"
+
+    copy_skill_dirs "$out/claude-code/skills"
+    copy_agent_dirs "$out/claude-code/agents"
+    copy_reference_dirs "$out/claude-code"
+    embed_shared_references "$out/claude-code/skills"
+    copy_claude_commands "$out/claude-code/.claude/commands"
+
+    mkdir -p "$out/gemini/dev-flow-quality"
+    copy_skill_dirs "$out/gemini/dev-flow-quality/skills"
+    copy_agent_dirs "$out/gemini/dev-flow-quality/agents"
+    copy_reference_dirs "$out/gemini/dev-flow-quality"
+    embed_shared_references "$out/gemini/dev-flow-quality/skills"
+    copy_gemini_commands "$out/gemini/dev-flow-quality/commands"
+    write_gemini_extension_manifest "$out/gemini/dev-flow-quality"
+
+    copy_skill_dirs "$out/openclaw/skills"
+    copy_agent_dirs "$out/openclaw/agents"
+    copy_reference_dirs "$out/openclaw"
+    copy_command_dirs "$out/openclaw/commands"
+    embed_shared_references "$out/openclaw/skills"
+
+    copy_skill_dirs "$out/opencode/.opencode/skills"
+    copy_agent_dirs "$out/opencode/.opencode/agents"
+    copy_reference_dirs "$out/opencode/.opencode"
+    copy_command_dirs "$out/opencode/.opencode/commands"
+    embed_shared_references "$out/opencode/.opencode/skills"
+
+    cat > "$out/INSTALL.md" <<'EOF'
+# Agent Skills Native Adapter Package
+
+Install the generated folders into the target agent surface:
+
+- Codex App/CLI: copy `codex/skills/*` to `~/.codex/skills/`. `codex/commands/` contains reusable prompt shortcuts for hosts that support custom commands or snippets.
+- Claude Code: copy `claude-code/skills/*` to `~/.claude/skills/` or project `.claude/skills/`; copy `.claude/commands/` into a project when slash commands are desired.
+- Claude.ai/API: upload or package each skill folder separately for that surface.
+- Gemini CLI: run `gemini extensions link <path-to>/gemini/dev-flow-quality` while developing, or `gemini extensions install <path-to>/gemini/dev-flow-quality`.
+- OpenClaw: copy `openclaw/skills/*` to `~/.openclaw/skills/`, `~/.agents/skills/`, or workspace `skills/`; use `openclaw/commands/` as command snippets where supported.
+- OpenCode: copy `opencode/.opencode/skills/*` into a workspace `.opencode/skills/`, or copy to `~/.config/opencode/skills/`; copy `.opencode/commands/` where supported.
+
+Agent personas are included under each adapter's `agents/` directory when the platform supports persona/sub-agent files. Shared references are embedded into each packaged skill so standalone skill installation keeps reference files available.
+
+The helper can also install directly:
+
+```bash
+bin/dev-flow install codex --scope user
+bin/dev-flow install claude-code --scope project
+bin/dev-flow install gemini --scope project
+bin/dev-flow install openclaw --scope user
+bin/dev-flow install opencode --scope project
+```
+EOF
+    echo "Packaged adapters under $out"
     ;;
   help|-h|--help)
     usage

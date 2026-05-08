@@ -1,16 +1,18 @@
-description = "Create UX, interaction, and visual design requirements before implementation planning"
+description = "Create reference-driven UX, interaction, visual system, and screen acceptance requirements before implementation planning"
 
 prompt = """
 Invoke the design-flow skill.
 
-Read the approved spec under `work/<project-name>/specs/` and inspect existing app screens/components if they exist. Then:
+Read the approved spec under `work/<project-name>/specs/`, inspect references under `work/<project-name>/design/`, and inspect existing app screens/components if they exist. For customer-facing UI, run `bin/dev-flow reference-check <project-name> --required` when available. Then:
 
 1. Define the UX problem and success criteria
-2. Compare interaction approaches and choose a recommendation
-3. Apply iOS, Android, accessibility, privacy, and HCI principles
-4. Define information architecture, navigation, screen hierarchy, states, and interaction model
-5. Define visual direction: icon, palette, typography, spacing, cards, buttons, motion, and gestures
-6. If visual artifacts are useful, use the installed imagegen skill and save project-bound outputs under `work/<project-name>/design/`
+2. Extract concrete patterns from provided references or ask for references if visual direction is not delegated
+3. Compare interaction approaches and choose a recommendation
+4. Apply iOS, Android, accessibility, privacy, and HCI principles
+5. Define information architecture, navigation, screen hierarchy, states, and interaction model
+6. Define visual direction: icon, palette, typography, spacing, cards, buttons, motion, and gestures
+7. Define screen acceptance criteria for key states and breakpoints
+8. If visual artifacts are useful, use the installed imagegen skill and save project-bound outputs under `work/<project-name>/design/`
 
-Save the design package under `work/<project-name>/design/` and update the spec or task plan references before implementation planning.
+Save `DESIGN.md`, `VISUAL_SYSTEM.md`, and `SCREEN_ACCEPTANCE.md` under `work/<project-name>/design/`. Run `bin/dev-flow design-check <project-name>` when available, then update spec or task plan references before implementation planning.
 """
