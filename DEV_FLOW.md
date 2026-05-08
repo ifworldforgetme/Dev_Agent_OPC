@@ -57,9 +57,11 @@ bin/dev-flow next <project-name>
 bin/dev-flow phase <project-name> pm "Write PRD and product acceptance criteria"
 bin/dev-flow phase <project-name> agent "Design agent workflow and evals"
 bin/dev-flow phase <project-name> spec "Write SPEC.md from the approved idea"
+bin/dev-flow verify-phase <project-name> spec
 bin/dev-flow reference-check <project-name> --required
 bin/dev-flow design-check <project-name>
 bin/dev-flow visual-check <project-name>
+bin/dev-flow ship-check <project-name>
 bin/dev-flow check <project-name>
 ```
 
@@ -73,9 +75,12 @@ bin/dev-flow check <project-name>
 - `tasks/quality-gates.md`: project-specific verification checklist
 - `bin/check`: executable quality gate for this project
 
-Use `phase` whenever the project moves from idea to spec, design, plan, build,
-test, review, or ship. Use `next` at the start of a session to get the next
-prompt and artifact target.
+Use `phase` whenever the project moves from idea to pm, agent, spec, design,
+plan, build, test, review, or ship. A phase transition verifies the previous
+phase by default; use `--force` only when deliberately recording state before
+artifacts are ready. Use `verify-phase` to check one stage and `ship-check`
+before delivery. Use `next` at the start of a session to get the next prompt
+and artifact target.
 
 ## UI Quality Gates
 
@@ -116,8 +121,8 @@ Every phase should produce a named artifact:
 | Phase | Required output |
 |---|---|
 | Idea | `work/<project-name>/ideas/idea-brief.md` |
-| Product | `work/<project-name>/product/PRD.md`, `USER_STORIES.md`, `ACCEPTANCE.md` |
-| Agent | `work/<project-name>/agent/AGENT_SPEC.md`, `WORKFLOW.md`, `TOOLS_AND_PERMISSIONS.md`, `EVALS.md` |
+| Product | `work/<project-name>/product/PRD.md`, `USER_STORIES.md`, `METRICS.md`, `ACCEPTANCE.md` |
+| Agent | `work/<project-name>/agent/AGENT_SPEC.md`, `WORKFLOW.md`, `TOOLS_AND_PERMISSIONS.md`, `PROMPTS_AND_SKILLS.md`, `EVALS.md`, `FAILURE_RECOVERY.md` |
 | Spec | `work/<project-name>/specs/SPEC.md` |
 | Design | `work/<project-name>/design/DESIGN.md`, `VISUAL_SYSTEM.md`, `SCREEN_ACCEPTANCE.md` |
 | Plan | `work/<project-name>/tasks/PLAN.md` |
@@ -184,3 +189,22 @@ Default destinations:
 
 Installer behavior is additive: it creates or updates matching files, but it
 does not delete old custom files in the destination.
+
+## Evidence Gates
+
+`bin/dev-flow phase` only records state; it does not perform the skill work for
+the agent. To prevent false progress, phase transitions verify the previous
+phase by default. The intended pattern is:
+
+```bash
+bin/dev-flow next <project-name>
+# create the requested artifacts
+bin/dev-flow verify-phase <project-name> <phase>
+bin/dev-flow phase <project-name> <next-phase> "next task"
+```
+
+Use `bin/dev-flow ship-check <project-name>` before delivery. It verifies idea,
+pm, agent, spec, design, plan, build, test, review, and ship artifacts. If a
+runtime gate cannot run, such as Android APK build in an environment without
+Java/Gradle/Android SDK, record the blocker in `reviews/BLOCKED_BUILD.md` rather
+than silently passing the phase.

@@ -87,10 +87,17 @@ bin/dev-flow init my-project
 bin/dev-flow status my-project
 bin/dev-flow next my-project
 
-# Move through phases
+# Move through phases. Each transition verifies the previous phase by default.
 bin/dev-flow phase my-project pm "Write product requirements"
 bin/dev-flow phase my-project agent "Design agent workflow"
 bin/dev-flow phase my-project spec "Write buildable spec"
+
+# Verify a single phase or the whole delivery package
+bin/dev-flow verify-phase my-project design
+bin/dev-flow ship-check my-project
+
+# Use --force only when intentionally recording state before artifacts exist
+bin/dev-flow phase my-project design "Explore UX direction" --force
 ```
 
 For customer-facing UI:
@@ -128,6 +135,7 @@ Use `--dest <path>` to install into a staging directory or custom agent home.
 - **Agent workflows before prompts** — reliable AI products need tools, permissions, memory, recovery, and evals, not just instructions.
 - **Reference-driven UI** — customer-facing design should be grounded in concrete references or explicit visual direction.
 - **Small verifiable slices** — every task should have acceptance criteria and evidence.
+- **Evidence-gated phases** — phase changes are state updates, not work execution; `verify-phase` and `ship-check` make artifacts explicit before claiming progress.
 - **Portable adapters** — keep canonical workflows in `agent-skills/`, then generate host-specific installs.
 
 ## Author

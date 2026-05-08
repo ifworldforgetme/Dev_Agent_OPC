@@ -52,7 +52,9 @@ Use `bin/dev-flow` to manage project state:
 bin/dev-flow init <project-name>
 bin/dev-flow status <project-name>
 bin/dev-flow next <project-name>
-bin/dev-flow phase <project-name> <phase> [task]
+bin/dev-flow phase <project-name> <phase> [task] [--force]
+bin/dev-flow verify-phase <project-name> <phase>
+bin/dev-flow ship-check <project-name>
 bin/dev-flow reference-check <project-name> [--required]
 bin/dev-flow design-check <project-name> [--allow-no-reference]
 bin/dev-flow visual-check <project-name>
@@ -65,8 +67,15 @@ Start real work with `bin/dev-flow init <project-name>`. At the beginning of a
 session, run `bin/dev-flow status <project-name>` and `bin/dev-flow next
 <project-name>` to recover the current phase and next artifact target. After a
 phase is approved, update `.dev-flow/state.env` through `bin/dev-flow phase`.
-Before claiming a slice is done, run `bin/dev-flow check <project-name>` and any
+Before claiming a slice is done, run the relevant `bin/dev-flow verify-phase
+<project-name> <phase>`, `bin/dev-flow check <project-name>`, and any
 project-specific checks listed in `work/<project-name>/tasks/quality-gates.md`.
+Before delivery, run `bin/dev-flow ship-check <project-name>`.
+
+Important: `bin/dev-flow phase` records state only; it does not execute the
+skill work. By default it verifies the previous phase before moving forward. Use
+`--force` only when intentionally recording an early state and then complete the
+missing artifacts before delivery.
 
 For customer-facing apps, run `bin/dev-flow reference-check <project-name>
 --required` before design or visual implementation. Use user-provided reference
