@@ -1,0 +1,122 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+PACK="$ROOT/agent-skills"
+
+usage() {
+  cat <<'EOF'
+Usage:
+  bin/dev-flow list
+  bin/dev-flow show <alias-or-skill>
+  bin/dev-flow path <alias-or-skill>
+  bin/dev-flow command <spec|design|plan|build|test|review|code-simplify|ship>
+  bin/dev-flow agent <code-reviewer|test-engineer|security-auditor>
+  bin/dev-flow refs
+
+Aliases:
+  idea      -> idea-refine
+  spec      -> spec-driven-development
+  design    -> design-flow
+  plan      -> planning-and-task-breakdown
+  build     -> incremental-implementation
+  test      -> test-driven-development
+  review    -> code-review-and-quality
+  debug     -> debugging-and-error-recovery
+  ui        -> frontend-ui-engineering
+  api       -> api-and-interface-design
+  security  -> security-and-hardening
+  ship      -> shipping-and-launch
+EOF
+}
+
+skill_name() {
+  case "${1:-}" in
+    idea) echo "idea-refine" ;;
+    spec) echo "spec-driven-development" ;;
+    design) echo "design-flow" ;;
+    plan) echo "planning-and-task-breakdown" ;;
+    build) echo "incremental-implementation" ;;
+    test) echo "test-driven-development" ;;
+    review) echo "code-review-and-quality" ;;
+    debug) echo "debugging-and-error-recovery" ;;
+    ui) echo "frontend-ui-engineering" ;;
+    api) echo "api-and-interface-design" ;;
+    security) echo "security-and-hardening" ;;
+    ship) echo "shipping-and-launch" ;;
+    *) echo "${1:-}" ;;
+  esac
+}
+
+skill_path() {
+  local name
+  name="$(skill_name "${1:-}")"
+  echo "$PACK/skills/$name/SKILL.md"
+}
+
+require_pack() {
+  if [[ ! -d "$PACK" ]]; then
+    echo "Missing $PACK. Clone https://github.com/addyosmani/agent-skills first." >&2
+    exit 1
+  fi
+}
+
+cmd="${1:-help}"
+require_pack
+
+case "$cmd" in
+  list)
+    find "$PACK/skills" -mindepth 2 -maxdepth 2 -name SKILL.md \
+      | sed "s#^$PACK/skills/##; s#/SKILL.md\$##" \
+      | sort
+    ;;
+  show)
+    path="$(skill_path "${2:-}")"
+    if [[ -z "${2:-}" || ! -f "$path" ]]; then
+      echo "Unknown skill or alias: ${2:-<missing>}" >&2
+      usage >&2
+      exit 1
+    fi
+    cat "$path"
+    ;;
+  path)
+    path="$(skill_path "${2:-}")"
+    if [[ -z "${2:-}" || ! -f "$path" ]]; then
+      echo "Unknown skill or alias: ${2:-<missing>}" >&2
+      usage >&2
+      exit 1
+    fi
+    echo "$path"
+    ;;
+  command)
+    name="${2:-}"
+    path="$PACK/.claude/commands/$name.md"
+    if [[ -z "$name" || ! -f "$path" ]]; then
+      echo "Unknown command: ${name:-<missing>}" >&2
+      usage >&2
+      exit 1
+    fi
+    cat "$path"
+    ;;
+  agent)
+    name="${2:-}"
+    path="$PACK/agents/$name.md"
+    if [[ -z "$name" || ! -f "$path" ]]; then
+      echo "Unknown agent persona: ${name:-<missing>}" >&2
+      usage >&2
+      exit 1
+    fi
+    cat "$path"
+    ;;
+  refs)
+    find "$PACK/references" -maxdepth 1 -type f -name '*.md' | sort
+    ;;
+  help|-h|--help)
+    usage
+    ;;
+  *)
+    echo "Unknown command: $cmd" >&2
+    usage >&2
+    exit 1
+    ;;
+esac

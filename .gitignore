@@ -1,0 +1,21 @@
+# macOS / Synology metadata
+.DS_Store
+**/.DS_Store
+@eaDir/
+**/@eaDir/
+*SynoEAStream
+*SynoResource
+
+# Local backups / vendor metadata
+.vendor-git/
+
+# Runtime/editor noise
+*.log
+.tmp/
+tmp/
+.cache/
+
+# OS/editor
+Thumbs.db
+.idea/
+.vscode/
