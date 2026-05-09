@@ -1,115 +1,146 @@
 # Dev Agent OPC
 
-Dev Agent OPC is a lifecycle-driven workflow pack for AI coding agents. It turns a coding assistant from a general-purpose helper into a structured product and engineering partner that can move from idea to PRD, agent design, specification, UX design, task planning, implementation, testing, review, and launch.
+[![Version](https://img.shields.io/badge/version-v0.1-blue.svg)](#release-status)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![Agent Skills](https://img.shields.io/badge/agent--skills-compatible-111827.svg)](agent-skills/)
 
-The project is designed to work across agent hosts through portable `SKILL.md` workflows, command snippets, specialist personas, and a helper CLI.
+Dev Agent OPC is a portable workflow pack for AI coding agents. It gives an
+agent a structured operating model for product and engineering work: idea
+refinement, product requirements, agent workflow design, specification, UX
+design, planning, implementation, testing, review, and launch.
+
+The repository keeps the canonical source in `agent-skills/` and uses
+`bin/dev-flow` as a local control plane for project state, quality gates,
+adapter packaging, and host-specific installation.
+
+## Why This Exists
+
+General-purpose coding agents are useful, but real product work needs more than
+one prompt. Dev Agent OPC turns repeatable delivery practices into reusable
+agent workflows:
+
+- lifecycle stages with explicit artifacts
+- specialist personas for product design, UI QA, code review, testing, and security
+- evidence gates before phase transitions and shipping
+- reference-driven UI workflows for customer-facing products
+- portable adapters for Codex, Claude Code, Gemini CLI, OpenClaw, and OpenCode
 
 ## Based On
 
-Dev Agent OPC is based on and extends [Addy Osmani's `agent-skills`](https://github.com/addyosmani/agent-skills), adding project-state management, product-management flow, AI-agent product flow, UI quality gates, adapter packaging, and OpenClaw-oriented installation support.
+Dev Agent OPC builds on [Addy Osmani's `agent-skills`](https://github.com/addyosmani/agent-skills)
+and adds a project-local workflow layer, product-management flow, AI-agent
+product flow, visual quality gates, adapter packaging, and OpenClaw-oriented
+installation support.
 
-Related platforms and surfaces:
+## Release Status
 
-- [OpenClaw](https://github.com/openclaw/openclaw) / [OpenClaw Docs](https://docs.openclaw.ai)
-- [Codex CLI](https://www.npmjs.com/package/@openai/codex)
-- Claude Code, Gemini CLI, OpenCode, and other `SKILL.md`-compatible agent environments
+`v0.1` is the first maintained release line for this repository.
 
-## What It Provides
+Highlights in this release:
 
-### Lifecycle Workflows
+- evidence-gated phase transitions in `bin/dev-flow`
+- optional `pm`, `agent`, `design`, and UI mockup gates through `.dev-flow/applicability.env`
+- reference intake, design checks, and screenshot-based visual QA for UI work
+- shared design, platform UX, visual QA, and image-generation reference material
+- ignored runtime `work/` state so personal project experiments are not published accidentally
+- adapter generation and installation paths for multiple agent hosts
 
-| Stage | Alias / Command | Main skill | Output |
-|---|---|---|---|
-| Idea | `idea` / `/idea` | `idea-refine` | Focused idea brief |
-| Product | `pm` / `/pm` | `pm-flow` | PRD, user stories, metrics, acceptance criteria |
-| Agent | `agent` / `/agent` | `agent-flow` | Agent workflow, tools, prompts, memory, operations, recovery, evals |
-| Spec | `spec` / `/spec` | `spec-driven-development` | Buildable technical/product spec |
-| Design | `design` / `/design` | `design-flow` | UX, visual system, screen acceptance |
-| Plan | `plan` / `/plan` | `planning-and-task-breakdown` | Small verifiable tasks |
-| Build | `build` / `/build` | `incremental-implementation` + `test-driven-development` | Implemented slices with proof |
-| Test | `test` / `/test` | `test-driven-development` | Tests, regression proof, verification evidence |
-| Review | `review` / `/review` | `code-review-and-quality` | Structured quality review |
-| Ship | `ship` / `/ship` | `shipping-and-launch` | Launch notes, go/no-go, rollback plan |
-
-### Specialist Personas
-
-- `product-designer` — customer-facing UX, visual systems, references, and screen acceptance criteria
-- `ui-quality-reviewer` — screenshot-based visual QA and polish review
-- `code-reviewer` — correctness, readability, architecture, security, and performance review
-- `test-engineer` — test strategy, coverage, and prove-it regression tests
-- `security-auditor` — threat modeling, vulnerability review, and hardening recommendations
-
-### Quality Gates
-
-The helper CLI can create and check project state under `work/<project-name>/`:
-
-- `reference-check` — ensures customer-facing UI has reference images, software, links, or explicit visual-direction delegation
-- `design-check` — requires `DESIGN.md`, `VISUAL_SYSTEM.md`, and `SCREEN_ACCEPTANCE.md`
-- `visual-check` — requires screenshot evidence and `VISUAL_QA.md`
-- `check` — runs the project-local `bin/check` gate
-
-### Adapter Packaging
-
-The repository can generate or install adapters for:
-
-- Codex App/CLI
-- Claude Code
-- Gemini CLI
-- OpenClaw
-- OpenCode
-
-Generated adapter output is disposable and should be regenerated from `agent-skills/` rather than edited by hand.
-
-## Repository Structure
+## Repository Layout
 
 ```text
 agent-skills/
   skills/          Canonical SKILL.md workflows
-  agents/          Specialist personas
+  agents/          Specialist agent personas
   commands/        Platform-neutral command prompts
-  references/      Shared quality and orchestration references
+  references/      Shared checklists, rubrics, and orchestration guidance
   .claude/         Claude Code command files
-  .gemini/         Gemini command files
-bin/dev-flow       Helper CLI for project state, gates, packaging, and installs
-work/              Runtime project artifacts created on demand by bin/dev-flow init; git-ignored by default
+  .gemini/         Gemini CLI command files
+bin/dev-flow       Helper CLI for state, gates, packaging, and installs
+DEV_FLOW.md        Detailed local workflow documentation
+AGENTS.md          Agent instructions for this repository
+work/              Runtime project state created on demand; ignored by git
 ```
+
+`work/` is intentionally absent from a clean checkout. It is created only when
+you run `bin/dev-flow init <project-name>`.
+
+## Lifecycle
+
+| Stage | Alias / Command | Main workflow | Primary output |
+|---|---|---|---|
+| Idea | `idea` / `/idea` | `idea-refine` | Focused idea brief |
+| Product | `pm` / `/pm` | `pm-flow` | PRD, user stories, metrics, acceptance criteria |
+| Agent | `agent` / `/agent` | `agent-flow` | Agent workflow, tools, prompts, operations, recovery, evals |
+| Spec | `spec` / `/spec` | `spec-driven-development` | Buildable product and technical spec |
+| Design | `design` / `/design` | `design-flow` | UX, visual system, screen acceptance criteria |
+| Plan | `plan` / `/plan` | `planning-and-task-breakdown` | Small, verifiable implementation tasks |
+| Build | `build` / `/build` | `incremental-implementation` | Implemented slices with proof |
+| Test | `test` / `/test` | `test-driven-development` | Tests and regression evidence |
+| Review | `review` / `/review` | `code-review-and-quality` | Structured quality review |
+| Ship | `ship` / `/ship` | `shipping-and-launch` | Launch notes, go/no-go, rollback plan |
 
 ## Quick Start
 
+Inspect the available workflows:
+
 ```bash
-# Inspect available workflows
 bin/dev-flow list
 bin/dev-flow command pm
 bin/dev-flow command agent
+bin/dev-flow refs
+```
 
-# Start a project
+Start a project:
+
+```bash
 bin/dev-flow init my-project
 bin/dev-flow status my-project
 bin/dev-flow next my-project
+```
 
-# Move through phases. Each transition verifies all prior applicable phases by default.
+Move through phases:
+
+```bash
 bin/dev-flow phase my-project pm "Write product requirements"
 bin/dev-flow phase my-project agent "Design agent workflow"
 bin/dev-flow phase my-project spec "Write buildable spec"
-
-# Verify a single phase or the whole delivery package
-bin/dev-flow verify-phase my-project design
-bin/dev-flow ship-check my-project
-
-# Use --force only when intentionally recording state before artifacts exist
-bin/dev-flow phase my-project design "Explore UX direction" --force
 ```
 
-`pm`, `agent`, `design`, and design mockups are applicability-gated. Configure
-`work/<project-name>/.dev-flow/applicability.env` with `PM_FLOW`,
-`AGENT_FLOW`, `UI_FLOW`, and `UI_MOCKUPS` set to `auto`, `required`, or
-`disabled`.
+Verify work before claiming progress:
 
-`work/` is runtime state, not part of the published workflow pack. It does not
-need to exist in a clean checkout, and generated project folders are ignored so
-local experiments are not published accidentally.
+```bash
+bin/dev-flow verify-phase my-project spec
+bin/dev-flow check my-project
+bin/dev-flow ship-check my-project
+```
 
-For customer-facing UI:
+Phase transitions verify all prior applicable phases by default. Use `--force`
+only when intentionally recording state before artifacts exist.
+
+## Applicability Gates
+
+Each project gets `work/<project-name>/.dev-flow/applicability.env`.
+
+Use it to control optional workflow phases:
+
+```bash
+PM_FLOW="auto"
+AGENT_FLOW="auto"
+UI_FLOW="auto"
+UI_MOCKUPS="auto"
+GIT_CHECKPOINTS="auto"
+```
+
+Supported values:
+
+- `auto` validates the phase only after matching artifacts exist.
+- `required` treats the phase as part of phase transitions and `ship-check`.
+- `disabled` skips the phase in phase transitions and `ship-check`.
+
+## UI Quality Gates
+
+Customer-facing UI work should be grounded in concrete references and verified
+with screenshots.
 
 ```bash
 bin/dev-flow reference-check my-project --required
@@ -117,9 +148,13 @@ bin/dev-flow design-check my-project
 bin/dev-flow visual-check my-project
 ```
 
-## Package Or Install
+Reference material can include screenshots, Figma exports, app names, websites,
+competitor products, platform UI examples, or explicit user-delegated visual
+direction.
 
-Generate adapter output:
+## Adapter Packaging
+
+Generate disposable adapter output:
 
 ```bash
 bin/dev-flow package-adapters
@@ -136,24 +171,40 @@ bin/dev-flow install opencode --scope project
 ```
 
 Use `--dest <path>` to install into a staging directory or custom agent home.
+Generated adapter folders are build output and should be regenerated from
+`agent-skills/`, not edited by hand.
+
+## Specialist Personas
+
+- `product-designer` for UX, visual systems, reference synthesis, and screen acceptance.
+- `ui-quality-reviewer` for screenshot-based visual QA and polish review.
+- `code-reviewer` for correctness, readability, architecture, security, and performance review.
+- `test-engineer` for test strategy, coverage, and regression proof.
+- `security-auditor` for threat modeling, vulnerability review, and hardening.
+
+## Development Model
+
+- `main` is the release branch.
+- `dev` is the active iteration branch after `v0.1`.
+- Release tags use the `vX.Y` format.
+- Commit messages should follow Conventional Commits, for example `docs: polish README for v0.1 release`.
+
+Runtime project folders under `work/` and generated adapter installs such as
+`.codex/`, `.claude/`, `.gemini/`, `.openclaw/`, `.opencode/`, and `dist/` are
+ignored by git.
 
 ## Design Principles
 
-- **Spec before code** — reduce guessing by making requirements explicit.
-- **Product before implementation** — PRDs, stories, and metrics clarify what matters.
-- **Agent workflows before prompts** — reliable AI products need tools, permissions, memory, operations, recovery, and evals, not just instructions.
-- **Reference-driven UI** — customer-facing design should be grounded in concrete references or explicit visual direction.
-- **Small verifiable slices** — every task should have acceptance criteria and evidence.
-- **Evidence-gated phases** — phase changes are state updates, not work execution; `verify-phase` and `ship-check` make applicable artifacts explicit before claiming progress.
-- **Portable adapters** — keep canonical workflows in `agent-skills/`, then generate host-specific installs.
+- Make requirements explicit before implementation.
+- Keep source workflows canonical in `agent-skills/`.
+- Treat phase changes as state updates, not proof of completed work.
+- Use executable quality gates instead of prose-only reminders.
+- Keep customer-facing UI reference-driven and screenshot-reviewed.
+- Keep local project experiments separate from the publishable workflow pack.
 
-## Author
+## Maintainer
 
-Created and maintained by:
-
-- **Kevin KE**
-- **laoke.ai**
-- Built to work with **OpenClaw** and **Model GPT-5.5**
+Created and maintained by Kevin KE / laoke.ai.
 
 ## License
 
