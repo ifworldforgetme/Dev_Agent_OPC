@@ -175,7 +175,7 @@ If a task is L or larger, it should be broken into smaller tasks. An agent perfo
 
 ### Checkpoint: Complete
 - [ ] All acceptance criteria met
-- [ ] Ready for review
+- [ ] Ready for review, or ready to continue when routine implementation is delegated
 
 ## Risks and Mitigations
 | Risk | Impact | Mitigation |
@@ -229,6 +229,6 @@ Before starting implementation, confirm:
 - [ ] Task dependencies are identified and ordered correctly
 - [ ] No task touches more than ~5 files
 - [ ] Checkpoints exist between major phases
-- [ ] The human has reviewed and approved the plan
+- [ ] The human has reviewed and approved the plan, or routine implementation is delegated and no review gate is open
 - [ ] The plan and referenced source paths live under `work/<project-name>/`
 - [ ] User-facing work references design requirements from `work/<project-name>/design/`

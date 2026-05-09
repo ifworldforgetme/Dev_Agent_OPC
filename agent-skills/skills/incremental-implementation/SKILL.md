@@ -38,7 +38,7 @@ For each slice:
 1. **Implement** the smallest complete piece of functionality
 2. **Test** — run the test suite (or write a test if none exists)
 3. **Verify** — confirm the slice works as expected (tests pass, build succeeds, manual check)
-4. **Commit** -- save your progress with a descriptive message (see `git-workflow-and-versioning` for atomic commit guidance)
+4. **Commit or checkpoint** -- when inside a git repo and the user/workspace has authorized commits, save progress with a descriptive commit. Otherwise, record a checkpoint in `work/<project-name>/tasks/status.md` with changed files and verification evidence.
 5. **Move to the next slice** — carry forward, don't restart
 
 Use the project-local workspace layout for all implementation work:
@@ -147,6 +147,8 @@ Each increment changes one logical thing. Don't mix concerns:
 
 **Good:** Three separate commits — one for each change.
 
+If commits are not appropriate in the current environment, use the same atomicity for checkpoints: one status entry per logical change, with files touched and verification output.
+
 ### Rule 2: Keep It Compilable
 
 After each increment, the project must build and existing tests must pass. Don't leave the codebase in a broken state between slices.
@@ -213,7 +215,7 @@ After each increment, verify:
 - [ ] Type checking passes (`npx tsc --noEmit`)
 - [ ] Linting passes (`npm run lint`)
 - [ ] The new functionality works as expected
-- [ ] The change is committed with a descriptive message
+- [ ] The change is committed with a descriptive message, or checkpointed in `tasks/status.md` when commits are unavailable or not authorized
 
 **Note:** Run each verification command after a change that could affect it. After a successful run, don't repeat the same command unless the code has changed since — re-running on unchanged code adds no information.
 
@@ -223,7 +225,7 @@ After each increment, verify:
 |---|---|
 | "I'll test it all at the end" | Bugs compound. A bug in Slice 1 makes Slices 2-5 wrong. Test each slice. |
 | "It's faster to do it all at once" | It *feels* faster until something breaks and you can't find which of 500 changed lines caused it. |
-| "These changes are too small to commit separately" | Small commits are free. Large commits hide bugs and make rollbacks painful. |
+| "These changes are too small to commit or checkpoint separately" | Small commits/checkpoints are cheap. Large untracked batches hide bugs and make rollbacks painful. |
 | "I'll add the feature flag later" | If the feature isn't complete, it shouldn't be user-visible. Add the flag now. |
 | "This refactor is small enough to include" | Refactors mixed with features make both harder to review and debug. Separate them. |
 | "Let me run the build command again just to be sure" | After a successful run, repeating the same command adds nothing unless the code has changed since. Run it again after subsequent edits, not as reassurance. |
@@ -236,6 +238,7 @@ After each increment, verify:
 - Skipping the test/verify step to move faster
 - Build or tests broken between increments
 - Large uncommitted changes accumulating
+- No checkpoint record in a non-git or no-commit environment
 - Building abstractions before the third use case demands it
 - Touching files outside the task scope "while I'm here"
 - Creating new utility files for one-time operations
@@ -245,8 +248,8 @@ After each increment, verify:
 
 After completing all increments for a task:
 
-- [ ] Each increment was individually tested and committed
+- [ ] Each increment was individually tested and committed or checkpointed
 - [ ] The full test suite passes
 - [ ] The build is clean
 - [ ] The feature works end-to-end as specified
-- [ ] No uncommitted changes remain
+- [ ] No uncommitted changes remain, or remaining changes are intentionally listed in the latest checkpoint

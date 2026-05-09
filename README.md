@@ -22,7 +22,7 @@ Related platforms and surfaces:
 |---|---|---|---|
 | Idea | `idea` / `/idea` | `idea-refine` | Focused idea brief |
 | Product | `pm` / `/pm` | `pm-flow` | PRD, user stories, metrics, acceptance criteria |
-| Agent | `agent` / `/agent` | `agent-flow` | Agent workflow, tools, prompts, memory, recovery, evals |
+| Agent | `agent` / `/agent` | `agent-flow` | Agent workflow, tools, prompts, memory, operations, recovery, evals |
 | Spec | `spec` / `/spec` | `spec-driven-development` | Buildable technical/product spec |
 | Design | `design` / `/design` | `design-flow` | UX, visual system, screen acceptance |
 | Plan | `plan` / `/plan` | `planning-and-task-breakdown` | Small verifiable tasks |
@@ -71,7 +71,7 @@ agent-skills/
   .claude/         Claude Code command files
   .gemini/         Gemini command files
 bin/dev-flow       Helper CLI for project state, gates, packaging, and installs
-work/              Local project artifacts created by bin/dev-flow init
+work/              Runtime project artifacts created on demand by bin/dev-flow init; git-ignored by default
 ```
 
 ## Quick Start
@@ -87,7 +87,7 @@ bin/dev-flow init my-project
 bin/dev-flow status my-project
 bin/dev-flow next my-project
 
-# Move through phases. Each transition verifies the previous phase by default.
+# Move through phases. Each transition verifies all prior applicable phases by default.
 bin/dev-flow phase my-project pm "Write product requirements"
 bin/dev-flow phase my-project agent "Design agent workflow"
 bin/dev-flow phase my-project spec "Write buildable spec"
@@ -99,6 +99,15 @@ bin/dev-flow ship-check my-project
 # Use --force only when intentionally recording state before artifacts exist
 bin/dev-flow phase my-project design "Explore UX direction" --force
 ```
+
+`pm`, `agent`, `design`, and design mockups are applicability-gated. Configure
+`work/<project-name>/.dev-flow/applicability.env` with `PM_FLOW`,
+`AGENT_FLOW`, `UI_FLOW`, and `UI_MOCKUPS` set to `auto`, `required`, or
+`disabled`.
+
+`work/` is runtime state, not part of the published workflow pack. It does not
+need to exist in a clean checkout, and generated project folders are ignored so
+local experiments are not published accidentally.
 
 For customer-facing UI:
 
@@ -132,10 +141,10 @@ Use `--dest <path>` to install into a staging directory or custom agent home.
 
 - **Spec before code** — reduce guessing by making requirements explicit.
 - **Product before implementation** — PRDs, stories, and metrics clarify what matters.
-- **Agent workflows before prompts** — reliable AI products need tools, permissions, memory, recovery, and evals, not just instructions.
+- **Agent workflows before prompts** — reliable AI products need tools, permissions, memory, operations, recovery, and evals, not just instructions.
 - **Reference-driven UI** — customer-facing design should be grounded in concrete references or explicit visual direction.
 - **Small verifiable slices** — every task should have acceptance criteria and evidence.
-- **Evidence-gated phases** — phase changes are state updates, not work execution; `verify-phase` and `ship-check` make artifacts explicit before claiming progress.
+- **Evidence-gated phases** — phase changes are state updates, not work execution; `verify-phase` and `ship-check` make applicable artifacts explicit before claiming progress.
 - **Portable adapters** — keep canonical workflows in `agent-skills/`, then generate host-specific installs.
 
 ## Author

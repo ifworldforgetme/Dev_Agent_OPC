@@ -7,6 +7,8 @@ description: Creates product-management artifacts before design or implementatio
 
 Turn product intent into buildable product-management artifacts before design, planning, or code.
 
+`pm-flow` owns product intent: who the product serves, what user-visible outcome matters, MVP scope, stories, acceptance criteria, metrics, and reference-product notes. It does **not** own technical architecture, exact build commands, repository layout, or implementation sequencing; hand those to `spec-driven-development` and `planning-and-task-breakdown`.
+
 ## When to Use
 
 - Writing or improving a PRD
@@ -58,7 +60,8 @@ Save artifacts under `work/<project-name>/product/`:
 6. **Prepare downstream handoff**
    - If user-facing UI is involved, hand off to `design-flow`
    - If agent behavior is involved, hand off to `agent-flow`
-   - If requirements are ready for build planning, hand off to `spec-driven-development` or `planning-and-task-breakdown`
+   - If requirements are ready for technical definition, hand off to `spec-driven-development`
+   - Do not duplicate technical architecture or task planning inside the PRD; link to downstream spec and plan artifacts instead
 
 ## PRD Template
 
@@ -102,6 +105,7 @@ Save artifacts under `work/<project-name>/product/`:
 - Design requirements needed:
 - Agent/workflow requirements needed:
 - Technical spec requirements needed:
+- Decisions intentionally left for technical spec:
 ```
 
 ## Verification

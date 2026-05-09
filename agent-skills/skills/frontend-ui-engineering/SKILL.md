@@ -21,6 +21,18 @@ Build production-quality user interfaces that are accessible, performant, and vi
 For substantial UI or mobile product changes, load `design-flow` before implementation planning so information architecture, platform interaction requirements, and visual direction are explicit before code is written.
 For customer-facing UI, do not start implementation until `DESIGN.md`, `VISUAL_SYSTEM.md`, and `SCREEN_ACCEPTANCE.md` exist under `work/<project-name>/design/`.
 
+## Platform Adaptation
+
+The code examples below use React/Tailwind because they are compact examples of UI engineering principles. They are not a required stack.
+
+- Web React/Vue/Svelte: translate the examples into local components, state management, routing, styling tokens, and browser semantics.
+- SwiftUI/iOS: follow platform navigation, safe areas, Dynamic Type, gestures, permission timing, haptics, and accessibility APIs.
+- Android/Compose/XML: follow Android back behavior, Material/platform conventions, system bars, density classes, permissions, and content descriptions.
+- Flutter/React Native: follow native navigation, platform-specific gestures, safe areas, text scaling, accessibility labels, and device breakpoints.
+- Desktop/electron/native: prioritize keyboard, resizable layouts, menus, focus rings, dense information display, and multi-window behavior.
+
+Always inspect the existing app stack before choosing patterns. If `SCREEN_ACCEPTANCE.md` conflicts with platform conventions, surface the tradeoff before implementation.
+
 ## Component Architecture
 
 ### File Structure

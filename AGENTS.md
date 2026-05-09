@@ -73,9 +73,12 @@ project-specific checks listed in `work/<project-name>/tasks/quality-gates.md`.
 Before delivery, run `bin/dev-flow ship-check <project-name>`.
 
 Important: `bin/dev-flow phase` records state only; it does not execute the
-skill work. By default it verifies the previous phase before moving forward. Use
-`--force` only when intentionally recording an early state and then complete the
-missing artifacts before delivery.
+skill work. By default it verifies all prior applicable phases before moving
+forward. `pm`, `agent`, `design`, and design mockups are applicability-gated by
+`work/<project-name>/.dev-flow/applicability.env`; set `PM_FLOW`,
+`AGENT_FLOW`, `UI_FLOW`, or `UI_MOCKUPS` to `required`, `disabled`, or `auto`.
+Use `--force` only when intentionally recording an early state and then complete
+the missing artifacts before delivery.
 
 For customer-facing apps, run `bin/dev-flow reference-check <project-name>
 --required` before design or visual implementation. Use user-provided reference
@@ -99,6 +102,10 @@ as blockers unless the user explicitly narrows scope away from customer-facing U
 
 ## Artifacts
 
+`work/` is runtime state. It does not need to exist in a clean checkout, and
+generated project folders are ignored by git by default so personal experiments
+are not published with the reusable workflow pack.
+
 Keep every project self-contained under `work/<project-name>/`.
 Project-specific source code and runtime apps belong inside that project folder, not
 at the workspace root.
@@ -121,10 +128,10 @@ at the workspace root.
 Expected phase outputs:
 
 - Idea: `work/<project-name>/ideas/idea-brief.md`
-- Product: `work/<project-name>/product/PRD.md`, `USER_STORIES.md`, `ACCEPTANCE.md`
-- Agent: `work/<project-name>/agent/AGENT_SPEC.md`, `WORKFLOW.md`, `TOOLS_AND_PERMISSIONS.md`, `EVALS.md`
+- Product, when applicable: `work/<project-name>/product/PRD.md`, `USER_STORIES.md`, `ACCEPTANCE.md`, `METRICS.md`
+- Agent, when applicable: `work/<project-name>/agent/AGENT_SPEC.md`, `WORKFLOW.md`, `TOOLS_AND_PERMISSIONS.md`, `PROMPTS_AND_SKILLS.md`, `EVALS.md`, `FAILURE_RECOVERY.md`, `OPERATIONS.md`
 - Spec: `work/<project-name>/specs/SPEC.md`
-- Design: `work/<project-name>/design/DESIGN.md`, `work/<project-name>/design/VISUAL_SYSTEM.md`, `work/<project-name>/design/SCREEN_ACCEPTANCE.md`
+- Design, when UI is applicable: `work/<project-name>/design/DESIGN.md`, `work/<project-name>/design/VISUAL_SYSTEM.md`, `work/<project-name>/design/SCREEN_ACCEPTANCE.md`
 - Plan: `work/<project-name>/tasks/PLAN.md`
 - Visual QA: `work/<project-name>/reviews/VISUAL_QA.md`
 - Review: `work/<project-name>/reviews/REVIEW.md`

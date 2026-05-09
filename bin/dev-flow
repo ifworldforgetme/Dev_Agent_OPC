@@ -41,6 +41,10 @@ Aliases:
   ship      -> shipping-and-launch
   pm        -> pm-flow
   agent     -> agent-flow
+
+Applicability:
+  Optional phases are controlled by work/<project-name>/.dev-flow/applicability.env.
+  Set PM_FLOW, AGENT_FLOW, UI_FLOW, or UI_MOCKUPS to auto, required, or disabled.
 EOF
 }
 
@@ -56,6 +60,10 @@ project_path() {
 
 state_path() {
   echo "$(project_path "${1:-}")/.dev-flow/state.env"
+}
+
+applicability_path() {
+  echo "$(project_path "${1:-}")/.dev-flow/applicability.env"
 }
 
 require_project() {
@@ -210,6 +218,85 @@ has_content() {
   [[ -s "$path" ]] && [[ "$(wc -l < "$path" | tr -d ' ')" -ge 5 ]]
 }
 
+load_project_applicability() {
+  local path
+  PM_FLOW="auto"
+  AGENT_FLOW="auto"
+  UI_FLOW="auto"
+  UI_MOCKUPS="auto"
+  GIT_CHECKPOINTS="auto"
+  path="$(applicability_path "${1:-}")"
+  if [[ -f "$path" ]]; then
+    # shellcheck disable=SC1090
+    source "$path"
+  fi
+}
+
+setting_enabled() {
+  case "${1:-}" in
+    required|enabled|true|yes|1) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+setting_disabled() {
+  case "${1:-}" in
+    disabled|false|no|0|skip|off) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+has_phase_artifact() {
+  local project="$1"
+  local phase="$2"
+  local dir
+  dir="$(project_path "$project")"
+  case "$phase" in
+    pm)
+      [[ -s "$dir/product/PRD.md" || -s "$dir/product/USER_STORIES.md" || -s "$dir/product/ACCEPTANCE.md" || -s "$dir/product/METRICS.md" ]]
+      ;;
+    agent)
+      [[ -s "$dir/agent/AGENT_SPEC.md" || -s "$dir/agent/WORKFLOW.md" || -s "$dir/agent/TOOLS_AND_PERMISSIONS.md" || -s "$dir/agent/PROMPTS_AND_SKILLS.md" || -s "$dir/agent/EVALS.md" || -s "$dir/agent/FAILURE_RECOVERY.md" || -s "$dir/agent/OPERATIONS.md" ]]
+      ;;
+    design)
+      [[ -s "$dir/design/DESIGN.md" || -s "$dir/design/VISUAL_SYSTEM.md" || -s "$dir/design/SCREEN_ACCEPTANCE.md" ]] && return 0
+      [[ "$(count_reference_assets "$dir")" -gt 0 || "$(count_reference_links "$dir")" -gt 0 || "$(count_design_mockups "$dir")" -gt 0 ]]
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
+phase_is_applicable() {
+  local project="$1"
+  local phase="$2"
+  load_project_applicability "$project"
+  case "$phase" in
+    idea|spec|plan|build|test|review|ship)
+      return 0
+      ;;
+    pm)
+      setting_disabled "$PM_FLOW" && return 1
+      setting_enabled "$PM_FLOW" && return 0
+      has_phase_artifact "$project" pm
+      ;;
+    agent)
+      setting_disabled "$AGENT_FLOW" && return 1
+      setting_enabled "$AGENT_FLOW" && return 0
+      has_phase_artifact "$project" agent
+      ;;
+    design)
+      setting_disabled "$UI_FLOW" && return 1
+      setting_enabled "$UI_FLOW" && return 0
+      has_phase_artifact "$project" design
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
 phase_index() {
   case "${1:-}" in
     idea) echo 0 ;;
@@ -226,19 +313,24 @@ phase_index() {
   esac
 }
 
-previous_phase() {
-  case "${1:-}" in
-    pm) echo idea ;;
-    agent) echo pm ;;
-    spec) echo agent ;;
-    design) echo spec ;;
-    plan) echo design ;;
-    build) echo plan ;;
-    test) echo build ;;
-    review) echo test ;;
-    ship) echo review ;;
-    *) echo "" ;;
-  esac
+verify_prior_applicable_phases() {
+  local project="$1"
+  local phase="$2"
+  local target_idx candidate candidate_idx failures
+  target_idx="$(phase_index "$phase")"
+  failures=0
+  for candidate in idea pm agent spec design plan build test review ship; do
+    candidate_idx="$(phase_index "$candidate")"
+    if [[ "$candidate_idx" -ge 0 && "$candidate_idx" -lt "$target_idx" ]]; then
+      if phase_is_applicable "$project" "$candidate"; then
+        echo "Verifying prior phase before entering $phase: $candidate"
+        if ! verify_phase_impl "$project" "$candidate"; then
+          failures=$((failures + 1))
+        fi
+      fi
+    fi
+  done
+  [[ "$failures" -eq 0 ]]
 }
 
 record_verification() {
@@ -292,7 +384,7 @@ verify_phase_impl() {
       done
       ;;
     agent)
-      for file in agent/AGENT_SPEC.md agent/WORKFLOW.md agent/TOOLS_AND_PERMISSIONS.md agent/PROMPTS_AND_SKILLS.md agent/EVALS.md agent/FAILURE_RECOVERY.md; do
+      for file in agent/AGENT_SPEC.md agent/WORKFLOW.md agent/TOOLS_AND_PERMISSIONS.md agent/PROMPTS_AND_SKILLS.md agent/EVALS.md agent/FAILURE_RECOVERY.md agent/OPERATIONS.md; do
         require_content_file "$dir" "$file" || failures=$((failures + 1))
       done
       ;;
@@ -307,7 +399,8 @@ verify_phase_impl() {
         echo "Missing references: add reference assets/software or reference links before design verification." >&2
         failures=$((failures + 1))
       fi
-      if [[ "$mockups" -eq 0 ]]; then
+      load_project_applicability "$project"
+      if setting_enabled "$UI_MOCKUPS" && [[ "$mockups" -eq 0 ]]; then
         echo "Missing design mockups: add image/SVG/PDF/Figma artifacts under design/mocks/." >&2
         failures=$((failures + 1))
       fi
@@ -359,6 +452,10 @@ ship_check_impl() {
   local phase failures
   failures=0
   for phase in idea pm agent spec design plan build test review ship; do
+    if ! phase_is_applicable "$project" "$phase"; then
+      echo "Skipping non-applicable phase: $project/$phase"
+      continue
+    fi
     if ! verify_phase_impl "$project" "$phase"; then
       failures=$((failures + 1))
     fi
@@ -682,12 +779,25 @@ CURRENT_PHASE=\"idea\"
 CURRENT_TASK=\"Refine the initial idea\"
 BLOCKERS=\"none\"
 LAST_VERIFICATION=\"not run\""
+    write_if_missing "$dir/.dev-flow/applicability.env" "# Phase applicability for $project
+# Values: auto, required, disabled
+#
+# auto: validate this phase only after matching artifacts exist
+# required: treat this phase as part of phase transitions and ship-check
+# disabled: skip this phase in phase transitions and ship-check
+PM_FLOW=\"auto\"
+AGENT_FLOW=\"auto\"
+UI_FLOW=\"auto\"
+UI_MOCKUPS=\"auto\"
+GIT_CHECKPOINTS=\"auto\""
     write_if_missing "$dir/.dev-flow/context.md" "# Context Loading: $project
 
 Load only the files needed for the current phase.
 
 - Idea: read \`ideas/\` and relevant user notes.
-- Spec: read approved idea artifacts and existing app files if present.
+- Product: read \`product/\` only when PM_FLOW is required or product artifacts exist.
+- Agent: read \`agent/\` only when AGENT_FLOW is required or agent artifacts exist.
+- Spec: read approved idea/product/agent artifacts that apply, and existing app files if present.
 - Design: read \`specs/SPEC.md\`, \`design/reference-intake.md\`, user-provided references, existing screens, and platform constraints.
 - Plan: read approved spec/design and inspect likely source boundaries.
 - Build: read the assigned task, nearby source files, and tests.
@@ -775,6 +885,8 @@ for f in \"\${required_files[@]}\"; do
   [[ -f \"\$ROOT/\$f\" ]] || { echo \"Missing file: \$f\" >&2; exit 1; }
 done
 
+[[ -f \"\$ROOT/.dev-flow/applicability.env\" ]] || { echo \"Missing file: .dev-flow/applicability.env\" >&2; exit 1; }
+
 echo \"Default workflow gate passed for \$(basename \"\$ROOT\").\""
     chmod +x "$dir/bin/check"
     echo "Initialized $dir"
@@ -819,11 +931,7 @@ echo \"Default workflow gate passed for \$(basename \"\$ROOT\").\""
       exit 1
     fi
     if [[ "$force" != "true" ]]; then
-      prev="$(previous_phase "$phase")"
-      if [[ -n "$prev" ]]; then
-        echo "Verifying previous phase before entering $phase: $prev"
-        verify_phase_impl "$project" "$prev"
-      fi
+      verify_prior_applicable_phases "$project" "$phase"
     fi
     load_project_state "$project"
     if [[ -z "$task" ]]; then
@@ -922,7 +1030,8 @@ echo \"Default workflow gate passed for \$(basename \"\$ROOT\").\""
     done
     mockups="$(count_design_mockups "$dir")"
     screenshots="$(count_visual_screenshots "$dir")"
-    if [[ "$mockups" -eq 0 ]]; then
+    load_project_applicability "$project"
+    if setting_enabled "$UI_MOCKUPS" && [[ "$mockups" -eq 0 ]]; then
       echo "Missing design mockup evidence under design/mocks/." >&2
       failures=$((failures + 1))
     fi

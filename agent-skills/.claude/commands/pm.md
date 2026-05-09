@@ -11,6 +11,7 @@ Use this before design, planning, or implementation when product scope needs to 
 3. Write user stories with testable acceptance criteria.
 4. Capture competitor/reference notes when relevant.
 5. Define success metrics and guardrails.
-6. Save artifacts under `work/<project-name>/product/`.
+6. Leave technical architecture, commands, repository layout, and implementation sequencing for `spec-driven-development` and `planning-and-task-breakdown`.
+7. Save artifacts under `work/<project-name>/product/`.
 
 If the product includes agent behavior, continue with `agent-flow`. If it includes customer-facing UI, continue with `design-flow`.

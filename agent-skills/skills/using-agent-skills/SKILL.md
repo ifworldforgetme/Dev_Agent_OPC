@@ -17,6 +17,8 @@ When a task arrives, identify the development phase and apply the corresponding 
 Task arrives
     │
     ├── Vague idea/need refinement? ──→ idea-refine
+    ├── Product scope/PRD/stories? ───→ pm-flow
+    ├── AI agent/automation design? ──→ agent-flow
     ├── New project/feature/change? ──→ spec-driven-development
     ├── Need UX/visual design? ────────→ design-flow
     ├── Have a spec, need tasks? ──────→ planning-and-task-breakdown
@@ -127,7 +129,7 @@ These are the subtle errors that look like productivity but create problems:
 
 2. **Skills are workflows, not suggestions.** Follow the steps in order. Don't skip verification steps.
 
-3. **Multiple skills can apply.** A feature implementation might involve `idea-refine` → `spec-driven-development` → `design-flow` → `planning-and-task-breakdown` → `incremental-implementation` → `test-driven-development` → `code-review-and-quality` → `shipping-and-launch` in sequence.
+3. **Multiple skills can apply.** A feature implementation might involve `idea-refine` → `pm-flow` when product scope is unclear → `agent-flow` when agent behavior is involved → `spec-driven-development` → `design-flow` when UI is involved → `planning-and-task-breakdown` → `incremental-implementation` → `test-driven-development` → `code-review-and-quality` → `shipping-and-launch` in sequence.
 
 4. **When in doubt, start with a spec.** If the task is non-trivial and there's no spec, begin with `spec-driven-development`.
 
@@ -137,26 +139,30 @@ For a complete feature, the typical skill sequence is:
 
 ```
 1. idea-refine                 → Refine vague ideas
-2. spec-driven-development     → Define what we're building
-3. design-flow                 → Define UX, interaction, and visual requirements
-4. planning-and-task-breakdown → Break into verifiable chunks
-5. context-engineering         → Load the right context
-6. source-driven-development   → Verify against official docs
-7. incremental-implementation  → Build slice by slice
-8. test-driven-development     → Prove each slice works
-9. code-review-and-quality     → Review before merge
-10. git-workflow-and-versioning → Clean commit history
-11. documentation-and-adrs     → Document decisions
-12. shipping-and-launch        → Deploy safely
+2. pm-flow                     → Define product scope, PRD, stories, metrics when needed
+3. agent-flow                  → Define agent workflow, tools, memory, operations, evals when needed
+4. spec-driven-development     → Convert approved product/agent intent into a buildable spec
+5. design-flow                 → Define UX, interaction, and visual requirements when UI is involved
+6. planning-and-task-breakdown → Break into verifiable chunks
+7. context-engineering         → Load the right context
+8. source-driven-development   → Verify against official docs
+9. incremental-implementation  → Build slice by slice
+10. test-driven-development    → Prove each slice works
+11. code-review-and-quality    → Review before merge
+12. git-workflow-and-versioning → Commit or checkpoint cleanly
+13. documentation-and-adrs     → Document decisions
+14. shipping-and-launch        → Deploy safely
 ```
 
-Not every task needs every skill. A bug fix might only need: `debugging-and-error-recovery` → `test-driven-development` → `code-review-and-quality`.
+Not every task needs every skill. `pm-flow`, `agent-flow`, and `design-flow` are applicability-gated: use them only when product scope, agent behavior, or user-facing UI is part of the work. A bug fix might only need: `debugging-and-error-recovery` → `test-driven-development` → `code-review-and-quality`.
 
 ## Quick Reference
 
 | Phase | Skill | One-Line Summary |
 |-------|-------|-----------------|
 | Define | idea-refine | Refine ideas through structured divergent and convergent thinking |
+| Define | pm-flow | Product scope, PRD, user stories, acceptance criteria, metrics |
+| Define | agent-flow | Agent workflow, tools, permissions, memory, operations, failure recovery, evals |
 | Define | spec-driven-development | Requirements and acceptance criteria before code |
 | Design | design-flow | UX, interaction, platform, and visual requirements before planning |
 | Plan | planning-and-task-breakdown | Decompose into small, verifiable tasks |
@@ -171,7 +177,7 @@ Not every task needs every skill. A bug fix might only need: `debugging-and-erro
 | Review | code-review-and-quality | Five-axis review with quality gates |
 | Review | security-and-hardening | OWASP prevention, input validation, least privilege |
 | Review | performance-optimization | Measure first, optimize only what matters |
-| Ship | git-workflow-and-versioning | Atomic commits, clean history |
+| Ship | git-workflow-and-versioning | Atomic commits when authorized, clean checkpoints otherwise |
 | Ship | ci-cd-and-automation | Automated quality gates on every change |
 | Ship | documentation-and-adrs | Document the why, not just the what |
 | Ship | shipping-and-launch | Pre-launch checklist, monitoring, rollback plan |

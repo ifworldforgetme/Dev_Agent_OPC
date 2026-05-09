@@ -9,6 +9,8 @@ description: Creates specs before coding. Use when starting a new project, featu
 
 Write a structured specification before writing any code. The spec is the shared source of truth between you and the human engineer — it defines what we're building, why, and how we'll know it's done. Code without a spec is guessing.
 
+When a PRD or product artifact already exists under `work/<project-name>/product/`, do not recreate product-management work. Treat `pm-flow` artifacts as the source for users, jobs, MVP scope, metrics, and product acceptance criteria; this skill converts those decisions into a buildable technical/product spec with commands, structure, code style, testing strategy, boundaries, and implementation-facing success criteria.
+
 ## When to Use
 
 - Starting a new project or feature
@@ -21,19 +23,20 @@ Write a structured specification before writing any code. The spec is the shared
 
 ## The Gated Workflow
 
-Spec-driven development has four phases. Do not advance to the next phase until the current one is validated.
+Spec-driven development has four phases. Do not advance to the next phase until the current one is validated. Validation can be explicit human approval or a recorded delegated assumption when workspace instructions allow autonomous progress.
 
 ```
 SPECIFY ──→ DESIGN ──→ PLAN ──→ TASKS ──→ IMPLEMENT
    │          │          │        │          │
    ▼          ▼          ▼        ▼          ▼
- Human      Human      Human    Human      Human
- reviews    reviews    reviews  reviews    reviews
+Validate   Validate   Validate Validate   Verify
 ```
 
 ### Phase 1: Specify
 
 Start with a high-level vision. Ask the human clarifying questions until requirements are concrete.
+
+If `pm-flow` artifacts exist, start by reading `PRD.md`, `USER_STORIES.md`, `ACCEPTANCE.md`, and `METRICS.md`. Summarize their decisions briefly, then fill only the technical and delivery gaps. Do not silently change product scope, user stories, or metrics in the spec; flag conflicts and ask for resolution or record the delegated assumption.
 
 **Surface assumptions immediately.** Before writing any spec content, list what you're assuming:
 
@@ -46,7 +49,7 @@ ASSUMPTIONS I'M MAKING:
 → Correct me now or I'll proceed with these.
 ```
 
-Don't silently fill in ambiguous requirements. The spec's entire purpose is to surface misunderstandings *before* code gets written — assumptions are the most dangerous form of misunderstanding.
+Don't silently fill in ambiguous requirements. The spec's entire purpose is to surface misunderstandings *before* code gets written — assumptions are the most dangerous form of misunderstanding. If the workspace instructions explicitly delegate defaults, record those assumptions in the spec and continue unless the issue is a named human review gate.
 
 **Write a spec document covering these six core areas:**
 
@@ -79,8 +82,8 @@ Don't silently fill in ambiguous requirements. The spec's entire purpose is to s
 5. **Testing Strategy** — What framework, where tests live, coverage expectations, which test levels for which concerns.
 
 6. **Boundaries** — Three-tier system:
-   - **Always do:** Run tests before commits, follow naming conventions, validate inputs
-   - **Ask first:** Database schema changes, adding dependencies, changing CI config
+   - **Always do:** Run tests before commits or checkpoints, follow naming conventions, validate inputs
+   - **Ask first:** Database schema changes, adding dependencies, changing CI config, high-risk architecture, security/payment/permission/data-deletion behavior, production launch approval
    - **Never do:** Commit secrets, edit vendor directories, remove failing tests without approval
 
 **Spec template:**
@@ -148,7 +151,7 @@ With the validated spec, generate a technical implementation plan:
 4. Identify what can be built in parallel vs. what must be sequential
 5. Define verification checkpoints between phases
 
-The plan should be reviewable: the human should be able to read it and say "yes, that's the right approach" or "no, change X."
+The plan should be reviewable: the human should be able to read it and say "yes, that's the right approach" or "no, change X." If the user has delegated routine implementation, proceed after recording assumptions unless the plan crosses a named review gate.
 
 ### Phase 4: Tasks
 
@@ -204,7 +207,7 @@ The spec is a living document, not a one-time artifact:
 Before proceeding to implementation, confirm:
 
 - [ ] The spec covers all six core areas
-- [ ] The human has reviewed and approved the spec
+- [ ] The human has reviewed and approved the spec, or workspace instructions explicitly delegate defaults and no human review gate is open
 - [ ] Success criteria are specific and testable
 - [ ] Boundaries (Always/Ask First/Never) are defined
 - [ ] The spec is saved under `work/<project-name>/specs/`

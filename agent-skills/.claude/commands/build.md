@@ -1,5 +1,5 @@
 ---
-description: Implement the next task incrementally — build, test, verify, commit
+description: Implement the next task incrementally — build, test, verify, commit or checkpoint
 ---
 
 Invoke the agent-skills:incremental-implementation skill alongside agent-skills:test-driven-development.
@@ -14,7 +14,7 @@ Pick the next pending task from `work/<project-name>/tasks/`. Run implementation
 5. Run the full test suite to check for regressions
 6. Run the build to verify compilation
 7. For customer-facing UI, capture/update screenshot evidence and run `bin/dev-flow visual-check <project-name>` when available
-8. Commit with a descriptive message
+8. Commit with a descriptive message when inside a git repo and commits are authorized; otherwise record a checkpoint in `work/<project-name>/tasks/status.md`
 9. Mark the task complete and move to the next one
 
 If any step fails, follow the agent-skills:debugging-and-error-recovery skill.

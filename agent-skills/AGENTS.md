@@ -25,8 +25,8 @@ them, and this repository's lifecycle rules.
 
 The agent should automatically map user intent to skills:
 
-- Product definition / PRD / user stories → `pm-flow`
-- AI agent or automation workflow → `agent-flow`
+- Product definition / PRD / user stories → `pm-flow` when product scope needs definition
+- AI agent or automation workflow → `agent-flow` when agent behavior, tools, memory, approvals, operations, or evals are part of the work
 - Feature / new functionality → `spec-driven-development`, `design-flow` for user-facing work, then `planning-and-task-breakdown`, `incremental-implementation`, `test-driven-development`
 - Planning / breakdown → `planning-and-task-breakdown`
 - Bug / failure / unexpected behavior → `debugging-and-error-recovery`
@@ -42,7 +42,7 @@ The agent should automatically map user intent to skills:
 Some hosts support custom slash commands and some only support prompt snippets or
 intent mapping. In all cases, the agent must internally follow this lifecycle:
 
-- DEFINE → `idea-refine`, `pm-flow`, `agent-flow` when applicable, then `spec-driven-development`
+- DEFINE → `idea-refine`, `pm-flow` when product scope is applicable, `agent-flow` when agent behavior is applicable, then `spec-driven-development`
 - DESIGN → `design-flow` (reference intake, visual system, screen acceptance)
 - PLAN → `planning-and-task-breakdown`
 - BUILD → `incremental-implementation` + `test-driven-development`

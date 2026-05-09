@@ -1,0 +1,22 @@
+# Design Rubric
+
+Use this rubric before implementation planning for customer-facing UI.
+
+## Required Checks
+
+- Reference use: provided screenshots, apps, sites, Figma files, or competitor notes were inspected and translated into concrete patterns.
+- Information architecture: key screens, navigation, hierarchy, and primary actions are explicit.
+- Interaction model: loading, empty, error, success, disabled, selected, long-content, and narrow-screen states are defined.
+- Visual system: palette, typography, spacing, icon style, cards/panels, controls, and motion are specific enough to implement.
+- Platform fit: iOS, Android, web, desktop, or embedded constraints are named when applicable.
+- Accessibility: keyboard, focus, screen reader labels, touch targets, contrast, reduced motion, and error messaging are covered.
+- Content realism: examples use realistic copy and data lengths, not filler text.
+- Implementation handoff: `SCREEN_ACCEPTANCE.md` names screenshot evidence required before delivery.
+
+## Blocking Issues
+
+- No visual direction for customer-facing UI and no user delegation.
+- Generic AI aesthetic: purple-heavy gradients, decorative blobs, stock card grids, or nested card stacks that do not match the product.
+- Missing mobile or narrow-screen behavior.
+- Missing critical states such as loading, empty, error, permission denied, or long content.
+- Visual requirements conflict with accessibility or platform conventions.

@@ -12,7 +12,7 @@ direct adapter installation.
 - `agent-skills/.gemini/commands/`: Gemini CLI command files.
 - `AGENTS.md`: local instruction layer telling agents how to use the pack here.
 - `bin/dev-flow`: helper script for listing workflows, managing project state, enforcing gates, packaging adapters, and installing adapters.
-- `work/`: project-local specs, plans, source roots, reviews, and launch artifacts.
+- `work/`: runtime project-local specs, plans, source roots, reviews, and launch artifacts created on demand by `bin/dev-flow init`; ignored by git by default.
 
 ## Lifecycle Commands
 
@@ -65,9 +65,11 @@ bin/dev-flow ship-check <project-name>
 bin/dev-flow check <project-name>
 ```
 
-`init` creates a control layer under `work/<project-name>/`:
+`work/` does not need to exist in a clean checkout. `init` creates the directory
+and a control layer under `work/<project-name>/` when a project actually starts:
 
 - `.dev-flow/state.env`: current phase, active task, blockers, last verification
+- `.dev-flow/applicability.env`: optional phase gates for `PM_FLOW`, `AGENT_FLOW`, `UI_FLOW`, `UI_MOCKUPS`, and `GIT_CHECKPOINTS`
 - `.dev-flow/context.md`: what context to load at each lifecycle phase
 - `design/reference-intake.md`: rules for using reference images and software
 - `design/reference-links.md`: user-provided reference apps, sites, Figma links, or competitor notes
@@ -76,11 +78,13 @@ bin/dev-flow check <project-name>
 - `bin/check`: executable quality gate for this project
 
 Use `phase` whenever the project moves from idea to pm, agent, spec, design,
-plan, build, test, review, or ship. A phase transition verifies the previous
-phase by default; use `--force` only when deliberately recording state before
-artifacts are ready. Use `verify-phase` to check one stage and `ship-check`
-before delivery. Use `next` at the start of a session to get the next prompt
-and artifact target.
+plan, build, test, review, or ship. A phase transition verifies all prior
+applicable phases by default. `pm`, `agent`, `design`, and design mockups are optional unless
+their artifacts exist or their flow is marked `required` in
+`.dev-flow/applicability.env`; use `--force` only when deliberately recording
+state before artifacts are ready. Use `verify-phase` to check one stage and
+`ship-check` before delivery. Use `next` at the start of a session to get the
+next prompt and artifact target.
 
 ## UI Quality Gates
 
@@ -121,8 +125,8 @@ Every phase should produce a named artifact:
 | Phase | Required output |
 |---|---|
 | Idea | `work/<project-name>/ideas/idea-brief.md` |
-| Product | `work/<project-name>/product/PRD.md`, `USER_STORIES.md`, `METRICS.md`, `ACCEPTANCE.md` |
-| Agent | `work/<project-name>/agent/AGENT_SPEC.md`, `WORKFLOW.md`, `TOOLS_AND_PERMISSIONS.md`, `PROMPTS_AND_SKILLS.md`, `EVALS.md`, `FAILURE_RECOVERY.md` |
+| Product, when applicable | `work/<project-name>/product/PRD.md`, `USER_STORIES.md`, `METRICS.md`, `ACCEPTANCE.md` |
+| Agent, when applicable | `work/<project-name>/agent/AGENT_SPEC.md`, `WORKFLOW.md`, `TOOLS_AND_PERMISSIONS.md`, `PROMPTS_AND_SKILLS.md`, `EVALS.md`, `FAILURE_RECOVERY.md`, `OPERATIONS.md` |
 | Spec | `work/<project-name>/specs/SPEC.md` |
 | Design | `work/<project-name>/design/DESIGN.md`, `VISUAL_SYSTEM.md`, `SCREEN_ACCEPTANCE.md` |
 | Plan | `work/<project-name>/tasks/PLAN.md` |
@@ -203,8 +207,9 @@ bin/dev-flow verify-phase <project-name> <phase>
 bin/dev-flow phase <project-name> <next-phase> "next task"
 ```
 
-Use `bin/dev-flow ship-check <project-name>` before delivery. It verifies idea,
-pm, agent, spec, design, plan, build, test, review, and ship artifacts. If a
-runtime gate cannot run, such as Android APK build in an environment without
-Java/Gradle/Android SDK, record the blocker in `reviews/BLOCKED_BUILD.md` rather
-than silently passing the phase.
+Use `bin/dev-flow ship-check <project-name>` before delivery. It verifies all
+required phases plus optional phases that have artifacts or are marked
+`required` in `.dev-flow/applicability.env`. If a runtime gate cannot run, such
+as Android APK build in an environment without Java/Gradle/Android SDK, record
+the blocker in `reviews/BLOCKED_BUILD.md` rather than silently passing the
+phase.

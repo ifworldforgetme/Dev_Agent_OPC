@@ -162,7 +162,7 @@ Make one simplification at a time. Run tests after each change. **Submit refacto
 FOR EACH SIMPLIFICATION:
 1. Make the change
 2. Run the test suite
-3. If tests pass → commit (or continue to next simplification)
+3. If tests pass → commit when authorized, or checkpoint in `work/<project-name>/tasks/status.md`
 4. If tests fail → revert and reconsider
 ```
 
@@ -313,7 +313,7 @@ function UserBadge({ user }: Props) {
 - Renaming things to match your preferences rather than project conventions
 - Removing error handling because "it makes the code cleaner"
 - Simplifying code you don't fully understand
-- Batching many simplifications into one large, hard-to-review commit
+- Batching many simplifications into one large, hard-to-review commit or checkpoint
 - Refactoring code outside the scope of the current task without being asked
 
 ## Verification
