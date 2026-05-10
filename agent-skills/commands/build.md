@@ -11,7 +11,7 @@ Pick the next pending task under `work/<project-name>/tasks/`:
 3. Write or update proof for the expected behavior.
 4. Implement the smallest slice that satisfies the task.
 5. Run the relevant lint, test, typecheck, and build commands from the project-local source directory.
-6. For customer-facing UI, also invoke `frontend-ui-engineering`, capture screenshot evidence, compare against imagegen boards, and run `bin/dev-flow visual-check <project-name>` when available.
+6. For customer-facing UI, also invoke `frontend-ui-engineering`, record functional and monkey test evidence, compare against imagegen boards, and run `bin/dev-flow qa-check <project-name>` when available. Capture screenshots only for exceptions or blocked flows.
 7. Update task status and verification evidence.
 
 If the implementation stalls or fails, invoke `debugging-and-error-recovery`.

@@ -34,7 +34,7 @@ The agent should automatically map user intent to skills:
 - Refactoring / simplification → `code-simplification`
 - API or interface design → `api-and-interface-design`
 - UX, visual design, reference intake, or screen acceptance before planning → `design-flow`
-- UI implementation, visual polish, or screenshot-based UI QA → `frontend-ui-engineering`
+- UI implementation, visual polish, functional UI QA, monkey testing, or visual comparison review → `frontend-ui-engineering`
 - Customer-facing UI with no references → ask for reference images/software unless the user explicitly delegates visual direction
 
 ### Lifecycle Mapping
@@ -46,7 +46,7 @@ intent mapping. In all cases, the agent must internally follow this lifecycle:
 - DESIGN → `design-flow` (reference intake, visual system, screen acceptance)
 - PLAN → `planning-and-task-breakdown`
 - BUILD → `incremental-implementation` + `test-driven-development`
-- VERIFY → `debugging-and-error-recovery`; for customer-facing UI also `frontend-ui-engineering` visual QA
+- VERIFY → `debugging-and-error-recovery`; for customer-facing UI also `frontend-ui-engineering` QA
 - REVIEW → `code-review-and-quality`
 - SHIP → `shipping-and-launch`
 
@@ -78,7 +78,7 @@ This ensures OpenCode behaves similarly to Claude Code with full workflow enforc
 This repo has three composable layers. They have different jobs and should not be confused:
 
 - **Skills** (`skills/<name>/SKILL.md`) — workflows with steps and exit criteria. The *how*. Mandatory hops when an intent matches.
-- **Personas** (`agents/<role>.md`) — roles with a perspective and an output format. The *who*. Use `product-designer` for customer-facing UX/design and `ui-quality-reviewer` for screenshot-based UI review.
+- **Personas** (`agents/<role>.md`) — roles with a perspective and an output format. The *who*. Use `product-designer` for customer-facing UX/design and `ui-quality-reviewer` for visual comparison review, functional QA evidence, and exception screenshot review.
 - **Commands** (`commands/*.md`, `.claude/commands/*.md`, `.gemini/commands/*.toml`) — user-facing entry points. The *when*. The orchestration layer.
 
 Composition rule: **the user, a command, or host intent mapping is the orchestrator. Personas do not invoke other personas.** A persona may invoke skills.

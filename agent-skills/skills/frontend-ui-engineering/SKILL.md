@@ -1,6 +1,6 @@
 ---
 name: frontend-ui-engineering
-description: Builds and visually verifies production-quality UIs. Use when building, modifying, or reviewing user-facing interfaces, components, layouts, responsive states, accessibility, screenshot evidence, or visual polish where the output must look product-grade rather than AI-generated.
+description: Builds and verifies production-quality UIs. Use when building, modifying, or reviewing user-facing interfaces, components, layouts, responsive states, accessibility, functional QA, monkey testing, visual comparison scoring, exception screenshots, or visual polish where the output must look product-grade rather than AI-generated.
 ---
 
 # Frontend UI Engineering
@@ -311,18 +311,20 @@ function useToggleTask() {
 ## See Also
 
 For detailed accessibility requirements and testing tools, see `references/accessibility-checklist.md`.
-For screenshot-based visual review, load `references/visual-qa-rubric.md`.
+For UI delivery review, load `references/visual-qa-rubric.md`.
 
-## Visual QA
+## UI QA
 
 After implementing customer-facing UI, verify it against the design contract:
 
 1. Read `work/<project-name>/design/DESIGN.md`, `VISUAL_SYSTEM.md`, and `SCREEN_ACCEPTANCE.md`.
 2. Review imagegen boards under `work/<project-name>/design/imagegen/`, prompt coverage in `imagegen-prompts.md`, cut assets under `design/cut-assets/`, and references under `references/`, `mocks/`, `screenshots/`, and `reference-links.md`.
-3. Capture screenshots under `work/<project-name>/reviews/visual-screenshots/` for the required breakpoints and key states.
-4. Check console/runtime errors when the platform supports it.
-5. Save `work/<project-name>/reviews/VISUAL_QA.md` with findings by severity, screenshots reviewed, fixes made or required, and residual risks.
-6. Run `bin/dev-flow visual-check <project-name>` when this workspace helper is available.
+3. Run functional-flow checks for the critical happy paths and recovery paths; save `work/<project-name>/reviews/FUNCTIONAL_TEST.md`.
+4. Run monkey or exploratory stress checks across navigation, repeated actions, invalid inputs, resizing, and state changes; save `work/<project-name>/reviews/MONKEY_TEST.md`.
+5. Compare the implemented UI against approved imagegen boards and cut assets; save `work/<project-name>/reviews/VISUAL_COMPARISON.md` with `Overall score: N/100`, score breakdown, differences, and decision.
+6. Capture screenshots under `work/<project-name>/reviews/visual-screenshots/` only when an exception occurs or a flow cannot be completed; document the blocker in `reviews/EXCEPTION.md` or `reviews/BLOCKED_FLOW.md`.
+7. Check console/runtime errors when the platform supports it.
+8. Run `bin/dev-flow qa-check <project-name>` when this workspace helper is available.
 
 Blocking visual issues include text overlap, clipped controls, unusable mobile or desktop layout, missing required states, inaccessible primary actions, output that ignores provided reference direction, and implementation that materially diverges from approved imagegen layout/state boards without a recorded design reason.
 
@@ -344,7 +346,9 @@ Blocking visual issues include text overlap, clipped controls, unusable mobile o
 - No keyboard navigation testing
 - Color as the sole indicator of state (red/green without text or icons)
 - Generic "AI look" (purple gradients, oversized cards, stock layouts)
-- No screenshot evidence for customer-facing UI
+- Missing functional-flow evidence for customer-facing UI
+- Missing monkey or exploratory test evidence for customer-facing UI
+- Missing visual comparison score against approved imagegen boards
 - Implementation that ignores `SCREEN_ACCEPTANCE.md`
 - Missing imagegen boards before UI implementation
 - Runtime UI that does not match approved imagegen boards or cut assets
@@ -362,6 +366,8 @@ After building UI:
 - [ ] Loading, error, and empty states all handled
 - [ ] Follows the project's design system (spacing, colors, typography)
 - [ ] No accessibility warnings in dev tools or axe-core
-- [ ] Customer-facing UI has screenshot evidence under `work/<project-name>/reviews/visual-screenshots/`
-- [ ] `VISUAL_QA.md` exists for customer-facing UI
-- [ ] `bin/dev-flow visual-check <project-name>` passes when available
+- [ ] `FUNCTIONAL_TEST.md` exists for customer-facing UI
+- [ ] `MONKEY_TEST.md` exists for customer-facing UI
+- [ ] `VISUAL_COMPARISON.md` exists with `Overall score: N/100`
+- [ ] Runtime screenshots exist only when `EXCEPTION.md` or `BLOCKED_FLOW.md` records an exception or blocked flow
+- [ ] `bin/dev-flow qa-check <project-name>` passes when available

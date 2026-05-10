@@ -184,7 +184,7 @@ The commands above are the entry points. Under the hood, they activate the skill
 | [test-driven-development](skills/test-driven-development/SKILL.md) | Red-Green-Refactor, test pyramid (80/15/5), test sizes, DAMP over DRY, Beyonce Rule, browser testing | Implementing logic, fixing bugs, or changing behavior |
 | [context-engineering](skills/context-engineering/SKILL.md) | Feed agents the right information at the right time - rules files, context packing, MCP integrations | Starting a session, switching tasks, or when output quality drops |
 | [source-driven-development](skills/source-driven-development/SKILL.md) | Ground every framework decision in official documentation - verify, cite sources, flag what's unverified | You want authoritative, source-cited code for any framework or library |
-| [frontend-ui-engineering](skills/frontend-ui-engineering/SKILL.md) | Component architecture, design systems, responsive design, accessibility, and screenshot-based visual QA | Building, modifying, or visually reviewing user-facing interfaces |
+| [frontend-ui-engineering](skills/frontend-ui-engineering/SKILL.md) | Component architecture, design systems, responsive design, accessibility, functional QA, monkey testing, and visual comparison scoring | Building, modifying, or visually reviewing user-facing interfaces |
 | [api-and-interface-design](skills/api-and-interface-design/SKILL.md) | Contract-first design, Hyrum's Law, One-Version Rule, error semantics, boundary validation | Designing APIs, module boundaries, or public interfaces |
 
 ### Verify - Prove it works
@@ -225,7 +225,7 @@ Pre-configured specialist personas for targeted reviews:
 | [product-designer](agents/product-designer.md) | Product Designer | Reference-driven UX, visual systems, and screen acceptance |
 | [test-engineer](agents/test-engineer.md) | QA Specialist | Test strategy, coverage analysis, and the Prove-It pattern |
 | [security-auditor](agents/security-auditor.md) | Security Engineer | Vulnerability detection, threat modeling, OWASP assessment |
-| [ui-quality-reviewer](agents/ui-quality-reviewer.md) | UI Quality Reviewer | Screenshot-based visual fidelity, responsiveness, and polish review |
+| [ui-quality-reviewer](agents/ui-quality-reviewer.md) | UI Quality Reviewer | Visual comparison scoring, functional QA evidence, responsiveness, and polish review |
 
 ---
 

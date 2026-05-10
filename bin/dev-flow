@@ -22,6 +22,7 @@ Usage:
   bin/dev-flow ship-check <project-name>
   bin/dev-flow reference-check <project-name> [--required|--delegated]
   bin/dev-flow design-check <project-name> [--allow-no-reference]
+  bin/dev-flow qa-check <project-name>
   bin/dev-flow visual-check <project-name>
   bin/dev-flow check <project-name>
   bin/dev-flow package-adapters [output-dir]
@@ -486,6 +487,17 @@ require_any_file() {
   return 1
 }
 
+visual_score() {
+  local path="$1"
+  [[ -f "$path" ]] || return 1
+  sed -nE 's/.*Overall score:[[:space:]]*([0-9][0-9]?[0-9]?)\/100.*/\1/p' "$path" | head -n 1
+}
+
+qa_exception_recorded() {
+  local dir="$1"
+  [[ -f "$dir/reviews/EXCEPTION.md" || -f "$dir/reviews/BLOCKED_FLOW.md" ]]
+}
+
 verify_phase_impl() {
   local project="$1"
   local phase="$2"
@@ -582,6 +594,69 @@ verify_phase_impl() {
   echo "Phase verification passed: $project/$phase"
 }
 
+qa_check_impl() {
+  local project="$1"
+  local dir failures mockups imagegen_assets screenshots score
+  require_project "$project"
+  dir="$(project_path "$project")"
+  failures=0
+  for file in design/DESIGN.md design/VISUAL_SYSTEM.md design/SCREEN_ACCEPTANCE.md reviews/FUNCTIONAL_TEST.md reviews/MONKEY_TEST.md reviews/VISUAL_COMPARISON.md; do
+    if ! has_content "$dir/$file"; then
+      echo "Missing or too thin: $file" >&2
+      failures=$((failures + 1))
+    fi
+  done
+  mockups="$(count_design_mockups "$dir")"
+  imagegen_assets="$(count_imagegen_artifacts "$dir")"
+  screenshots="$(count_visual_screenshots "$dir")"
+  load_project_applicability "$project"
+  if setting_enabled "$UI_IMAGEGEN"; then
+    if ! has_content "$dir/design/imagegen-prompts.md"; then
+      echo "Missing or too thin: design/imagegen-prompts.md" >&2
+      failures=$((failures + 1))
+    fi
+    if [[ "$(count_invalid_imagegen_artifacts "$dir")" -gt 0 ]]; then
+      echo "Invalid imagegen artifact(s): files under design/imagegen/ must be real non-empty image/PDF files, not text placeholders." >&2
+      failures=$((failures + 1))
+    fi
+    if [[ "$imagegen_assets" -eq 0 ]]; then
+      echo "Missing imagegen UI boards under design/imagegen/." >&2
+      failures=$((failures + 1))
+    fi
+  fi
+  if setting_enabled "$UI_MOCKUPS" && [[ "$mockups" -eq 0 ]]; then
+    echo "Missing design mockup evidence under design/mocks/." >&2
+    failures=$((failures + 1))
+  fi
+  score="$(visual_score "$dir/reviews/VISUAL_COMPARISON.md" || true)"
+  if [[ -z "$score" ]]; then
+    echo "Missing visual comparison score: add 'Overall score: N/100' to reviews/VISUAL_COMPARISON.md." >&2
+    failures=$((failures + 1))
+  elif [[ "$score" -gt 100 ]]; then
+    echo "Visual comparison score out of range: $score/100." >&2
+    failures=$((failures + 1))
+  elif [[ "$score" -lt 80 ]]; then
+    echo "Visual comparison score too low: $score/100, expected at least 80/100." >&2
+    failures=$((failures + 1))
+  fi
+  if qa_exception_recorded "$dir"; then
+    if [[ "$screenshots" -eq 0 && ! -s "$dir/reviews/BLOCKED_SCREENSHOT.md" ]]; then
+      echo "Exception or blocked-flow record found; add screenshot evidence under reviews/visual-screenshots/ or document why capture is impossible in reviews/BLOCKED_SCREENSHOT.md." >&2
+      failures=$((failures + 1))
+    fi
+  fi
+  if [[ "$failures" -gt 0 ]]; then
+    echo "QA check failed for $project." >&2
+    return 1
+  fi
+  echo "QA check passed for $project with $imagegen_assets imagegen UI board(s), visual score ${score:-n/a}/100, functional test evidence, and monkey test evidence."
+  if [[ "$screenshots" -eq 0 ]]; then
+    echo "No exception or blocked flow recorded; runtime screenshots were not required."
+  else
+    echo "Runtime screenshot artifacts found: $screenshots."
+  fi
+}
+
 ship_check_impl() {
   local project="$1"
   local phase failures
@@ -602,6 +677,12 @@ ship_check_impl() {
   if ! (cd "$(project_path "$project")" && ./bin/check); then
     echo "Project default check failed for $project." >&2
     return 1
+  fi
+  if phase_is_applicable "$project" design; then
+    if ! qa_check_impl "$project"; then
+      echo "Project QA check failed for $project." >&2
+      return 1
+    fi
   fi
   echo "Ship check passed for $project."
 }
@@ -740,7 +821,7 @@ EOF
   cat > "$target/GEMINI.md" <<'EOF'
 # Dev Flow Quality
 
-Use the bundled skills for lifecycle-driven software delivery. For customer-facing UI, design-flow owns reference intake and screen acceptance; frontend-ui-engineering owns implementation and visual QA.
+Use the bundled skills for lifecycle-driven software delivery. For customer-facing UI, design-flow owns reference intake and screen acceptance; frontend-ui-engineering owns implementation, functional QA, monkey testing, and visual comparison.
 EOF
 }
 
@@ -940,7 +1021,8 @@ Load only the files needed for the current phase.
 - Plan: read approved spec/design and inspect likely source boundaries.
 - Build: read the assigned task, approved design docs, \`design/imagegen/\` layout/state boards, nearby source files, and tests.
 - Review: read the diff, tests, and quality-gate output.
-- Ship: read review results, verification evidence, and launch notes.
+- QA: read verification evidence, functional and monkey test logs, visual comparison score, and exception screenshots only when a flow is blocked.
+- Ship: read review results, QA evidence, verification evidence, and launch notes.
 
 Do not bulk-load \`agent-skills/\` or unrelated project folders."
     write_if_missing "$dir/design/reference-intake.md" "# Reference Intake: $project
@@ -1032,8 +1114,54 @@ folder and mirror them in \`bin/check\` when they become stable.
 - [ ] Unit tests
 - [ ] Build
 - [ ] Browser or device smoke test, when user-facing
+- [ ] Functional flow test, when user-facing
+- [ ] Monkey or exploratory stress test, when user-facing
+- [ ] Visual comparison score against approved imagegen boards, when user-facing
 - [ ] \`bin/dev-flow design-check $project\`, before implementation planning for customer-facing UI
-- [ ] \`bin/dev-flow visual-check $project\`, before delivery for customer-facing UI"
+- [ ] \`bin/dev-flow qa-check $project\`, before delivery for customer-facing UI"
+    write_if_missing "$dir/reviews/FUNCTIONAL_TEST.md" "# Functional Test: $project
+
+Record normal happy-path and critical user-flow verification here after implementation.
+
+## Commands / Devices
+
+## Flows Checked
+
+## Result
+"
+    write_if_missing "$dir/reviews/MONKEY_TEST.md" "# Monkey Test: $project
+
+Record random, exploratory, stress, or resilience testing here after implementation.
+
+## Scope
+
+## Events / Inputs
+
+## Result
+"
+    write_if_missing "$dir/reviews/VISUAL_COMPARISON.md" "# Visual Comparison: $project
+
+Compare the implemented UI with approved imagegen boards and design artifacts.
+
+Overall score: 0/100
+
+## Compared Inputs
+- Imagegen boards:
+- Runtime UI surfaces:
+- Exception screenshots, only if a flow was blocked:
+
+## Score Breakdown
+- Layout and hierarchy:
+- Component fidelity:
+- State coverage:
+- Responsiveness:
+- Polish:
+
+## Differences
+-
+
+## Decision
+"
     write_if_missing "$dir/bin/check" "#!/usr/bin/env bash
 set -euo pipefail
 
@@ -1044,7 +1172,7 @@ for d in \"\${required_dirs[@]}\"; do
   [[ -d \"\$ROOT/\$d\" ]] || { echo \"Missing directory: \$d\" >&2; exit 1; }
 done
 
-required_files=(.dev-flow/state.env .dev-flow/context.md design/reference-intake.md design/reference-links.md design/imagegen-prompts.md design/cut-assets/ASSET_MANIFEST.md tasks/status.md tasks/quality-gates.md)
+required_files=(.dev-flow/state.env .dev-flow/context.md design/reference-intake.md design/reference-links.md design/imagegen-prompts.md design/cut-assets/ASSET_MANIFEST.md tasks/status.md tasks/quality-gates.md reviews/FUNCTIONAL_TEST.md reviews/MONKEY_TEST.md reviews/VISUAL_COMPARISON.md)
 for f in \"\${required_files[@]}\"; do
   [[ -f \"\$ROOT/\$f\" ]] || { echo \"Missing file: \$f\" >&2; exit 1; }
 done
@@ -1155,7 +1283,7 @@ echo \"Default workflow gate passed for \$(basename \"\$ROOT\").\""
     fi
     if [[ "$total" -gt 0 ]]; then
       echo "Reference intake passed."
-      echo "Use these references in design requirements and visual QA."
+      echo "Use these references in design requirements and visual comparison QA."
       exit 0
     fi
     echo "No reference assets or reference software found."
@@ -1211,51 +1339,9 @@ echo \"Default workflow gate passed for \$(basename \"\$ROOT\").\""
     fi
     echo "Design check passed for $project with $imagegen_assets imagegen UI board(s)."
     ;;
-  visual-check)
+  qa-check|visual-check)
     project="${2:-}"
-    require_project "$project"
-    dir="$(project_path "$project")"
-    failures=0
-    for file in design/DESIGN.md design/VISUAL_SYSTEM.md design/SCREEN_ACCEPTANCE.md reviews/VISUAL_QA.md; do
-      if ! has_content "$dir/$file"; then
-        echo "Missing or too thin: $file" >&2
-        failures=$((failures + 1))
-      fi
-    done
-    mockups="$(count_design_mockups "$dir")"
-    imagegen_assets="$(count_imagegen_artifacts "$dir")"
-    screenshots="$(count_visual_screenshots "$dir")"
-    load_project_applicability "$project"
-    if setting_enabled "$UI_IMAGEGEN"; then
-      if ! has_content "$dir/design/imagegen-prompts.md"; then
-        echo "Missing or too thin: design/imagegen-prompts.md" >&2
-        failures=$((failures + 1))
-      fi
-      if [[ "$(count_invalid_imagegen_artifacts "$dir")" -gt 0 ]]; then
-        echo "Invalid imagegen artifact(s): files under design/imagegen/ must be real non-empty image/PDF files, not text placeholders." >&2
-        failures=$((failures + 1))
-      fi
-      if [[ "$imagegen_assets" -eq 0 ]]; then
-        echo "Missing imagegen UI boards under design/imagegen/." >&2
-        failures=$((failures + 1))
-      fi
-    fi
-    if setting_enabled "$UI_MOCKUPS" && [[ "$mockups" -eq 0 ]]; then
-      echo "Missing design mockup evidence under design/mocks/." >&2
-      failures=$((failures + 1))
-    fi
-    if [[ "$screenshots" -eq 0 ]]; then
-      echo "Missing runtime visual screenshot evidence under reviews/visual-screenshots/." >&2
-      echo "If runtime screenshots cannot be captured, document the blocker in reviews/BLOCKED_BUILD.md." >&2
-      if ! has_content "$dir/reviews/BLOCKED_BUILD.md"; then
-        failures=$((failures + 1))
-      fi
-    fi
-    if [[ "$failures" -gt 0 ]]; then
-      echo "Visual check failed for $project." >&2
-      exit 1
-    fi
-    echo "Visual check passed for $project with $imagegen_assets imagegen UI board(s), $mockups design mockup(s), and $screenshots runtime screenshot artifact(s)."
+    qa_check_impl "$project"
     ;;
   check)
     project="${2:-}"

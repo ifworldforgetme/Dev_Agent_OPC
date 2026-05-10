@@ -24,7 +24,8 @@ Use this lifecycle for non-trivial product or engineering work:
 For debugging, load `agent-skills/skills/debugging-and-error-recovery/SKILL.md`.
 For UI work, also load `agent-skills/skills/frontend-ui-engineering/SKILL.md`.
 For customer-facing UI, `design-flow` owns reference intake and design gates, and
-`frontend-ui-engineering` owns implementation plus screenshot-based visual QA.
+`frontend-ui-engineering` owns implementation plus functional QA, monkey
+testing, visual comparison, and exception-only screenshot evidence.
 For APIs or public module boundaries, also load
 `agent-skills/skills/api-and-interface-design/SKILL.md`.
 For security-sensitive work, also load
@@ -57,7 +58,8 @@ bin/dev-flow verify-phase <project-name> <phase>
 bin/dev-flow ship-check <project-name>
 bin/dev-flow reference-check <project-name> [--required|--delegated]
 bin/dev-flow design-check <project-name> [--allow-no-reference]
-bin/dev-flow visual-check <project-name>
+bin/dev-flow qa-check <project-name>
+bin/dev-flow visual-check <project-name> # compatibility alias for qa-check
 bin/dev-flow check <project-name>
 bin/dev-flow package-adapters [output-dir]
 bin/dev-flow install <codex|claude-code|gemini|openclaw|opencode> [--scope project|user] [--dest path]
@@ -95,9 +97,9 @@ For customer-facing UI, use the canonical skills and personas inside
 `agent-skills/`:
 
 - `agent-skills/skills/design-flow/SKILL.md` before implementation planning
-- `agent-skills/skills/frontend-ui-engineering/SKILL.md` during implementation and visual QA
+- `agent-skills/skills/frontend-ui-engineering/SKILL.md` during implementation and QA
 - `agent-skills/agents/product-designer.md` for UX and visual-system design
-- `agent-skills/agents/ui-quality-reviewer.md` for screenshot-based visual review
+- `agent-skills/agents/ui-quality-reviewer.md` for visual comparison review and exception screenshot review
 
 For every customer-facing screen, the design phase must use the installed
 `imagegen` skill to produce 1-N layout and state images before implementation
@@ -105,12 +107,17 @@ planning. Save prompts and screen/state coverage in
 `work/<project-name>/design/imagegen-prompts.md`, selected boards under
 `work/<project-name>/design/imagegen/`, and any bitmap cut assets under
 `work/<project-name>/design/cut-assets/` with an asset manifest.
-The saved imagegen boards and runtime screenshots must be real non-empty image
-or PDF files, not placeholder text files with image extensions.
+The saved imagegen boards and cut assets must be real non-empty image or PDF
+files, not placeholder text files with image extensions.
 
 Run `bin/dev-flow design-check <project-name>` before planning implementation.
-Run `bin/dev-flow visual-check <project-name>` before delivery. Treat failures
-as blockers unless the user explicitly narrows scope away from customer-facing UI.
+Run `bin/dev-flow qa-check <project-name>` before delivery. Normal QA requires
+`reviews/FUNCTIONAL_TEST.md`, `reviews/MONKEY_TEST.md`, and
+`reviews/VISUAL_COMPARISON.md` with an `Overall score: N/100` line. Runtime
+screenshots are required only when `reviews/EXCEPTION.md` or
+`reviews/BLOCKED_FLOW.md` records an exception or a flow that cannot be
+completed. Treat QA failures as blockers unless the user explicitly narrows
+scope away from customer-facing UI.
 
 ## Artifacts
 
@@ -136,7 +143,8 @@ at the workspace root.
 - Reference software and links: `work/<project-name>/design/reference-links.md`
 - Plans and task lists: `work/<project-name>/tasks/`
 - Reviews: `work/<project-name>/reviews/`
-- Visual QA screenshots: `work/<project-name>/reviews/visual-screenshots/`
+- QA evidence: `work/<project-name>/reviews/FUNCTIONAL_TEST.md`, `work/<project-name>/reviews/MONKEY_TEST.md`, `work/<project-name>/reviews/VISUAL_COMPARISON.md`
+- Exception screenshots, only when needed: `work/<project-name>/reviews/visual-screenshots/`
 - Launch notes and release artifacts: `work/<project-name>/ship/`
 
 Expected phase outputs:
@@ -147,7 +155,7 @@ Expected phase outputs:
 - Spec: `work/<project-name>/specs/SPEC.md`
 - Design, when UI is applicable: `work/<project-name>/design/DESIGN.md`, `work/<project-name>/design/VISUAL_SYSTEM.md`, `work/<project-name>/design/SCREEN_ACCEPTANCE.md`, `work/<project-name>/design/imagegen-prompts.md`, `work/<project-name>/design/imagegen/*`
 - Plan: `work/<project-name>/tasks/PLAN.md`
-- Visual QA: `work/<project-name>/reviews/VISUAL_QA.md`
+- QA: `work/<project-name>/reviews/FUNCTIONAL_TEST.md`, `work/<project-name>/reviews/MONKEY_TEST.md`, `work/<project-name>/reviews/VISUAL_COMPARISON.md`
 - Review: `work/<project-name>/reviews/REVIEW.md`
 - Ship: `work/<project-name>/ship/LAUNCH.md`
 

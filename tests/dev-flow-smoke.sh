@@ -9,9 +9,10 @@ INVALID="$ROOT/work/__${RUN_ID}_invalid"
 ADAPTER_OUT="/private/tmp/dev-agent-opc-${RUN_ID}-adapters"
 UI_BLOCK_OUT="/private/tmp/dev-flow-${RUN_ID}-ui-block.out"
 INVALID_OUT="/private/tmp/dev-flow-${RUN_ID}-invalid.out"
+EXCEPTION_OUT="/private/tmp/dev-flow-${RUN_ID}-exception.out"
 
 cleanup() {
-  rm -rf "$UI_BLOCK" "$DELEGATED" "$INVALID" "$ADAPTER_OUT" "$UI_BLOCK_OUT" "$INVALID_OUT"
+  rm -rf "$UI_BLOCK" "$DELEGATED" "$INVALID" "$ADAPTER_OUT" "$UI_BLOCK_OUT" "$INVALID_OUT" "$EXCEPTION_OUT"
 }
 trap cleanup EXIT
 
@@ -96,24 +97,36 @@ grep -q 'UI_REFERENCES="delegated"' "$DELEGATED/.dev-flow/applicability.env"
 bin/dev-flow phase "$(basename "$DELEGATED")" plan "Plan implementation after delegated design" >/dev/null
 
 write_file "$DELEGATED/tasks/PLAN.md" \
-  "# Plan" "" "## Task 1" "Build the static UI under apps/web." "Acceptance: source exists and screenshots are reviewed."
+  "# Plan" "" "## Task 1" "Build the static UI under apps/web." "Acceptance: source exists, functional QA passes, monkey QA passes, and visual comparison is scored."
 write_file "$DELEGATED/apps/web/index.html" \
   "<!doctype html>" \
   "<html lang=\"en\"><head><meta charset=\"utf-8\"><title>Audit</title></head><body><main><h1>Habit Tracker</h1><button>Create habit</button></main></body></html>"
 write_file "$DELEGATED/reviews/VERIFICATION.md" \
   "# Verification" "" "## Result" "The static UI source exists." "The workflow checks passed."
-write_file "$DELEGATED/reviews/VISUAL_QA.md" \
-  "# Visual QA" "" "## Screenshots Reviewed" "- reviews/visual-screenshots/dashboard-empty.png" "## Findings" "No blocking workflow-gate issues."
+write_file "$DELEGATED/reviews/FUNCTIONAL_TEST.md" \
+  "# Functional Test" "" "## Commands / Devices" "Static HTML source inspection." "## Flows Checked" "- Open dashboard." "- Locate primary action." "## Result" "Critical fixture flow passed."
+write_file "$DELEGATED/reviews/MONKEY_TEST.md" \
+  "# Monkey Test" "" "## Scope" "Static fixture exploratory checks." "## Events / Inputs" "- Repeated navigation-safe reload." "- Invalid interaction scan." "## Result" "No blocking workflow issues found."
+write_file "$DELEGATED/reviews/VISUAL_COMPARISON.md" \
+  "# Visual Comparison" "" "Overall score: 92/100" "" "## Compared Inputs" "- design/imagegen/onboarding-default.png" "- design/imagegen/dashboard-empty.png" "## Score Breakdown" "- Layout and hierarchy: 18/20" "- Component fidelity: 18/20" "- State coverage: 19/20" "- Responsiveness: 18/20" "- Polish: 19/20" "## Differences" "- None blocking." "## Decision" "Pass."
 write_file "$DELEGATED/reviews/REVIEW.md" \
   "# Review" "" "## Correctness" "The fixture exercises the workflow checks." "## Decision" "Ready for workflow ship-check."
 write_file "$DELEGATED/ship/LAUNCH.md" \
   "# Launch" "" "## Summary" "Workflow fixture reached ship-check." "## Go / No-Go" "Go for workflow validation."
-write_valid_png "$DELEGATED/reviews/visual-screenshots/dashboard-empty.png"
-
 bin/dev-flow phase "$(basename "$DELEGATED")" build "Implement audited UI slice" >/dev/null
 bin/dev-flow verify-phase "$(basename "$DELEGATED")" build >/dev/null
 bin/dev-flow verify-phase "$(basename "$DELEGATED")" test >/dev/null
-bin/dev-flow visual-check "$(basename "$DELEGATED")" >/dev/null
+bin/dev-flow qa-check "$(basename "$DELEGATED")" >/dev/null
+write_file "$DELEGATED/reviews/EXCEPTION.md" \
+  "# Exception" "" "## Flow" "Dashboard exception path." "## Result" "This fixture verifies that screenshots become mandatory only after an exception is recorded."
+if bin/dev-flow qa-check "$(basename "$DELEGATED")" >"$EXCEPTION_OUT" 2>&1; then
+  cat "$EXCEPTION_OUT" >&2
+  echo "Expected exception QA to require screenshot evidence." >&2
+  exit 1
+fi
+grep -q "Exception or blocked-flow record found" "$EXCEPTION_OUT"
+write_valid_png "$DELEGATED/reviews/visual-screenshots/dashboard-exception.png"
+bin/dev-flow qa-check "$(basename "$DELEGATED")" >/dev/null
 bin/dev-flow ship-check "$(basename "$DELEGATED")" >/dev/null
 
 bin/dev-flow package-adapters "$ADAPTER_OUT" >/dev/null

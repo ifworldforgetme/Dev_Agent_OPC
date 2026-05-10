@@ -12,7 +12,7 @@ Pick the next pending task from `work/<project-name>/tasks/`. Run implementation
 4. Implement the minimum code to pass the test (GREEN)
 5. Run the full test suite to check for regressions
 6. Run the build to verify compilation
-7. For customer-facing UI, compare implementation against approved imagegen boards, capture/update screenshot evidence, and run `bin/dev-flow visual-check <project-name>` when available
+7. For customer-facing UI, record functional and monkey test evidence, compare implementation against approved imagegen boards, and run `bin/dev-flow qa-check <project-name>` when available. Capture screenshots only for exceptions or blocked flows.
 8. Commit with a descriptive message when inside a git repo and commits are authorized; otherwise record a checkpoint in `work/<project-name>/tasks/status.md`
 9. Mark the task complete and move to the next one
 

@@ -11,9 +11,10 @@ Use this when implementing screens, components, interactions, responsive layouts
 3. Inspect existing component and styling conventions.
 4. Implement the UI with stable responsive layout constraints.
 5. Verify core states, empty states, loading states, and error states.
-6. Compare runtime screenshots against the approved imagegen boards and any cut assets.
-7. Capture screenshot evidence under `work/<project-name>/reviews/visual-screenshots/`.
-8. Write or update `work/<project-name>/reviews/VISUAL_QA.md`.
-9. Run `bin/dev-flow visual-check <project-name>` when available.
+6. Run functional-flow checks and record them in `work/<project-name>/reviews/FUNCTIONAL_TEST.md`.
+7. Run monkey or exploratory stress checks and record them in `work/<project-name>/reviews/MONKEY_TEST.md`.
+8. Compare the implemented UI against the approved imagegen boards and any cut assets in `work/<project-name>/reviews/VISUAL_COMPARISON.md` with `Overall score: N/100`.
+9. Capture screenshots under `work/<project-name>/reviews/visual-screenshots/` only when an exception occurs or a flow cannot be completed.
+10. Run `bin/dev-flow qa-check <project-name>` when available.
 
 If no design contract or imagegen screen boards exist for customer-facing UI, return to the design phase first.

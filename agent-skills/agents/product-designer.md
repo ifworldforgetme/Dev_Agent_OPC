@@ -18,7 +18,7 @@ Use this persona when a project needs customer-facing design quality before impl
 
 ## Output
 
-Write concise, buildable design requirements backed by saved imagegen boards. Avoid mood-board language that cannot be verified in code, generated boards, or screenshots.
+Write concise, buildable design requirements backed by saved imagegen boards. Avoid mood-board language that cannot be verified in code, generated boards, functional tests, monkey tests, or visual comparison evidence.
 
 ## Composition
 

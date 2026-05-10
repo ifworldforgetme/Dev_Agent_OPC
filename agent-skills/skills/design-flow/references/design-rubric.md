@@ -31,5 +31,4 @@ Use this rubric before implementation planning for customer-facing UI.
 - Screens are decomposed into implementable components.
 - Breakpoints are specified.
 - Accessibility expectations are named.
-- The design names what must be verified with screenshots.
-
+- The design names what must be verified by functional tests, monkey/exploratory tests, and visual comparison, with screenshots only for exceptions or blocked flows.

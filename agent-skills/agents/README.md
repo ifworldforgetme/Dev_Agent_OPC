@@ -8,7 +8,7 @@ Specialist personas that play a single role with a single perspective. Each pers
 | [product-designer](product-designer.md) | Product Designer | Customer-facing UX, visual systems, references, and screen acceptance |
 | [security-auditor](security-auditor.md) | Security Engineer | Vulnerability detection, OWASP-style audit |
 | [test-engineer](test-engineer.md) | QA Engineer | Test strategy, coverage analysis, Prove-It pattern |
-| [ui-quality-reviewer](ui-quality-reviewer.md) | UI Quality Reviewer | Screenshot-based visual review before customer-facing delivery |
+| [ui-quality-reviewer](ui-quality-reviewer.md) | UI Quality Reviewer | Visual comparison scoring, functional QA evidence, and exception screenshot review before customer-facing delivery |
 
 ## How personas relate to skills and commands
 

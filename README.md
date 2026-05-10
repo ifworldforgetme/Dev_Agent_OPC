@@ -40,7 +40,7 @@ Highlights in this release:
 
 - evidence-gated phase transitions in `bin/dev-flow`
 - optional `pm` and `agent` gates plus required UI design/imagegen gates through `.dev-flow/applicability.env`
-- reference intake, mandatory imagegen layout/state boards, design checks, and screenshot-based visual QA for UI work
+- reference intake, mandatory imagegen layout/state boards, design checks, functional QA, monkey testing, and visual comparison scoring for UI work
 - shared design, platform UX, visual QA, and image-generation reference material
 - ignored runtime `work/` state so personal project experiments are not published accidentally
 - adapter generation and installation paths for multiple agent hosts
@@ -149,12 +149,13 @@ Supported values:
 ## UI Quality Gates
 
 Customer-facing UI work must be grounded in concrete references, designed with
-imagegen before implementation, and verified with screenshots.
+imagegen before implementation, and verified with functional tests, monkey
+tests, and a visual comparison score against the approved imagegen boards.
 
 ```bash
 bin/dev-flow reference-check my-project --required
 bin/dev-flow design-check my-project
-bin/dev-flow visual-check my-project
+bin/dev-flow qa-check my-project
 ```
 
 Reference material can include screenshots, Figma exports, app names, websites,
@@ -175,8 +176,16 @@ Before planning or building UI, `design-check` requires:
 - 1-N saved imagegen layout or state boards for every customer-facing screen under `work/<project-name>/design/imagegen/`
 - bitmap cut assets under `work/<project-name>/design/cut-assets/` when implementation needs generated icons, illustrations, backgrounds, or UI elements
 
-Imagegen boards and runtime screenshots must be real non-empty image or PDF
-files. A text placeholder with a `.png` extension does not satisfy the gate.
+After implementation, `qa-check` requires:
+
+- functional-flow evidence in `reviews/FUNCTIONAL_TEST.md`
+- monkey or exploratory testing evidence in `reviews/MONKEY_TEST.md`
+- visual comparison evidence in `reviews/VISUAL_COMPARISON.md` with `Overall score: N/100`
+- screenshot evidence only when `reviews/EXCEPTION.md` or `reviews/BLOCKED_FLOW.md` records an exception or a flow that cannot be completed
+
+Imagegen boards, cut assets, and exception screenshots must be real non-empty
+image or PDF files. A text placeholder with a `.png` extension does not satisfy
+the gate.
 
 ## Adapter Packaging
 
@@ -203,7 +212,7 @@ Generated adapter folders are build output and should be regenerated from
 ## Specialist Personas
 
 - `product-designer` for UX, visual systems, reference synthesis, and screen acceptance.
-- `ui-quality-reviewer` for screenshot-based visual QA and polish review.
+- `ui-quality-reviewer` for visual comparison review, functional QA evidence, and exception screenshot review.
 - `code-reviewer` for correctness, readability, architecture, security, and performance review.
 - `test-engineer` for test strategy, coverage, and regression proof.
 - `security-auditor` for threat modeling, vulnerability review, and hardening.
@@ -225,7 +234,7 @@ ignored by git.
 - Keep source workflows canonical in `agent-skills/`.
 - Treat phase changes as state updates, not proof of completed work.
 - Use executable quality gates instead of prose-only reminders.
-- Keep customer-facing UI reference-driven, imagegen-designed, and screenshot-reviewed.
+- Keep customer-facing UI reference-driven, imagegen-designed, functionally tested, monkey-tested, and visually scored.
 - Keep local project experiments separate from the publishable workflow pack.
 
 ## Maintainer

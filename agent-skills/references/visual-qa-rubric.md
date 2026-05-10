@@ -1,13 +1,14 @@
-# Visual QA Rubric
+# UI QA And Visual Comparison Rubric
 
 Use this after implementing customer-facing UI and before delivery.
 
 ## Evidence
 
-- Capture screenshots for required breakpoints and states from `SCREEN_ACCEPTANCE.md`.
-- Include mobile/narrow, tablet or medium, desktop, loading, empty, error, and long-content states when applicable.
-- Save screenshots under `work/<project-name>/reviews/visual-screenshots/`.
-- Save findings in `work/<project-name>/reviews/VISUAL_QA.md`.
+- Run critical functional flows from `SCREEN_ACCEPTANCE.md` and save results in `work/<project-name>/reviews/FUNCTIONAL_TEST.md`.
+- Run monkey or exploratory stress checks and save results in `work/<project-name>/reviews/MONKEY_TEST.md`.
+- Compare the implemented UI against imagegen boards, cut assets, references, and design requirements.
+- Save findings and `Overall score: N/100` in `work/<project-name>/reviews/VISUAL_COMPARISON.md`.
+- Capture screenshots under `work/<project-name>/reviews/visual-screenshots/` only when an exception occurs or a flow cannot be completed.
 
 ## Review Axes
 
@@ -17,6 +18,14 @@ Use this after implementing customer-facing UI and before delivery.
 - Interaction: primary actions, disabled states, focus states, and error recovery are visible and usable.
 - Accessibility: contrast, labels, keyboard/focus, touch targets, reduced motion, and screen reader structure are acceptable.
 - Runtime: no console errors, missing assets, blank canvases, or broken network-dependent UI.
+- Imagegen fidelity: runtime UI materially follows the approved board layout, density, state coverage, and visual system unless a design reason is recorded.
+
+## Score Guide
+
+- 90-100: polished, coherent, complete states, no blocking UX or visual issues.
+- 80-89: shippable with minor polish gaps.
+- 60-79: usable but not ready; notable mismatches, state gaps, or rough responsiveness.
+- Below 60: visually or functionally incomplete.
 
 ## Severity
 

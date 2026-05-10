@@ -60,7 +60,7 @@ Save design artifacts under `work/<project-name>/design/`:
 8. **Define screen acceptance**
    - For each key screen, list required states, breakpoints, primary actions, and visual acceptance criteria.
    - Include at least empty, loading, error, success, disabled, selected, long-content, and narrow-screen states when applicable.
-   - Name what later needs screenshot evidence under `work/<project-name>/reviews/visual-screenshots/`.
+   - Name what later must be exercised by functional tests, monkey/exploratory testing, and visual comparison against imagegen boards. Do not require runtime screenshots unless a flow is blocked or an exception occurs.
 
 9. **Generate imagegen UI boards before planning implementation**
    - Use the installed `imagegen` skill for every customer-facing UI screen before implementation planning.

@@ -1,6 +1,14 @@
-# UI Visual QA Rubric
+# UI QA And Visual Comparison Rubric
 
 Use this rubric after implementation.
+
+## Required Evidence
+
+- `reviews/FUNCTIONAL_TEST.md` covers critical happy paths and recovery paths.
+- `reviews/MONKEY_TEST.md` covers random, repeated, invalid, resize, navigation, and stress interactions.
+- `reviews/VISUAL_COMPARISON.md` compares the implemented UI to approved imagegen boards, cut assets, references, and screen acceptance criteria.
+- `VISUAL_COMPARISON.md` includes `Overall score: N/100`; the workflow gate expects at least 80/100.
+- `reviews/visual-screenshots/` is used only when an exception occurs or a flow cannot be completed.
 
 ## Blocking Issues
 
@@ -9,6 +17,7 @@ Use this rubric after implementation.
 - A required state is blank or broken.
 - Mobile or desktop layout is unusable.
 - Visual output ignores provided reference direction.
+- Runtime UI materially diverges from approved imagegen boards without a recorded design reason.
 
 ## Important Issues
 
@@ -28,9 +37,10 @@ Use this rubric after implementation.
 
 ## Evidence Checklist
 
-- Screenshots cover required breakpoints.
-- Screenshots cover key states.
+- Functional tests cover required flows.
+- Monkey or exploratory tests cover unstable interactions.
+- Visual comparison covers required breakpoints and key states.
 - Console/runtime issues were checked where possible.
 - Findings cite specific screens or components.
 - Residual risks are named.
-
+- Exception screenshots exist only when an exception or blocked flow was recorded.

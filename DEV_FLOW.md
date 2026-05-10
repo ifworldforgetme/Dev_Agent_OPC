@@ -60,7 +60,7 @@ bin/dev-flow phase <project-name> spec "Write SPEC.md from the approved idea"
 bin/dev-flow verify-phase <project-name> spec
 bin/dev-flow reference-check <project-name> --required
 bin/dev-flow design-check <project-name>
-bin/dev-flow visual-check <project-name>
+bin/dev-flow qa-check <project-name>
 bin/dev-flow ship-check <project-name>
 bin/dev-flow check <project-name>
 ```
@@ -78,6 +78,9 @@ and a control layer under `work/<project-name>/` when a project actually starts:
 - `design/cut-assets/`: bitmap UI assets cut or derived from imagegen outputs when needed
 - `tasks/status.md`: human-readable project ledger and review gates
 - `tasks/quality-gates.md`: project-specific verification checklist
+- `reviews/FUNCTIONAL_TEST.md`: normal critical-flow test evidence after implementation
+- `reviews/MONKEY_TEST.md`: exploratory, random, repeated, or stress test evidence
+- `reviews/VISUAL_COMPARISON.md`: comparison against approved imagegen boards with `Overall score: N/100`
 - `bin/check`: executable quality gate for this project
 
 Use `phase` whenever the project moves from idea to pm, agent, spec, design,
@@ -114,11 +117,15 @@ backgrounds, or UI elements are needed, save cut assets under
 `design/cut-assets/` and list them in `ASSET_MANIFEST.md`.
 
 Use `design-check` after writing `DESIGN.md`, `VISUAL_SYSTEM.md`,
-`SCREEN_ACCEPTANCE.md`, imagegen prompts, and imagegen boards. Use
-`visual-check` after implementation screenshots and `reviews/VISUAL_QA.md`
-exist.
-Imagegen boards and runtime screenshots must be real non-empty image or PDF
-files, not placeholder text files with image extensions.
+`SCREEN_ACCEPTANCE.md`, imagegen prompts, and imagegen boards. Use `qa-check`
+after implementation. Normal QA requires functional-flow evidence,
+monkey/exploratory testing evidence, and a visual comparison score against the
+approved imagegen boards. Runtime screenshots are required only when
+`reviews/EXCEPTION.md` or `reviews/BLOCKED_FLOW.md` records an exception or a
+flow that cannot be completed.
+
+Imagegen boards, cut assets, and exception screenshots must be real non-empty
+image or PDF files, not placeholder text files with image extensions.
 
 ## Artifact Locations
 
@@ -155,6 +162,7 @@ Every phase should produce a named artifact:
 | Plan | `work/<project-name>/tasks/PLAN.md` |
 | Build | Working source under `apps/` or `packages/` |
 | Test | Verification evidence in `tasks/status.md` or `reviews/` |
+| QA | `work/<project-name>/reviews/FUNCTIONAL_TEST.md`, `MONKEY_TEST.md`, `VISUAL_COMPARISON.md` |
 | Review | `work/<project-name>/reviews/REVIEW.md` |
 | Ship | `work/<project-name>/ship/LAUNCH.md` |
 
