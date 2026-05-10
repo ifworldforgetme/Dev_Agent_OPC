@@ -16,9 +16,10 @@ Save design artifacts under `work/<project-name>/design/`:
 - `DESIGN.md`
 - `VISUAL_SYSTEM.md`
 - `SCREEN_ACCEPTANCE.md`
+- `imagegen-prompts.md`
 - `reference-links.md` when reference software, sites, Figma links, or competitor notes exist
-- `imagegen-prompts.md` when raster design boards are useful
-- Generated design boards, mockups, or visual references when requested
+- Generated imagegen layout and state boards under `design/imagegen/`
+- Bitmap cut assets under `design/cut-assets/` when implementation needs them
 
 ## Workflow
 
@@ -61,11 +62,15 @@ Save design artifacts under `work/<project-name>/design/`:
    - Include at least empty, loading, error, success, disabled, selected, long-content, and narrow-screen states when applicable.
    - Name what later needs screenshot evidence under `work/<project-name>/reviews/visual-screenshots/`.
 
-9. **Generate visual artifacts when useful**
-   - Use the installed `imagegen` skill for raster UI boards, visual spec boards, icon explorations, and high-fidelity layout concepts.
+9. **Generate imagegen UI boards before planning implementation**
+   - Use the installed `imagegen` skill for every customer-facing UI screen before implementation planning.
+   - Produce 1-N high-fidelity layout and state images for each screen listed in `SCREEN_ACCEPTANCE.md`.
+   - Cover important states such as default, empty, loading, error, success, selected, disabled, long-content, and narrow-screen where applicable.
+   - Save prompts and a screen/state coverage table in `work/<project-name>/design/imagegen-prompts.md`.
+   - Save final selected imagegen outputs under `work/<project-name>/design/imagegen/`.
+   - If bitmap icons, illustrations, background images, or UI elements are needed in implementation, cut or derive them and save them under `work/<project-name>/design/cut-assets/` with `ASSET_MANIFEST.md`.
    - Prefer deterministic Mermaid/SVG/Markdown for exact diagrams with important text.
    - Load `references/imagegen-design-artifacts.md` before writing imagegen prompts.
-   - Save project-bound outputs under `work/<project-name>/design/`.
 
 10. **Gate before planning**
    - Update the spec if design changes product scope.
@@ -101,7 +106,9 @@ Save design artifacts under `work/<project-name>/design/`:
 [Icon, palette, typography, spacing, cards, buttons, motion.]
 
 ## Design Artifacts
-- [Artifact path or prompt file]
+- Imagegen boards: [paths under design/imagegen/]
+- Cut assets: [paths under design/cut-assets/, if any]
+- Prompt ledger: imagegen-prompts.md
 
 ## Build Implications
 [What implementation tasks should account for.]
@@ -136,18 +143,35 @@ Save design artifacts under `work/<project-name>/design/`:
 - Required content:
 - Required states:
 - Breakpoints:
+- Required imagegen boards:
 - Visual acceptance:
 - Accessibility acceptance:
+```
+
+```markdown
+# imagegen-prompts.md
+
+## Required Coverage
+- [Screen]: [1-N layout/state boards saved under design/imagegen/]
+
+## Screen Coverage
+| Screen | State | Prompt summary | Saved image path | Build notes |
+|---|---|---|---|---|
+
+## Prompts
+[Record the final prompts used with the imagegen skill.]
 ```
 
 ## Verification
 
 - [ ] `DESIGN.md`, `VISUAL_SYSTEM.md`, and `SCREEN_ACCEPTANCE.md` are saved under `work/<project-name>/design/`
 - [ ] Customer-facing UI has reference intake or an explicit user delegation for visual direction
+- [ ] `imagegen-prompts.md` maps every screen/state to 1-N generated imagegen boards
+- [ ] Final selected imagegen boards are saved under `work/<project-name>/design/imagegen/`
+- [ ] Any required bitmap cut assets are saved under `work/<project-name>/design/cut-assets/` and listed in `ASSET_MANIFEST.md`
 - [ ] Interaction alternatives and recommendation are explicit
 - [ ] Platform and accessibility requirements are listed
 - [ ] Key screens and states are defined
 - [ ] Visual direction is concrete enough for implementation
-- [ ] Imagegen prompts or outputs are saved when visual artifacts were requested
 - [ ] `bin/dev-flow design-check <project-name>` passes when available
 - [ ] Spec or task plan references the design package before build starts

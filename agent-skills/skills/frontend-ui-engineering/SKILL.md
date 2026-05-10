@@ -19,7 +19,7 @@ Build production-quality user interfaces that are accessible, performant, and vi
 - Reviewing implemented UI against references, design requirements, screenshots, or responsive acceptance criteria
 
 For substantial UI or mobile product changes, load `design-flow` before implementation planning so information architecture, platform interaction requirements, and visual direction are explicit before code is written.
-For customer-facing UI, do not start implementation until `DESIGN.md`, `VISUAL_SYSTEM.md`, and `SCREEN_ACCEPTANCE.md` exist under `work/<project-name>/design/`.
+For customer-facing UI, do not start implementation until `DESIGN.md`, `VISUAL_SYSTEM.md`, `SCREEN_ACCEPTANCE.md`, `imagegen-prompts.md`, and 1-N saved imagegen layout/state boards per screen exist under `work/<project-name>/design/`.
 
 ## Platform Adaptation
 
@@ -318,13 +318,13 @@ For screenshot-based visual review, load `references/visual-qa-rubric.md`.
 After implementing customer-facing UI, verify it against the design contract:
 
 1. Read `work/<project-name>/design/DESIGN.md`, `VISUAL_SYSTEM.md`, and `SCREEN_ACCEPTANCE.md`.
-2. Review references under `work/<project-name>/design/references/`, `mocks/`, `screenshots/`, and `reference-links.md`.
+2. Review imagegen boards under `work/<project-name>/design/imagegen/`, prompt coverage in `imagegen-prompts.md`, cut assets under `design/cut-assets/`, and references under `references/`, `mocks/`, `screenshots/`, and `reference-links.md`.
 3. Capture screenshots under `work/<project-name>/reviews/visual-screenshots/` for the required breakpoints and key states.
 4. Check console/runtime errors when the platform supports it.
 5. Save `work/<project-name>/reviews/VISUAL_QA.md` with findings by severity, screenshots reviewed, fixes made or required, and residual risks.
 6. Run `bin/dev-flow visual-check <project-name>` when this workspace helper is available.
 
-Blocking visual issues include text overlap, clipped controls, unusable mobile or desktop layout, missing required states, inaccessible primary actions, and output that ignores provided reference direction.
+Blocking visual issues include text overlap, clipped controls, unusable mobile or desktop layout, missing required states, inaccessible primary actions, output that ignores provided reference direction, and implementation that materially diverges from approved imagegen layout/state boards without a recorded design reason.
 
 ## Common Rationalizations
 
@@ -346,11 +346,15 @@ Blocking visual issues include text overlap, clipped controls, unusable mobile o
 - Generic "AI look" (purple gradients, oversized cards, stock layouts)
 - No screenshot evidence for customer-facing UI
 - Implementation that ignores `SCREEN_ACCEPTANCE.md`
+- Missing imagegen boards before UI implementation
+- Runtime UI that does not match approved imagegen boards or cut assets
 
 ## Verification
 
 After building UI:
 
+- [ ] `bin/dev-flow design-check <project-name>` passed before UI implementation
+- [ ] Imagegen layout/state boards under `work/<project-name>/design/imagegen/` were used as visual targets
 - [ ] Component renders without console errors
 - [ ] All interactive elements are keyboard accessible (Tab through the page)
 - [ ] Screen reader can convey the page's content and structure

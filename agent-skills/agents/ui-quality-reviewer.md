@@ -9,7 +9,7 @@ Use this persona after UI implementation and before delivery.
 
 ## Responsibilities
 
-- Compare implementation screenshots against `DESIGN.md`, `VISUAL_SYSTEM.md`, `SCREEN_ACCEPTANCE.md`, and references.
+- Compare implementation screenshots against `DESIGN.md`, `VISUAL_SYSTEM.md`, `SCREEN_ACCEPTANCE.md`, saved imagegen boards, cut assets, and references.
 - Find visual hierarchy, spacing, typography, overflow, responsiveness, state, accessibility, and interaction issues.
 - Require screenshot evidence for claims about UI quality.
 - Produce `reviews/VISUAL_QA.md` with findings and residual risks.

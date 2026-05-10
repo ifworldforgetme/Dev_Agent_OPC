@@ -69,17 +69,20 @@ bin/dev-flow check <project-name>
 and a control layer under `work/<project-name>/` when a project actually starts:
 
 - `.dev-flow/state.env`: current phase, active task, blockers, last verification
-- `.dev-flow/applicability.env`: optional phase gates for `PM_FLOW`, `AGENT_FLOW`, `UI_FLOW`, `UI_MOCKUPS`, and `GIT_CHECKPOINTS`
+- `.dev-flow/applicability.env`: optional phase gates for `PM_FLOW`, `AGENT_FLOW`, `UI_FLOW`, `UI_IMAGEGEN`, `UI_MOCKUPS`, and `GIT_CHECKPOINTS`
 - `.dev-flow/context.md`: what context to load at each lifecycle phase
 - `design/reference-intake.md`: rules for using reference images and software
 - `design/reference-links.md`: user-provided reference apps, sites, Figma links, or competitor notes
+- `design/imagegen-prompts.md`: screen/state prompt ledger for generated UI boards
+- `design/imagegen/`: selected imagegen layout and state boards
+- `design/cut-assets/`: bitmap UI assets cut or derived from imagegen outputs when needed
 - `tasks/status.md`: human-readable project ledger and review gates
 - `tasks/quality-gates.md`: project-specific verification checklist
 - `bin/check`: executable quality gate for this project
 
 Use `phase` whenever the project moves from idea to pm, agent, spec, design,
 plan, build, test, review, or ship. A phase transition verifies all prior
-applicable phases by default. `pm`, `agent`, `design`, and design mockups are optional unless
+applicable phases by default. `pm`, `agent`, `design`, imagegen UI boards, and design mockups are optional unless
 their artifacts exist or their flow is marked `required` in
 `.dev-flow/applicability.env`; use `--force` only when deliberately recording
 state before artifacts are ready. Use `verify-phase` to check one stage and
@@ -95,9 +98,17 @@ reference images, Figma exports, app names, or websites, place them under
 reference exists and the visual direction is not already delegated, ask the user
 for examples before implementation planning.
 
-Use `design-check` after writing `DESIGN.md`, `VISUAL_SYSTEM.md`, and
-`SCREEN_ACCEPTANCE.md`. Use `visual-check` after implementation screenshots and
-`reviews/VISUAL_QA.md` exist.
+Use the installed imagegen skill before implementation planning. Every
+customer-facing screen must have 1-N generated layout/state boards saved under
+`work/<project-name>/design/imagegen/`, with prompts and screen/state coverage
+recorded in `design/imagegen-prompts.md`. If bitmap icons, illustrations,
+backgrounds, or UI elements are needed, save cut assets under
+`design/cut-assets/` and list them in `ASSET_MANIFEST.md`.
+
+Use `design-check` after writing `DESIGN.md`, `VISUAL_SYSTEM.md`,
+`SCREEN_ACCEPTANCE.md`, imagegen prompts, and imagegen boards. Use
+`visual-check` after implementation screenshots and `reviews/VISUAL_QA.md`
+exist.
 
 ## Artifact Locations
 
@@ -112,6 +123,8 @@ work/<project-name>/design/
 work/<project-name>/design/references/
 work/<project-name>/design/mocks/
 work/<project-name>/design/screenshots/
+work/<project-name>/design/imagegen/
+work/<project-name>/design/cut-assets/
 work/<project-name>/tasks/
 work/<project-name>/reviews/
 work/<project-name>/reviews/visual-screenshots/
@@ -128,7 +141,7 @@ Every phase should produce a named artifact:
 | Product, when applicable | `work/<project-name>/product/PRD.md`, `USER_STORIES.md`, `METRICS.md`, `ACCEPTANCE.md` |
 | Agent, when applicable | `work/<project-name>/agent/AGENT_SPEC.md`, `WORKFLOW.md`, `TOOLS_AND_PERMISSIONS.md`, `PROMPTS_AND_SKILLS.md`, `EVALS.md`, `FAILURE_RECOVERY.md`, `OPERATIONS.md` |
 | Spec | `work/<project-name>/specs/SPEC.md` |
-| Design | `work/<project-name>/design/DESIGN.md`, `VISUAL_SYSTEM.md`, `SCREEN_ACCEPTANCE.md` |
+| Design | `work/<project-name>/design/DESIGN.md`, `VISUAL_SYSTEM.md`, `SCREEN_ACCEPTANCE.md`, `imagegen-prompts.md`, `design/imagegen/*` |
 | Plan | `work/<project-name>/tasks/PLAN.md` |
 | Build | Working source under `apps/` or `packages/` |
 | Test | Verification evidence in `tasks/status.md` or `reviews/` |

@@ -44,7 +44,7 @@ Aliases:
 
 Applicability:
   Optional phases are controlled by work/<project-name>/.dev-flow/applicability.env.
-  Set PM_FLOW, AGENT_FLOW, UI_FLOW, or UI_MOCKUPS to auto, required, or disabled.
+  Set PM_FLOW, AGENT_FLOW, UI_FLOW, UI_IMAGEGEN, or UI_MOCKUPS to auto, required, or disabled.
 EOF
 }
 
@@ -145,6 +145,7 @@ next_prompt_for_phase() {
       echo "Use local flow: design"
       echo "Goal: define UX, interaction, visual, and platform requirements under work/<project>/design/."
       echo "Before designing customer-facing UI, run: bin/dev-flow reference-check <project> --required"
+      echo "For UI work, generate 1-N imagegen layout/state boards per screen before planning or implementation."
       ;;
     plan)
       echo "Use local flow: plan"
@@ -153,6 +154,7 @@ next_prompt_for_phase() {
     build)
       echo "Use local flow: build"
       echo "Goal: implement the next task slice, then run bin/dev-flow check <project>."
+      echo "For UI work, confirm bin/dev-flow design-check <project> passes before writing code."
       ;;
     test)
       echo "Use local flow: test"
@@ -213,6 +215,24 @@ count_design_mockups() {
     \) 2>/dev/null | wc -l | tr -d ' '
 }
 
+count_imagegen_artifacts() {
+  local dir="$1"
+  find "$dir/design/imagegen" \
+    -type f \( \
+      -iname '*.png' -o -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.webp' -o \
+      -iname '*.gif' -o -iname '*.heic' -o -iname '*.pdf' \
+    \) 2>/dev/null | wc -l | tr -d ' '
+}
+
+count_cut_assets() {
+  local dir="$1"
+  find "$dir/design/cut-assets" \
+    -type f \( \
+      -iname '*.png' -o -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.webp' -o \
+      -iname '*.svg' -o -iname '*.pdf' \
+    \) 2>/dev/null | wc -l | tr -d ' '
+}
+
 has_content() {
   local path="$1"
   [[ -s "$path" ]] && [[ "$(wc -l < "$path" | tr -d ' ')" -ge 5 ]]
@@ -223,6 +243,7 @@ load_project_applicability() {
   PM_FLOW="auto"
   AGENT_FLOW="auto"
   UI_FLOW="auto"
+  UI_IMAGEGEN="required"
   UI_MOCKUPS="auto"
   GIT_CHECKPOINTS="auto"
   path="$(applicability_path "${1:-}")"
@@ -260,7 +281,7 @@ has_phase_artifact() {
       ;;
     design)
       [[ -s "$dir/design/DESIGN.md" || -s "$dir/design/VISUAL_SYSTEM.md" || -s "$dir/design/SCREEN_ACCEPTANCE.md" ]] && return 0
-      [[ "$(count_reference_assets "$dir")" -gt 0 || "$(count_reference_links "$dir")" -gt 0 || "$(count_design_mockups "$dir")" -gt 0 ]]
+      [[ "$(count_reference_assets "$dir")" -gt 0 || "$(count_reference_links "$dir")" -gt 0 || "$(count_design_mockups "$dir")" -gt 0 || "$(count_imagegen_artifacts "$dir")" -gt 0 ]]
       ;;
     *)
       return 1
@@ -371,7 +392,7 @@ verify_phase_impl() {
     echo "Invalid phase: ${phase:-<missing>}" >&2
     return 1
   fi
-  local dir failures assets links mockups screenshots java_sources
+  local dir failures assets links mockups imagegen_assets screenshots java_sources
   dir="$(project_path "$project")"
   failures=0
   case "$phase" in
@@ -395,11 +416,19 @@ verify_phase_impl() {
       assets="$(count_reference_assets "$dir")"
       links="$(count_reference_links "$dir")"
       mockups="$(count_design_mockups "$dir")"
+      imagegen_assets="$(count_imagegen_artifacts "$dir")"
       if [[ $((assets + links)) -eq 0 ]]; then
         echo "Missing references: add reference assets/software or reference links before design verification." >&2
         failures=$((failures + 1))
       fi
       load_project_applicability "$project"
+      if setting_enabled "$UI_IMAGEGEN"; then
+        require_content_file "$dir" "design/imagegen-prompts.md" || failures=$((failures + 1))
+        if [[ "$imagegen_assets" -eq 0 ]]; then
+          echo "Missing imagegen design boards: generate 1-N layout/state images per UI screen under design/imagegen/ before implementation planning." >&2
+          failures=$((failures + 1))
+        fi
+      fi
       if setting_enabled "$UI_MOCKUPS" && [[ "$mockups" -eq 0 ]]; then
         echo "Missing design mockups: add image/SVG/PDF/Figma artifacts under design/mocks/." >&2
         failures=$((failures + 1))
@@ -772,7 +801,7 @@ case "$cmd" in
     project="${2:-}"
     dir="$(project_path "$project")"
     mkdir -p "$dir"/{ideas,product,agent,specs,design,tasks,reviews,ship,apps,packages,bin,.dev-flow}
-    mkdir -p "$dir/design"/{references,mocks,screenshots}
+    mkdir -p "$dir/design"/{references,mocks,screenshots,imagegen,cut-assets}
     mkdir -p "$dir/reviews/visual-screenshots"
     write_if_missing "$dir/.dev-flow/state.env" "PROJECT_NAME=\"$project\"
 CURRENT_PHASE=\"idea\"
@@ -788,6 +817,7 @@ LAST_VERIFICATION=\"not run\""
 PM_FLOW=\"auto\"
 AGENT_FLOW=\"auto\"
 UI_FLOW=\"auto\"
+UI_IMAGEGEN=\"required\"
 UI_MOCKUPS=\"auto\"
 GIT_CHECKPOINTS=\"auto\""
     write_if_missing "$dir/.dev-flow/context.md" "# Context Loading: $project
@@ -798,9 +828,9 @@ Load only the files needed for the current phase.
 - Product: read \`product/\` only when PM_FLOW is required or product artifacts exist.
 - Agent: read \`agent/\` only when AGENT_FLOW is required or agent artifacts exist.
 - Spec: read approved idea/product/agent artifacts that apply, and existing app files if present.
-- Design: read \`specs/SPEC.md\`, \`design/reference-intake.md\`, user-provided references, existing screens, and platform constraints.
+- Design: read \`specs/SPEC.md\`, \`design/reference-intake.md\`, \`design/imagegen-prompts.md\`, user-provided references, existing screens, and platform constraints.
 - Plan: read approved spec/design and inspect likely source boundaries.
-- Build: read the assigned task, nearby source files, and tests.
+- Build: read the assigned task, approved design docs, \`design/imagegen/\` layout/state boards, nearby source files, and tests.
 - Review: read the diff, tests, and quality-gate output.
 - Ship: read review results, verification evidence, and launch notes.
 
@@ -814,6 +844,7 @@ Use this before customer-facing UI design or visual polish.
   - \`design/references/\`
   - \`design/mocks/\`
   - \`design/screenshots/\`
+  - \`design/imagegen/\`
 
 ## Reference Software
 - Put product names, app store links, websites, Figma links, or competitor notes in \`design/reference-links.md\`.
@@ -822,6 +853,29 @@ Use this before customer-facing UI design or visual polish.
 - If reference assets or software are provided, extract visual patterns before designing: layout density, navigation model, component style, spacing, typography, color, motion, and tone.
 - If this is customer-facing UI and no reference is provided, ask the user for examples unless the user has explicitly delegated visual direction.
 - If the user delegates visual direction, create a short reference board first and save it under \`design/\` before implementation planning."
+    write_if_missing "$dir/design/imagegen-prompts.md" "# Imagegen Prompts: $project
+
+Use the installed imagegen skill before implementation planning for every UI screen.
+
+## Required Coverage
+- Generate 1-N layout and state images for each screen listed in SCREEN_ACCEPTANCE.md.
+- Save final selected images under \`design/imagegen/\`.
+- Record the prompt, intended screen/state, saved path, and design decision for each image.
+- If bitmap icons, illustrations, or UI cut assets are needed, save them under \`design/cut-assets/\` and list them in \`design/cut-assets/ASSET_MANIFEST.md\`.
+
+## Screen Coverage
+| Screen | State | Prompt summary | Saved image path | Build notes |
+|---|---|---|---|---|
+
+## Prompts
+"
+    write_if_missing "$dir/design/cut-assets/ASSET_MANIFEST.md" "# Cut Assets: $project
+
+List bitmap icons, illustrations, or UI elements cut from imagegen outputs when implementation needs them.
+
+| Asset | Source image | Final path | Usage | Notes |
+|---|---|---|---|---|
+"
     write_if_missing "$dir/design/reference-links.md" "# Reference Links: $project
 
 Add user-provided reference apps, websites, Figma links, screenshots descriptions, or competitor notes below.
@@ -861,6 +915,8 @@ folder and mirror them in \`bin/check\` when they become stable.
 - [ ] Status ledger exists
 - [ ] Context loading guidance exists
 - [ ] Reference intake exists for customer-facing UI work
+- [ ] Imagegen layout/state boards exist under \`design/imagegen/\` before UI implementation
+- [ ] Cut assets are listed under \`design/cut-assets/ASSET_MANIFEST.md\` when bitmap UI assets are needed
 
 ## Add When The Project Has Code
 - [ ] Lint
@@ -875,12 +931,12 @@ set -euo pipefail
 
 ROOT=\"\$(cd \"\$(dirname \"\${BASH_SOURCE[0]}\")/..\" && pwd)\"
 
-required_dirs=(ideas product agent specs design design/references design/mocks design/screenshots tasks reviews reviews/visual-screenshots ship apps packages .dev-flow)
+required_dirs=(ideas product agent specs design design/references design/mocks design/screenshots design/imagegen design/cut-assets tasks reviews reviews/visual-screenshots ship apps packages .dev-flow)
 for d in \"\${required_dirs[@]}\"; do
   [[ -d \"\$ROOT/\$d\" ]] || { echo \"Missing directory: \$d\" >&2; exit 1; }
 done
 
-required_files=(.dev-flow/state.env .dev-flow/context.md design/reference-intake.md design/reference-links.md tasks/status.md tasks/quality-gates.md)
+required_files=(.dev-flow/state.env .dev-flow/context.md design/reference-intake.md design/reference-links.md design/imagegen-prompts.md design/cut-assets/ASSET_MANIFEST.md tasks/status.md tasks/quality-gates.md)
 for f in \"\${required_files[@]}\"; do
   [[ -f \"\$ROOT/\$f\" ]] || { echo \"Missing file: \$f\" >&2; exit 1; }
 done
@@ -997,11 +1053,23 @@ echo \"Default workflow gate passed for \$(basename \"\$ROOT\").\""
     require_project "$project"
     dir="$(project_path "$project")"
     failures=0
+    imagegen_assets="$(count_imagegen_artifacts "$dir")"
+    load_project_applicability "$project"
     if [[ "$mode" != "--allow-no-reference" ]]; then
       assets="$(count_reference_assets "$dir")"
       links="$(count_reference_links "$dir")"
       if [[ $((assets + links)) -eq 0 ]]; then
         echo "Missing references: add reference assets/software or rerun with --allow-no-reference after user delegates visual direction." >&2
+        failures=$((failures + 1))
+      fi
+    fi
+    if setting_enabled "$UI_IMAGEGEN"; then
+      if ! has_content "$dir/design/imagegen-prompts.md"; then
+        echo "Missing or too thin: design/imagegen-prompts.md" >&2
+        failures=$((failures + 1))
+      fi
+      if [[ "$imagegen_assets" -eq 0 ]]; then
+        echo "Missing imagegen UI boards: save 1-N layout/state images per screen under design/imagegen/ before implementation planning." >&2
         failures=$((failures + 1))
       fi
     fi
@@ -1015,7 +1083,7 @@ echo \"Default workflow gate passed for \$(basename \"\$ROOT\").\""
       echo "Design check failed for $project." >&2
       exit 1
     fi
-    echo "Design check passed for $project."
+    echo "Design check passed for $project with $imagegen_assets imagegen UI board(s)."
     ;;
   visual-check)
     project="${2:-}"
@@ -1029,8 +1097,19 @@ echo \"Default workflow gate passed for \$(basename \"\$ROOT\").\""
       fi
     done
     mockups="$(count_design_mockups "$dir")"
+    imagegen_assets="$(count_imagegen_artifacts "$dir")"
     screenshots="$(count_visual_screenshots "$dir")"
     load_project_applicability "$project"
+    if setting_enabled "$UI_IMAGEGEN"; then
+      if ! has_content "$dir/design/imagegen-prompts.md"; then
+        echo "Missing or too thin: design/imagegen-prompts.md" >&2
+        failures=$((failures + 1))
+      fi
+      if [[ "$imagegen_assets" -eq 0 ]]; then
+        echo "Missing imagegen UI boards under design/imagegen/." >&2
+        failures=$((failures + 1))
+      fi
+    fi
     if setting_enabled "$UI_MOCKUPS" && [[ "$mockups" -eq 0 ]]; then
       echo "Missing design mockup evidence under design/mocks/." >&2
       failures=$((failures + 1))
@@ -1046,7 +1125,7 @@ echo \"Default workflow gate passed for \$(basename \"\$ROOT\").\""
       echo "Visual check failed for $project." >&2
       exit 1
     fi
-    echo "Visual check passed for $project with $mockups design mockup(s) and $screenshots runtime screenshot artifact(s)."
+    echo "Visual check passed for $project with $imagegen_assets imagegen UI board(s), $mockups design mockup(s), and $screenshots runtime screenshot artifact(s)."
     ;;
   check)
     project="${2:-}"

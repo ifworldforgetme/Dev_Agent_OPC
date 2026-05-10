@@ -76,7 +76,8 @@ Important: `bin/dev-flow phase` records state only; it does not execute the
 skill work. By default it verifies all prior applicable phases before moving
 forward. `pm`, `agent`, `design`, and design mockups are applicability-gated by
 `work/<project-name>/.dev-flow/applicability.env`; set `PM_FLOW`,
-`AGENT_FLOW`, `UI_FLOW`, or `UI_MOCKUPS` to `required`, `disabled`, or `auto`.
+`AGENT_FLOW`, `UI_FLOW`, `UI_IMAGEGEN`, or `UI_MOCKUPS` to `required`,
+`disabled`, or `auto`.
 Use `--force` only when intentionally recording an early state and then complete
 the missing artifacts before delivery.
 
@@ -95,6 +96,13 @@ For customer-facing UI, use the canonical skills and personas inside
 - `agent-skills/skills/frontend-ui-engineering/SKILL.md` during implementation and visual QA
 - `agent-skills/agents/product-designer.md` for UX and visual-system design
 - `agent-skills/agents/ui-quality-reviewer.md` for screenshot-based visual review
+
+For every customer-facing screen, the design phase must use the installed
+`imagegen` skill to produce 1-N layout and state images before implementation
+planning. Save prompts and screen/state coverage in
+`work/<project-name>/design/imagegen-prompts.md`, selected boards under
+`work/<project-name>/design/imagegen/`, and any bitmap cut assets under
+`work/<project-name>/design/cut-assets/` with an asset manifest.
 
 Run `bin/dev-flow design-check <project-name>` before planning implementation.
 Run `bin/dev-flow visual-check <project-name>` before delivery. Treat failures
@@ -119,6 +127,8 @@ at the workspace root.
 - Specs: `work/<project-name>/specs/`
 - Design requirements and visual artifacts: `work/<project-name>/design/`
 - Reference images and screenshots: `work/<project-name>/design/references/`, `work/<project-name>/design/mocks/`, `work/<project-name>/design/screenshots/`
+- Imagegen UI boards and prompt ledger: `work/<project-name>/design/imagegen/`, `work/<project-name>/design/imagegen-prompts.md`
+- Cut assets, when needed: `work/<project-name>/design/cut-assets/`
 - Reference software and links: `work/<project-name>/design/reference-links.md`
 - Plans and task lists: `work/<project-name>/tasks/`
 - Reviews: `work/<project-name>/reviews/`
@@ -131,7 +141,7 @@ Expected phase outputs:
 - Product, when applicable: `work/<project-name>/product/PRD.md`, `USER_STORIES.md`, `ACCEPTANCE.md`, `METRICS.md`
 - Agent, when applicable: `work/<project-name>/agent/AGENT_SPEC.md`, `WORKFLOW.md`, `TOOLS_AND_PERMISSIONS.md`, `PROMPTS_AND_SKILLS.md`, `EVALS.md`, `FAILURE_RECOVERY.md`, `OPERATIONS.md`
 - Spec: `work/<project-name>/specs/SPEC.md`
-- Design, when UI is applicable: `work/<project-name>/design/DESIGN.md`, `work/<project-name>/design/VISUAL_SYSTEM.md`, `work/<project-name>/design/SCREEN_ACCEPTANCE.md`
+- Design, when UI is applicable: `work/<project-name>/design/DESIGN.md`, `work/<project-name>/design/VISUAL_SYSTEM.md`, `work/<project-name>/design/SCREEN_ACCEPTANCE.md`, `work/<project-name>/design/imagegen-prompts.md`, `work/<project-name>/design/imagegen/*`
 - Plan: `work/<project-name>/tasks/PLAN.md`
 - Visual QA: `work/<project-name>/reviews/VISUAL_QA.md`
 - Review: `work/<project-name>/reviews/REVIEW.md`

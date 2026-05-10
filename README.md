@@ -22,7 +22,7 @@ agent workflows:
 - lifecycle stages with explicit artifacts
 - specialist personas for product design, UI QA, code review, testing, and security
 - evidence gates before phase transitions and shipping
-- reference-driven UI workflows for customer-facing products
+- reference-driven UI workflows with mandatory imagegen screen boards before implementation
 - portable adapters for Codex, Claude Code, Gemini CLI, OpenClaw, and OpenCode
 
 ## Based On
@@ -40,7 +40,7 @@ Highlights in this release:
 
 - evidence-gated phase transitions in `bin/dev-flow`
 - optional `pm`, `agent`, `design`, and UI mockup gates through `.dev-flow/applicability.env`
-- reference intake, design checks, and screenshot-based visual QA for UI work
+- reference intake, mandatory imagegen layout/state boards, design checks, and screenshot-based visual QA for UI work
 - shared design, platform UX, visual QA, and image-generation reference material
 - ignored runtime `work/` state so personal project experiments are not published accidentally
 - adapter generation and installation paths for multiple agent hosts
@@ -127,6 +127,7 @@ Use it to control optional workflow phases:
 PM_FLOW="auto"
 AGENT_FLOW="auto"
 UI_FLOW="auto"
+UI_IMAGEGEN="required"
 UI_MOCKUPS="auto"
 GIT_CHECKPOINTS="auto"
 ```
@@ -139,8 +140,8 @@ Supported values:
 
 ## UI Quality Gates
 
-Customer-facing UI work should be grounded in concrete references and verified
-with screenshots.
+Customer-facing UI work must be grounded in concrete references, designed with
+imagegen before implementation, and verified with screenshots.
 
 ```bash
 bin/dev-flow reference-check my-project --required
@@ -151,6 +152,13 @@ bin/dev-flow visual-check my-project
 Reference material can include screenshots, Figma exports, app names, websites,
 competitor products, platform UI examples, or explicit user-delegated visual
 direction.
+
+Before planning or building UI, `design-check` requires:
+
+- `DESIGN.md`, `VISUAL_SYSTEM.md`, and `SCREEN_ACCEPTANCE.md`
+- `imagegen-prompts.md` with screen/state coverage
+- 1-N saved imagegen layout or state boards for every customer-facing screen under `work/<project-name>/design/imagegen/`
+- bitmap cut assets under `work/<project-name>/design/cut-assets/` when implementation needs generated icons, illustrations, backgrounds, or UI elements
 
 ## Adapter Packaging
 
@@ -199,7 +207,7 @@ ignored by git.
 - Keep source workflows canonical in `agent-skills/`.
 - Treat phase changes as state updates, not proof of completed work.
 - Use executable quality gates instead of prose-only reminders.
-- Keep customer-facing UI reference-driven and screenshot-reviewed.
+- Keep customer-facing UI reference-driven, imagegen-designed, and screenshot-reviewed.
 - Keep local project experiments separate from the publishable workflow pack.
 
 ## Maintainer

@@ -12,7 +12,8 @@ Read the approved spec under `work/<project-name>/specs/`, inspect references un
 5. Define information architecture, navigation, screen hierarchy, states, and interaction model
 6. Define visual direction: icon, palette, typography, spacing, cards, buttons, motion, and gestures
 7. Define screen acceptance criteria for key states and breakpoints
-8. If visual artifacts are useful, use the installed imagegen skill and save project-bound outputs under `work/<project-name>/design/`
+8. Use the installed imagegen skill to generate 1-N layout and state images for every customer-facing screen before implementation planning
+9. Save prompts and coverage in `imagegen-prompts.md`, selected boards in `design/imagegen/`, and any bitmap cut assets in `design/cut-assets/`
 
-Save `DESIGN.md`, `VISUAL_SYSTEM.md`, and `SCREEN_ACCEPTANCE.md` under `work/<project-name>/design/`. Run `bin/dev-flow design-check <project-name>` when available, then update spec or task plan references before implementation planning.
+Save `DESIGN.md`, `VISUAL_SYSTEM.md`, `SCREEN_ACCEPTANCE.md`, and `imagegen-prompts.md` under `work/<project-name>/design/`. Run `bin/dev-flow design-check <project-name>` when available, then update spec or task plan references before implementation planning.
 """
