@@ -69,7 +69,7 @@ bin/dev-flow check <project-name>
 and a control layer under `work/<project-name>/` when a project actually starts:
 
 - `.dev-flow/state.env`: current phase, active task, blockers, last verification
-- `.dev-flow/applicability.env`: optional phase gates for `PM_FLOW`, `AGENT_FLOW`, `UI_FLOW`, `UI_IMAGEGEN`, `UI_MOCKUPS`, and `GIT_CHECKPOINTS`
+- `.dev-flow/applicability.env`: phase gates for `PM_FLOW`, `AGENT_FLOW`, `UI_FLOW`, `UI_REFERENCES`, `UI_IMAGEGEN`, `UI_MOCKUPS`, and `GIT_CHECKPOINTS`
 - `.dev-flow/context.md`: what context to load at each lifecycle phase
 - `design/reference-intake.md`: rules for using reference images and software
 - `design/reference-links.md`: user-provided reference apps, sites, Figma links, or competitor notes
@@ -82,12 +82,14 @@ and a control layer under `work/<project-name>/` when a project actually starts:
 
 Use `phase` whenever the project moves from idea to pm, agent, spec, design,
 plan, build, test, review, or ship. A phase transition verifies all prior
-applicable phases by default. `pm`, `agent`, `design`, imagegen UI boards, and design mockups are optional unless
-their artifacts exist or their flow is marked `required` in
-`.dev-flow/applicability.env`; use `--force` only when deliberately recording
-state before artifacts are ready. Use `verify-phase` to check one stage and
-`ship-check` before delivery. Use `next` at the start of a session to get the
-next prompt and artifact target.
+applicable phases by default. `pm` and `agent` are optional unless their
+artifacts exist or their flow is marked `required` in
+`.dev-flow/applicability.env`. UI design is required by default through
+`UI_FLOW="required"` and `UI_IMAGEGEN="required"`; disable it only for
+non-UI work. Use `--force` only when deliberately recording state before
+artifacts are ready. Use `verify-phase` to check one stage and `ship-check`
+before delivery. Use `next` at the start of a session to get the next prompt
+and artifact target.
 
 ## UI Quality Gates
 
@@ -97,6 +99,12 @@ reference images, Figma exports, app names, or websites, place them under
 `work/<project-name>/design/` and extract concrete UI patterns from them. If no
 reference exists and the visual direction is not already delegated, ask the user
 for examples before implementation planning.
+
+If the user explicitly delegates visual direction, run
+`bin/dev-flow reference-check <project-name> --delegated` or
+`bin/dev-flow design-check <project-name> --allow-no-reference`. This records
+`UI_REFERENCES="delegated"` in `.dev-flow/applicability.env` so later phase and
+ship checks use the same decision.
 
 Use the installed imagegen skill before implementation planning. Every
 customer-facing screen must have 1-N generated layout/state boards saved under
@@ -109,6 +117,8 @@ Use `design-check` after writing `DESIGN.md`, `VISUAL_SYSTEM.md`,
 `SCREEN_ACCEPTANCE.md`, imagegen prompts, and imagegen boards. Use
 `visual-check` after implementation screenshots and `reviews/VISUAL_QA.md`
 exist.
+Imagegen boards and runtime screenshots must be real non-empty image or PDF
+files, not placeholder text files with image extensions.
 
 ## Artifact Locations
 
@@ -226,3 +236,13 @@ required phases plus optional phases that have artifacts or are marked
 as Android APK build in an environment without Java/Gradle/Android SDK, record
 the blocker in `reviews/BLOCKED_BUILD.md` rather than silently passing the
 phase.
+
+After changing this workflow pack, run:
+
+```bash
+tests/dev-flow-smoke.sh
+```
+
+The smoke test creates ignored temporary `work/` projects and verifies that UI
+planning cannot bypass design, delegated visual direction persists, invalid fake
+image files fail, a complete fixture reaches `ship-check`, and adapters package.

@@ -35,6 +35,7 @@ composition, polish, icon tone, state treatment, and high-fidelity UI direction.
 - Save generated reference boards under `work/<project-name>/design/references/` only when they summarize visual direction rather than define a screen.
 - Save optional design mockups from other tools under `work/<project-name>/design/mocks/`.
 - If implementation needs bitmap icons, illustrations, backgrounds, or UI element cutouts, save them under `work/<project-name>/design/cut-assets/` and list each asset in `design/cut-assets/ASSET_MANIFEST.md`.
+- Saved boards must be real non-empty image or PDF files. Placeholder text files with `.png`, `.jpg`, or `.pdf` extensions do not satisfy `design-check`.
 - Do not treat generated UI text as final copy; transcribe only design direction and rebuild exact UI in code.
 
 ## Minimum Coverage

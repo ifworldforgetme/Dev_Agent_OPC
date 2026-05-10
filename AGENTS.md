@@ -55,7 +55,7 @@ bin/dev-flow next <project-name>
 bin/dev-flow phase <project-name> <phase> [task] [--force]
 bin/dev-flow verify-phase <project-name> <phase>
 bin/dev-flow ship-check <project-name>
-bin/dev-flow reference-check <project-name> [--required]
+bin/dev-flow reference-check <project-name> [--required|--delegated]
 bin/dev-flow design-check <project-name> [--allow-no-reference]
 bin/dev-flow visual-check <project-name>
 bin/dev-flow check <project-name>
@@ -74,10 +74,10 @@ Before delivery, run `bin/dev-flow ship-check <project-name>`.
 
 Important: `bin/dev-flow phase` records state only; it does not execute the
 skill work. By default it verifies all prior applicable phases before moving
-forward. `pm`, `agent`, `design`, and design mockups are applicability-gated by
+forward. `pm`, `agent`, `design`, references, imagegen boards, and design mockups are applicability-gated by
 `work/<project-name>/.dev-flow/applicability.env`; set `PM_FLOW`,
-`AGENT_FLOW`, `UI_FLOW`, `UI_IMAGEGEN`, or `UI_MOCKUPS` to `required`,
-`disabled`, or `auto`.
+`AGENT_FLOW`, `UI_FLOW`, `UI_REFERENCES`, `UI_IMAGEGEN`, or `UI_MOCKUPS` to
+`required`, `delegated`, `disabled`, or `auto`.
 Use `--force` only when intentionally recording an early state and then complete
 the missing artifacts before delivery.
 
@@ -87,7 +87,9 @@ images, screenshots, Figma exports, app names, websites, or competitor products
 as concrete design inputs. If no reference is present and the user has not
 explicitly delegated visual direction, ask for examples before implementation
 planning. If the user delegates visual direction, create a short reference board
-under `work/<project-name>/design/` first.
+under `work/<project-name>/design/` first and record the decision with
+`bin/dev-flow reference-check <project-name> --delegated` or
+`bin/dev-flow design-check <project-name> --allow-no-reference`.
 
 For customer-facing UI, use the canonical skills and personas inside
 `agent-skills/`:
@@ -103,6 +105,8 @@ planning. Save prompts and screen/state coverage in
 `work/<project-name>/design/imagegen-prompts.md`, selected boards under
 `work/<project-name>/design/imagegen/`, and any bitmap cut assets under
 `work/<project-name>/design/cut-assets/` with an asset manifest.
+The saved imagegen boards and runtime screenshots must be real non-empty image
+or PDF files, not placeholder text files with image extensions.
 
 Run `bin/dev-flow design-check <project-name>` before planning implementation.
 Run `bin/dev-flow visual-check <project-name>` before delivery. Treat failures

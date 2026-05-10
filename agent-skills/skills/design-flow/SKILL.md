@@ -34,7 +34,7 @@ Save design artifacts under `work/<project-name>/design/`:
    - Run `bin/dev-flow reference-check <project-name> --required` when the UI is customer-facing.
    - If references exist, extract concrete patterns: layout density, navigation model, component style, spacing, typography, color, motion, tone, and state handling.
    - If no reference exists and the user has not delegated visual direction, ask for examples before implementation planning.
-   - If the user delegates visual direction, create a short reference board under `work/<project-name>/design/` first.
+   - If the user delegates visual direction, create a short reference board under `work/<project-name>/design/` first and run `bin/dev-flow reference-check <project-name> --delegated`.
 
 3. **Define UX problem**
    - State what feels unclear, slow, mechanical, risky, or visually unfinished.
@@ -68,6 +68,7 @@ Save design artifacts under `work/<project-name>/design/`:
    - Cover important states such as default, empty, loading, error, success, selected, disabled, long-content, and narrow-screen where applicable.
    - Save prompts and a screen/state coverage table in `work/<project-name>/design/imagegen-prompts.md`.
    - Save final selected imagegen outputs under `work/<project-name>/design/imagegen/`.
+   - Imagegen outputs must be real non-empty image or PDF files; do not use placeholder text files with image extensions.
    - If bitmap icons, illustrations, background images, or UI elements are needed in implementation, cut or derive them and save them under `work/<project-name>/design/cut-assets/` with `ASSET_MANIFEST.md`.
    - Prefer deterministic Mermaid/SVG/Markdown for exact diagrams with important text.
    - Load `references/imagegen-design-artifacts.md` before writing imagegen prompts.

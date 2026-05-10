@@ -4,7 +4,7 @@ description: Create reference-driven UX, interaction, visual system, and screen 
 
 Invoke the agent-skills:design-flow skill.
 
-Read the approved spec under `work/<project-name>/specs/`, inspect references under `work/<project-name>/design/`, and inspect existing app screens/components if they exist. For customer-facing UI, run `bin/dev-flow reference-check <project-name> --required` when available. Then:
+Read the approved spec under `work/<project-name>/specs/`, inspect references under `work/<project-name>/design/`, and inspect existing app screens/components if they exist. For customer-facing UI, run `bin/dev-flow reference-check <project-name> --required` when available. If the user explicitly delegates visual direction, run `bin/dev-flow reference-check <project-name> --delegated` instead. Then:
 
 1. Define the UX problem and success criteria
 2. Extract concrete patterns from provided references or ask for references if visual direction is not delegated

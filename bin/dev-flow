@@ -20,7 +20,7 @@ Usage:
   bin/dev-flow next <project-name>
   bin/dev-flow verify-phase <project-name> <idea|pm|agent|spec|design|plan|build|test|review|ship>
   bin/dev-flow ship-check <project-name>
-  bin/dev-flow reference-check <project-name> [--required]
+  bin/dev-flow reference-check <project-name> [--required|--delegated]
   bin/dev-flow design-check <project-name> [--allow-no-reference]
   bin/dev-flow visual-check <project-name>
   bin/dev-flow check <project-name>
@@ -44,7 +44,7 @@ Aliases:
 
 Applicability:
   Optional phases are controlled by work/<project-name>/.dev-flow/applicability.env.
-  Set PM_FLOW, AGENT_FLOW, UI_FLOW, UI_IMAGEGEN, or UI_MOCKUPS to auto, required, or disabled.
+  Set PM_FLOW, AGENT_FLOW, UI_FLOW, UI_REFERENCES, UI_IMAGEGEN, or UI_MOCKUPS to auto, required, delegated, or disabled.
 EOF
 }
 
@@ -175,13 +175,88 @@ next_prompt_for_phase() {
   esac
 }
 
-count_reference_assets() {
-  local dir="$1"
-  find "$dir/design/references" "$dir/design/mocks" "$dir/design/screenshots" \
+mime_type_for_file() {
+  local path="$1"
+  file --mime-type -b "$path" 2>/dev/null || file -bI "$path" 2>/dev/null | sed 's/;.*//'
+}
+
+is_supported_artifact() {
+  local path="$1"
+  local kind="${2:-image}"
+  local mime
+  [[ -s "$path" ]] || return 1
+  if command -v file >/dev/null 2>&1; then
+    mime="$(mime_type_for_file "$path")"
+    case "$kind:$mime" in
+      image:image/*|image:application/pdf) return 0 ;;
+      cut:image/*|cut:application/pdf|cut:text/xml|cut:application/xml) return 0 ;;
+      reference:image/*|reference:application/pdf|reference:application/json) return 0 ;;
+    esac
+    case "$kind:$path" in
+      reference:*.[Ff][Ii][Gg]) return 0 ;;
+    esac
+    return 1
+  fi
+  return 0
+}
+
+count_supported_artifacts() {
+  local kind="$1"
+  shift
+  local existing=()
+  local candidate
+  for candidate in "$@"; do
+    [[ -d "$candidate" ]] && existing+=("$candidate")
+  done
+  if [[ "${#existing[@]}" -eq 0 ]]; then
+    echo 0
+    return
+  fi
+  find "${existing[@]}" \
     -type f \( \
       -iname '*.png' -o -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.webp' -o \
-      -iname '*.gif' -o -iname '*.heic' -o -iname '*.pdf' -o -iname '*.fig' \
-    \) 2>/dev/null | wc -l | tr -d ' '
+      -iname '*.gif' -o -iname '*.heic' -o -iname '*.pdf' -o -iname '*.fig' -o \
+      -iname '*.svg' \
+    \) -print0 2>/dev/null \
+    | while IFS= read -r -d '' path; do
+        if is_supported_artifact "$path" "$kind"; then
+          printf '.\n'
+        fi
+      done \
+    | wc -l \
+    | tr -d ' '
+}
+
+count_unsupported_artifacts() {
+  local kind="$1"
+  shift
+  local existing=()
+  local candidate
+  for candidate in "$@"; do
+    [[ -d "$candidate" ]] && existing+=("$candidate")
+  done
+  if [[ "${#existing[@]}" -eq 0 ]]; then
+    echo 0
+    return
+  fi
+  find "${existing[@]}" \
+    -type f \( \
+      -iname '*.png' -o -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.webp' -o \
+      -iname '*.gif' -o -iname '*.heic' -o -iname '*.pdf' -o -iname '*.fig' -o \
+      -iname '*.svg' \
+    \) -print0 2>/dev/null \
+    | while IFS= read -r -d '' path; do
+        if ! is_supported_artifact "$path" "$kind"; then
+          printf '.\n'
+        fi
+      done \
+    | wc -l \
+    | tr -d ' '
+}
+
+count_reference_assets() {
+  local dir="$1"
+  count_supported_artifacts reference "$dir/design/references" "$dir/design/mocks" "$dir/design/screenshots"
 }
 
 count_reference_links() {
@@ -199,38 +274,27 @@ count_reference_links() {
 
 count_visual_screenshots() {
   local dir="$1"
-  find "$dir/reviews/visual-screenshots" \
-    -type f \( \
-      -iname '*.png' -o -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.webp' -o \
-      -iname '*.gif' -o -iname '*.heic' -o -iname '*.pdf' \
-    \) 2>/dev/null | wc -l | tr -d ' '
+  count_supported_artifacts image "$dir/reviews/visual-screenshots"
 }
 
 count_design_mockups() {
   local dir="$1"
-  find "$dir/design/mocks" \
-    -type f \( \
-      -iname '*.png' -o -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.webp' -o \
-      -iname '*.gif' -o -iname '*.svg' -o -iname '*.pdf' -o -iname '*.fig' \
-    \) 2>/dev/null | wc -l | tr -d ' '
+  count_supported_artifacts reference "$dir/design/mocks"
 }
 
 count_imagegen_artifacts() {
   local dir="$1"
-  find "$dir/design/imagegen" \
-    -type f \( \
-      -iname '*.png' -o -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.webp' -o \
-      -iname '*.gif' -o -iname '*.heic' -o -iname '*.pdf' \
-    \) 2>/dev/null | wc -l | tr -d ' '
+  count_supported_artifacts image "$dir/design/imagegen"
+}
+
+count_invalid_imagegen_artifacts() {
+  local dir="$1"
+  count_unsupported_artifacts image "$dir/design/imagegen"
 }
 
 count_cut_assets() {
   local dir="$1"
-  find "$dir/design/cut-assets" \
-    -type f \( \
-      -iname '*.png' -o -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.webp' -o \
-      -iname '*.svg' -o -iname '*.pdf' \
-    \) 2>/dev/null | wc -l | tr -d ' '
+  count_supported_artifacts cut "$dir/design/cut-assets"
 }
 
 has_content() {
@@ -242,7 +306,8 @@ load_project_applicability() {
   local path
   PM_FLOW="auto"
   AGENT_FLOW="auto"
-  UI_FLOW="auto"
+  UI_FLOW="required"
+  UI_REFERENCES="required"
   UI_IMAGEGEN="required"
   UI_MOCKUPS="auto"
   GIT_CHECKPOINTS="auto"
@@ -265,6 +330,24 @@ setting_disabled() {
     disabled|false|no|0|skip|off) return 0 ;;
     *) return 1 ;;
   esac
+}
+
+setting_delegated() {
+  case "${1:-}" in
+    delegated|delegate|user-delegated|visual-direction-delegated) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+references_required_loaded() {
+  setting_disabled "$UI_REFERENCES" && return 1
+  setting_delegated "$UI_REFERENCES" && return 1
+  return 0
+}
+
+references_required() {
+  load_project_applicability "$1"
+  references_required_loaded
 }
 
 has_phase_artifact() {
@@ -361,6 +444,25 @@ record_verification() {
   write_project_state "$project" "$CURRENT_PHASE" "$CURRENT_TASK" "$BLOCKERS" "$text"
 }
 
+set_project_applicability() {
+  local project="$1"
+  local key="$2"
+  local value="$3"
+  local path tmp
+  path="$(applicability_path "$project")"
+  mkdir -p "$(dirname "$path")"
+  tmp="$path.tmp"
+  if [[ -f "$path" && "$(grep -c "^$key=" "$path" || true)" -gt 0 ]]; then
+    awk -v key="$key" -v value="$value" '
+      $0 ~ "^" key "=" { print key "=\"" value "\""; next }
+      { print }
+    ' "$path" > "$tmp"
+    mv "$tmp" "$path"
+  else
+    printf '%s="%s"\n' "$key" "$value" >> "$path"
+  fi
+}
+
 require_content_file() {
   local dir="$1"
   local rel="$2"
@@ -417,13 +519,17 @@ verify_phase_impl() {
       links="$(count_reference_links "$dir")"
       mockups="$(count_design_mockups "$dir")"
       imagegen_assets="$(count_imagegen_artifacts "$dir")"
-      if [[ $((assets + links)) -eq 0 ]]; then
+      if references_required "$project" && [[ $((assets + links)) -eq 0 ]]; then
         echo "Missing references: add reference assets/software or reference links before design verification." >&2
         failures=$((failures + 1))
       fi
       load_project_applicability "$project"
       if setting_enabled "$UI_IMAGEGEN"; then
         require_content_file "$dir" "design/imagegen-prompts.md" || failures=$((failures + 1))
+        if [[ "$(count_invalid_imagegen_artifacts "$dir")" -gt 0 ]]; then
+          echo "Invalid imagegen artifact(s): files under design/imagegen/ must be real non-empty image/PDF files, not text placeholders." >&2
+          failures=$((failures + 1))
+        fi
         if [[ "$imagegen_assets" -eq 0 ]]; then
           echo "Missing imagegen design boards: generate 1-N layout/state images per UI screen under design/imagegen/ before implementation planning." >&2
           failures=$((failures + 1))
@@ -809,14 +915,16 @@ CURRENT_TASK=\"Refine the initial idea\"
 BLOCKERS=\"none\"
 LAST_VERIFICATION=\"not run\""
     write_if_missing "$dir/.dev-flow/applicability.env" "# Phase applicability for $project
-# Values: auto, required, disabled
+# Values: auto, required, delegated, disabled
 #
 # auto: validate this phase only after matching artifacts exist
 # required: treat this phase as part of phase transitions and ship-check
+# delegated: treat visual direction as user-delegated when used with UI_REFERENCES
 # disabled: skip this phase in phase transitions and ship-check
 PM_FLOW=\"auto\"
 AGENT_FLOW=\"auto\"
-UI_FLOW=\"auto\"
+UI_FLOW=\"required\"
+UI_REFERENCES=\"required\"
 UI_IMAGEGEN=\"required\"
 UI_MOCKUPS=\"auto\"
 GIT_CHECKPOINTS=\"auto\""
@@ -1029,12 +1137,22 @@ echo \"Default workflow gate passed for \$(basename \"\$ROOT\").\""
     mode="${3:-}"
     require_project "$project"
     dir="$(project_path "$project")"
+    load_project_applicability "$project"
+    if [[ "$mode" == "--delegated" ]]; then
+      set_project_applicability "$project" "UI_REFERENCES" "delegated"
+      UI_REFERENCES="delegated"
+    fi
     assets="$(count_reference_assets "$dir")"
     links="$(count_reference_links "$dir")"
     total=$((assets + links))
     echo "Project: $project"
     echo "Reference assets: $assets"
     echo "Reference links/software notes: $links"
+    if ! references_required_loaded; then
+      echo "Reference intake passed by project applicability: UI_REFERENCES=$UI_REFERENCES."
+      echo "Record the delegated visual direction in DESIGN.md and generate imagegen boards before implementation."
+      exit 0
+    fi
     if [[ "$total" -gt 0 ]]; then
       echo "Reference intake passed."
       echo "Use these references in design requirements and visual QA."
@@ -1055,17 +1173,25 @@ echo \"Default workflow gate passed for \$(basename \"\$ROOT\").\""
     failures=0
     imagegen_assets="$(count_imagegen_artifacts "$dir")"
     load_project_applicability "$project"
-    if [[ "$mode" != "--allow-no-reference" ]]; then
+    if [[ "$mode" == "--allow-no-reference" ]]; then
+      set_project_applicability "$project" "UI_REFERENCES" "delegated"
+      UI_REFERENCES="delegated"
+    fi
+    if references_required_loaded; then
       assets="$(count_reference_assets "$dir")"
       links="$(count_reference_links "$dir")"
       if [[ $((assets + links)) -eq 0 ]]; then
-        echo "Missing references: add reference assets/software or rerun with --allow-no-reference after user delegates visual direction." >&2
+        echo "Missing references: add reference assets/software or set UI_REFERENCES=\"delegated\" after the user explicitly delegates visual direction." >&2
         failures=$((failures + 1))
       fi
     fi
     if setting_enabled "$UI_IMAGEGEN"; then
       if ! has_content "$dir/design/imagegen-prompts.md"; then
         echo "Missing or too thin: design/imagegen-prompts.md" >&2
+        failures=$((failures + 1))
+      fi
+      if [[ "$(count_invalid_imagegen_artifacts "$dir")" -gt 0 ]]; then
+        echo "Invalid imagegen artifact(s): files under design/imagegen/ must be real non-empty image/PDF files, not text placeholders." >&2
         failures=$((failures + 1))
       fi
       if [[ "$imagegen_assets" -eq 0 ]]; then
@@ -1103,6 +1229,10 @@ echo \"Default workflow gate passed for \$(basename \"\$ROOT\").\""
     if setting_enabled "$UI_IMAGEGEN"; then
       if ! has_content "$dir/design/imagegen-prompts.md"; then
         echo "Missing or too thin: design/imagegen-prompts.md" >&2
+        failures=$((failures + 1))
+      fi
+      if [[ "$(count_invalid_imagegen_artifacts "$dir")" -gt 0 ]]; then
+        echo "Invalid imagegen artifact(s): files under design/imagegen/ must be real non-empty image/PDF files, not text placeholders." >&2
         failures=$((failures + 1))
       fi
       if [[ "$imagegen_assets" -eq 0 ]]; then

@@ -39,7 +39,7 @@ installation support.
 Highlights in this release:
 
 - evidence-gated phase transitions in `bin/dev-flow`
-- optional `pm`, `agent`, `design`, and UI mockup gates through `.dev-flow/applicability.env`
+- optional `pm` and `agent` gates plus required UI design/imagegen gates through `.dev-flow/applicability.env`
 - reference intake, mandatory imagegen layout/state boards, design checks, and screenshot-based visual QA for UI work
 - shared design, platform UX, visual QA, and image-generation reference material
 - ignored runtime `work/` state so personal project experiments are not published accidentally
@@ -114,6 +114,12 @@ bin/dev-flow check my-project
 bin/dev-flow ship-check my-project
 ```
 
+Run the repository smoke test after changing the workflow pack:
+
+```bash
+tests/dev-flow-smoke.sh
+```
+
 Phase transitions verify all prior applicable phases by default. Use `--force`
 only when intentionally recording state before artifacts exist.
 
@@ -126,7 +132,8 @@ Use it to control optional workflow phases:
 ```bash
 PM_FLOW="auto"
 AGENT_FLOW="auto"
-UI_FLOW="auto"
+UI_FLOW="required"
+UI_REFERENCES="required"
 UI_IMAGEGEN="required"
 UI_MOCKUPS="auto"
 GIT_CHECKPOINTS="auto"
@@ -136,6 +143,7 @@ Supported values:
 
 - `auto` validates the phase only after matching artifacts exist.
 - `required` treats the phase as part of phase transitions and `ship-check`.
+- `delegated` is used with `UI_REFERENCES` after the user explicitly delegates visual direction.
 - `disabled` skips the phase in phase transitions and `ship-check`.
 
 ## UI Quality Gates
@@ -153,12 +161,22 @@ Reference material can include screenshots, Figma exports, app names, websites,
 competitor products, platform UI examples, or explicit user-delegated visual
 direction.
 
+If the user explicitly delegates visual direction instead of providing external
+references, run:
+
+```bash
+bin/dev-flow reference-check my-project --delegated
+```
+
 Before planning or building UI, `design-check` requires:
 
 - `DESIGN.md`, `VISUAL_SYSTEM.md`, and `SCREEN_ACCEPTANCE.md`
 - `imagegen-prompts.md` with screen/state coverage
 - 1-N saved imagegen layout or state boards for every customer-facing screen under `work/<project-name>/design/imagegen/`
 - bitmap cut assets under `work/<project-name>/design/cut-assets/` when implementation needs generated icons, illustrations, backgrounds, or UI elements
+
+Imagegen boards and runtime screenshots must be real non-empty image or PDF
+files. A text placeholder with a `.png` extension does not satisfy the gate.
 
 ## Adapter Packaging
 
