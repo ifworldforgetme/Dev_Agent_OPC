@@ -55,6 +55,7 @@ bin/dev-flow status <project-name>
 bin/dev-flow next <project-name>
 bin/dev-flow phase <project-name> <phase> [task] [--force]
 bin/dev-flow verify-phase <project-name> <phase>
+bin/dev-flow pdca-check <project-name>
 bin/dev-flow ship-check <project-name>
 bin/dev-flow reference-check <project-name> [--required|--delegated]
 bin/dev-flow design-check <project-name> [--allow-no-reference]
@@ -72,7 +73,8 @@ phase is approved, update `.dev-flow/state.env` through `bin/dev-flow phase`.
 Before claiming a slice is done, run the relevant `bin/dev-flow verify-phase
 <project-name> <phase>`, `bin/dev-flow check <project-name>`, and any
 project-specific checks listed in `work/<project-name>/tasks/quality-gates.md`.
-Before delivery, run `bin/dev-flow ship-check <project-name>`.
+Before delivery, run `bin/dev-flow pdca-check <project-name>` and
+`bin/dev-flow ship-check <project-name>`.
 
 Important: `bin/dev-flow phase` records state only; it does not execute the
 skill work. By default it verifies all prior applicable phases before moving
@@ -113,11 +115,21 @@ files, not placeholder text files with image extensions.
 Run `bin/dev-flow design-check <project-name>` before planning implementation.
 Run `bin/dev-flow qa-check <project-name>` before delivery. Normal QA requires
 `reviews/FUNCTIONAL_TEST.md`, `reviews/MONKEY_TEST.md`, and
-`reviews/VISUAL_COMPARISON.md` with an `Overall score: N/100` line. Runtime
-screenshots are required only when `reviews/EXCEPTION.md` or
+`reviews/VISUAL_COMPARISON.md` with an `Overall score: N/100` line, per-screen
+fidelity coverage for every `SCREEN_ACCEPTANCE.md` screen, and a score of at
+least 90/100 for high-fidelity delivery. Runtime screenshots are required only
+when `reviews/EXCEPTION.md` or
 `reviews/BLOCKED_FLOW.md` records an exception or a flow that cannot be
 completed. Treat QA failures as blockers unless the user explicitly narrows
 scope away from customer-facing UI.
+
+Maintain `work/<project-name>/tasks/PDCA.md` as the handoff loop for every
+delivery cycle. Current Cycle records cycle ID, scope, owner or agent, and
+checkpoint. Plan records objective, source artifacts, acceptance criteria, and
+quality gates. Do records implementation slices and changed areas. Check records
+verification, functional tests, monkey tests, visual comparison, and blockers.
+Act records the decision, standardization, next iteration, rollback, or recovery
+notes. Treat missing Act evidence as a delivery blocker.
 
 ## Artifacts
 
@@ -142,6 +154,7 @@ at the workspace root.
 - Cut assets, when needed: `work/<project-name>/design/cut-assets/`
 - Reference software and links: `work/<project-name>/design/reference-links.md`
 - Plans and task lists: `work/<project-name>/tasks/`
+- PDCA handoff ledger: `work/<project-name>/tasks/PDCA.md`
 - Reviews: `work/<project-name>/reviews/`
 - QA evidence: `work/<project-name>/reviews/FUNCTIONAL_TEST.md`, `work/<project-name>/reviews/MONKEY_TEST.md`, `work/<project-name>/reviews/VISUAL_COMPARISON.md`
 - Exception screenshots, only when needed: `work/<project-name>/reviews/visual-screenshots/`
@@ -155,6 +168,7 @@ Expected phase outputs:
 - Spec: `work/<project-name>/specs/SPEC.md`
 - Design, when UI is applicable: `work/<project-name>/design/DESIGN.md`, `work/<project-name>/design/VISUAL_SYSTEM.md`, `work/<project-name>/design/SCREEN_ACCEPTANCE.md`, `work/<project-name>/design/imagegen-prompts.md`, `work/<project-name>/design/imagegen/*`
 - Plan: `work/<project-name>/tasks/PLAN.md`
+- PDCA: `work/<project-name>/tasks/PDCA.md`
 - QA: `work/<project-name>/reviews/FUNCTIONAL_TEST.md`, `work/<project-name>/reviews/MONKEY_TEST.md`, `work/<project-name>/reviews/VISUAL_COMPARISON.md`
 - Review: `work/<project-name>/reviews/REVIEW.md`
 - Ship: `work/<project-name>/ship/LAUNCH.md`

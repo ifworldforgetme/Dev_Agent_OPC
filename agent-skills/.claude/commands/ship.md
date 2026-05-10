@@ -40,6 +40,12 @@ Once all three reports are back, the main agent (not a sub-persona) synthesizes 
 
 ## Phase C — Decision and rollback
 
+Before producing the final decision, update the Act section of
+`work/<project-name>/tasks/PDCA.md` with the decision, standardization,
+follow-up iteration, rollback, or recovery notes. Then run
+`bin/dev-flow pdca-check <project-name>` and
+`bin/dev-flow ship-check <project-name>`.
+
 Produce a single output:
 
 ```markdown

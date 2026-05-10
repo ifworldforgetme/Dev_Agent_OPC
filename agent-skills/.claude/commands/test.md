@@ -17,3 +17,7 @@ For bug fixes (Prove-It pattern):
 5. Run the full test suite for regressions
 
 For browser-related issues, also invoke agent-skills:browser-testing-with-devtools to verify with Chrome DevTools MCP.
+
+After tests run, update the Check section of `work/<project-name>/tasks/PDCA.md`
+with verification, functional, monkey, visual comparison, and blocker evidence
+as applicable.

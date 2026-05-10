@@ -39,7 +39,8 @@ For each slice:
 2. **Test** — run the test suite (or write a test if none exists)
 3. **Verify** — confirm the slice works as expected (tests pass, build succeeds, manual check)
 4. **Commit or checkpoint** -- when inside a git repo and the user/workspace has authorized commits, save progress with a descriptive commit. Otherwise, record a checkpoint in `work/<project-name>/tasks/status.md` with changed files and verification evidence.
-5. **Move to the next slice** — carry forward, don't restart
+5. **Update PDCA Do** -- record the implemented slice, changed areas, and build artifacts in `work/<project-name>/tasks/PDCA.md`.
+6. **Move to the next slice** — carry forward, don't restart
 
 Use the project-local workspace layout for all implementation work:
 
@@ -216,6 +217,7 @@ After each increment, verify:
 - [ ] Linting passes (`npm run lint`)
 - [ ] The new functionality works as expected
 - [ ] The change is committed with a descriptive message, or checkpointed in `tasks/status.md` when commits are unavailable or not authorized
+- [ ] `tasks/PDCA.md` Do records the implemented slice, changed areas, and build artifacts
 
 **Note:** Run each verification command after a change that could affect it. After a successful run, don't repeat the same command unless the code has changed since — re-running on unchanged code adds no information.
 

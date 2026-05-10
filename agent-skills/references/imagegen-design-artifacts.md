@@ -4,9 +4,20 @@ For customer-facing UI, image generation is a mandatory design gate before
 implementation planning. Every screen needs 1-N generated layout/state boards so
 the implementation has a concrete visual target, not only prose requirements.
 
+The canonical coverage list comes from the PRD, spec, design, and interaction
+model, then becomes the set of `##` screen headings in
+`SCREEN_ACCEPTANCE.md`. The `imagegen-prompts.md` coverage table must include at
+least one row for each exact heading and each row must point to a project-local
+final raster/PDF board path under `design/imagegen/`.
+
 Prefer Markdown, Mermaid, SVG, or code-native artifacts for exact text,
 diagrams, schemas, and implementation-critical logic. Use imagegen for visual
 composition, polish, icon tone, state treatment, and high-fidelity UI direction.
+
+When a deterministic SVG, Mermaid, Markdown, or code-native draft is useful,
+create it first as a structure reference only. Render or screenshot that draft,
+feed it into the installed `imagegen` skill as a reference image, then save the
+selected high-fidelity raster/PDF output back into `design/imagegen/`.
 
 ## Good Uses
 
@@ -32,6 +43,7 @@ composition, polish, icon tone, state treatment, and high-fidelity UI direction.
 
 - Save prompts in `work/<project-name>/design/imagegen-prompts.md`.
 - Save final selected imagegen UI boards under `work/<project-name>/design/imagegen/`.
+- Final imagegen UI boards must include raster/PDF outputs such as `.png`, `.jpg`, `.jpeg`, `.webp`, `.heic`, `.gif`, or `.pdf`. SVG, Mermaid, Markdown, and other code-native drafts can be saved for traceability but do not satisfy the imagegen gate by themselves.
 - Save generated reference boards under `work/<project-name>/design/references/` only when they summarize visual direction rather than define a screen.
 - Save optional design mockups from other tools under `work/<project-name>/design/mocks/`.
 - If implementation needs bitmap icons, illustrations, backgrounds, or UI element cutouts, save them under `work/<project-name>/design/cut-assets/` and list each asset in `design/cut-assets/ASSET_MANIFEST.md`.
@@ -40,7 +52,7 @@ composition, polish, icon tone, state treatment, and high-fidelity UI direction.
 
 ## Minimum Coverage
 
-- One generated board for every required screen before implementation planning.
+- One generated board for every `SCREEN_ACCEPTANCE.md` `##` screen before implementation planning.
 - Additional boards for materially different states or breakpoints.
 - A coverage table in `imagegen-prompts.md` mapping screen -> state -> prompt -> saved image path -> build notes.
 - `bin/dev-flow design-check <project-name>` must pass before planning or build starts.

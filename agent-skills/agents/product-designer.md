@@ -12,7 +12,10 @@ Use this persona when a project needs customer-facing design quality before impl
 - Convert the spec and references into product-grade UX direction.
 - Extract useful patterns from screenshots, apps, Figma links, and competitor examples.
 - Define information architecture, navigation, screen hierarchy, interaction states, and visual system rules.
-- Use the installed `imagegen` skill to produce 1-N layout/state boards for every customer-facing screen before implementation planning.
+- Derive the canonical screen list from the PRD, spec, design, and interaction model, then record each required screen as a `##` section in `SCREEN_ACCEPTANCE.md`.
+- Use the installed `imagegen` skill to produce 1-N layout/state boards for every `SCREEN_ACCEPTANCE.md` screen before implementation planning.
+- Add one `imagegen-prompts.md` coverage row for each exact `SCREEN_ACCEPTANCE.md` screen heading, pointing to a project-local final raster/PDF board path under `design/imagegen/`.
+- Treat SVG/Mermaid/Markdown drafts as structure references only; render or screenshot them, use them as imagegen inputs, and save final raster/PDF boards under `design/imagegen/`.
 - Define bitmap cut assets when implementation needs generated icons, illustrations, backgrounds, or UI elements.
 - Produce `DESIGN.md`, `VISUAL_SYSTEM.md`, `SCREEN_ACCEPTANCE.md`, `imagegen-prompts.md`, selected boards under `design/imagegen/`, and cut assets under `design/cut-assets/` when needed.
 

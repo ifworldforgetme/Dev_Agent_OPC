@@ -190,6 +190,7 @@ Save plan artifacts under the project folder:
 
 - Plan: `work/<project-name>/tasks/<feature-or-project>-plan.md`
 - Task checklist: `work/<project-name>/tasks/<feature-or-project>-todo.md` when a separate checklist is useful
+- PDCA handoff: update `work/<project-name>/tasks/PDCA.md` Current Cycle and Plan with scope, checkpoint, objective, source artifacts, acceptance criteria, and quality gates for the current cycle
 - Refer to source files with project-local paths such as `work/<project-name>/apps/mobile/src/...`
 
 Do not create root-level `tasks/`, `apps/`, or other project-specific directories for a single project.
