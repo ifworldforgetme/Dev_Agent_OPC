@@ -19,6 +19,7 @@ Usage:
   bin/dev-flow phase <project-name> <idea|pm|agent|spec|design|plan|build|test|review|ship> [task] [--force]
   bin/dev-flow next <project-name>
   bin/dev-flow verify-phase <project-name> <idea|pm|agent|spec|design|plan|build|test|review|ship>
+  bin/dev-flow pdca-check <project-name>
   bin/dev-flow ship-check <project-name>
   bin/dev-flow reference-check <project-name> [--required|--delegated]
   bin/dev-flow design-check <project-name> [--allow-no-reference]
@@ -151,15 +152,18 @@ next_prompt_for_phase() {
     plan)
       echo "Use local flow: plan"
       echo "Goal: break the approved spec/design into verifiable tasks under work/<project>/tasks/."
+      echo "Update tasks/PDCA.md with the Plan intent, acceptance evidence, and next checkpoint."
       ;;
     build)
       echo "Use local flow: build"
       echo "Goal: implement the next task slice, then run bin/dev-flow check <project>."
       echo "For UI work, confirm bin/dev-flow design-check <project> passes before writing code."
+      echo "Update tasks/PDCA.md with the Do evidence after each implementation slice."
       ;;
     test)
       echo "Use local flow: test"
       echo "Goal: add or run proof for the implemented slice."
+      echo "Update tasks/PDCA.md with the Check evidence: verification, functional tests, monkey tests, and visual comparison when UI applies."
       ;;
     review)
       echo "Use local flow: review"
@@ -168,6 +172,7 @@ next_prompt_for_phase() {
     ship)
       echo "Use local flow: ship"
       echo "Goal: prepare launch notes, rollback notes, and release evidence."
+      echo "Before delivery, run: bin/dev-flow pdca-check <project>"
       ;;
     *)
       echo "Unknown phase: ${1:-<missing>}"
@@ -286,6 +291,284 @@ count_design_mockups() {
 count_imagegen_artifacts() {
   local dir="$1"
   count_supported_artifacts image "$dir/design/imagegen"
+}
+
+is_final_imagegen_artifact() {
+  local path="$1"
+  local mime
+  [[ -s "$path" ]] || return 1
+  if command -v file >/dev/null 2>&1; then
+    mime="$(mime_type_for_file "$path")"
+    case "$mime" in
+      image/svg+xml|text/xml|application/xml) return 1 ;;
+      image/*|application/pdf) return 0 ;;
+    esac
+    return 1
+  fi
+  case "$path" in
+    *.[Pp][Nn][Gg]|*.[Jj][Pp][Gg]|*.[Jj][Pp][Ee][Gg]|*.[Ww][Ee][Bb][Pp]|*.[Gg][Ii][Ff]|*.[Hh][Ee][Ii][Cc]|*.[Pp][Dd][Ff]) return 0 ;;
+  esac
+  return 1
+}
+
+count_final_imagegen_artifacts() {
+  local dir="$1"
+  local existing=()
+  local candidate
+  for candidate in "$dir/design/imagegen"; do
+    [[ -d "$candidate" ]] && existing+=("$candidate")
+  done
+  if [[ "${#existing[@]}" -eq 0 ]]; then
+    echo 0
+    return
+  fi
+  find "${existing[@]}" \
+    -type f \( \
+      -iname '*.png' -o -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.webp' -o \
+      -iname '*.gif' -o -iname '*.heic' -o -iname '*.pdf' \
+    \) -print0 2>/dev/null \
+    | while IFS= read -r -d '' path; do
+        if is_final_imagegen_artifact "$path"; then
+          printf '.\n'
+        fi
+      done \
+    | wc -l \
+    | tr -d ' '
+}
+
+trim_md_cell() {
+  printf '%s' "${1:-}" | sed -E 's/^[[:space:]]+//; s/[[:space:]]+$//; s/^`//; s/`$//'
+}
+
+has_md_heading() {
+  local path="$1"
+  local heading="$2"
+  [[ -f "$path" ]] || return 1
+  grep -Eiq "^##[[:space:]]+${heading}([[:space:]]*$|[[:space:]]|:)" "$path"
+}
+
+has_md_heading_alias() {
+  local path="$1"
+  local aliases="$2"
+  local alias
+  local -a heading_aliases
+  IFS='|' read -r -a heading_aliases <<< "$aliases"
+  for alias in "${heading_aliases[@]}"; do
+    if has_md_heading "$path" "$alias"; then
+      return 0
+    fi
+  done
+  return 1
+}
+
+check_required_headings() {
+  local path="$1"
+  local label="$2"
+  shift 2
+  local heading failures
+  failures=0
+  for heading in "$@"; do
+    if ! has_md_heading "$path" "$heading"; then
+      echo "Missing required section in $label: ## $heading" >&2
+      failures=$((failures + 1))
+    fi
+  done
+  [[ "$failures" -eq 0 ]]
+}
+
+check_required_heading_aliases() {
+  local path="$1"
+  local label="$2"
+  shift 2
+  local aliases display failures
+  failures=0
+  for aliases in "$@"; do
+    display="${aliases%%|*}"
+    if ! has_md_heading_alias "$path" "$aliases"; then
+      echo "Missing required section in $label: ## $display" >&2
+      failures=$((failures + 1))
+    fi
+  done
+  [[ "$failures" -eq 0 ]]
+}
+
+pdca_section_has_evidence() {
+  local path="$1"
+  local heading="$2"
+  [[ -f "$path" ]] || return 1
+  awk -v target="$heading" '
+    BEGIN { found = 0; in_section = 0 }
+    /^##[[:space:]]+/ {
+      current = $0
+      sub(/^##[[:space:]]+/, "", current)
+      gsub(/[[:space:]]+$/, "", current)
+      in_section = (tolower(current) == tolower(target))
+      next
+    }
+    in_section {
+      line = $0
+      gsub(/^[[:space:]]*-[[:space:]]*/, "", line)
+      gsub(/^[[:space:]]+/, "", line)
+      gsub(/[[:space:]]+$/, "", line)
+      if (line == "" || line ~ /^<!--/) next
+      if (line ~ /^[^:]+:[[:space:]]*$/) next
+      found = 1
+    }
+    END { exit found ? 0 : 1 }
+  ' "$path"
+}
+
+check_design_package_structure() {
+  local dir="$1"
+  local failures
+  failures=0
+  check_required_heading_aliases "$dir/design/DESIGN.md" "design/DESIGN.md" \
+    "UX Problem|UX 问题" "Recommended Direction|推荐方向" "Alternatives Considered|备选方案" \
+    "Information Architecture|信息架构" "Interaction Model|交互模型" "Visual System|视觉系统" \
+    "Design Artifacts|设计产物" "Build Implications|实施影响" || failures=$((failures + 1))
+  check_required_heading_aliases "$dir/design/VISUAL_SYSTEM.md" "design/VISUAL_SYSTEM.md" \
+    "Reference Influence|参考影响" "Palette|色彩" "Typography|字体|字体与文字|排版" \
+    "Spacing and Layout|间距与布局" "Components and Motion|组件与动效|组件" \
+    "Forbidden Patterns|禁止模式|禁用模式" || failures=$((failures + 1))
+  check_screen_acceptance_structure "$dir" || failures=$((failures + 1))
+  [[ "$failures" -eq 0 ]]
+}
+
+required_design_screens() {
+  local dir="$1"
+  local path="$dir/design/SCREEN_ACCEPTANCE.md"
+  [[ -f "$path" ]] || return 0
+  awk '
+    /^##[[:space:]]+/ {
+      sub(/^##[[:space:]]+/, "")
+      gsub(/[[:space:]]+$/, "")
+      if ($0 != "") print
+    }
+  ' "$path"
+}
+
+is_project_imagegen_board_path() {
+  local dir="$1"
+  local saved_path="$2"
+  local full_path="$3"
+  case "$saved_path" in
+    design/imagegen/*|./design/imagegen/*)
+      [[ "$full_path" == "$dir/"* ]]
+      ;;
+    /*)
+      [[ "$full_path" == "$dir/design/imagegen/"* ]]
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
+screen_has_final_imagegen_board() {
+  local dir="$1"
+  local screen="$2"
+  local prompts="$dir/design/imagegen-prompts.md"
+  local line screen_cell path_cell screen_name saved_path full_path
+  [[ -f "$prompts" ]] || return 1
+  while IFS= read -r line; do
+    [[ "$line" == \|* ]] || continue
+    [[ "$line" == *"|---"* || "$line" == *"---|"* ]] && continue
+    IFS='|' read -r _ screen_cell _ _ path_cell _ <<< "$line"
+    screen_name="$(trim_md_cell "$screen_cell")"
+    [[ "$screen_name" == "$screen" ]] || continue
+    saved_path="$(trim_md_cell "$path_cell")"
+    [[ -n "$saved_path" ]] || continue
+    case "$saved_path" in
+      /*) full_path="$saved_path" ;;
+      *) full_path="$dir/$saved_path" ;;
+    esac
+    if is_project_imagegen_board_path "$dir" "$saved_path" "$full_path" && is_final_imagegen_artifact "$full_path"; then
+      return 0
+    fi
+  done < "$prompts"
+  return 1
+}
+
+check_screen_acceptance_structure() {
+  local dir="$1"
+  local path="$dir/design/SCREEN_ACCEPTANCE.md"
+  [[ -f "$path" ]] || return 1
+  awk '
+    function flush() {
+      if (screen == "") return
+      if (!states || !breakpoints || !boards || !visual || !accessibility) {
+        print "Incomplete screen acceptance section: " screen " (requires Required states, Breakpoints, Required imagegen boards, Visual acceptance, and Accessibility acceptance)." > "/dev/stderr"
+        failures++
+      }
+    }
+    /^##[[:space:]]+/ {
+      flush()
+      screen = $0
+      sub(/^##[[:space:]]+/, "", screen)
+      gsub(/[[:space:]]+$/, "", screen)
+      states = breakpoints = boards = visual = accessibility = 0
+      seen = 1
+      next
+    }
+    screen != "" {
+      if ($0 ~ /(Required states|必备状态)[：:]/) states = 1
+      if ($0 ~ /(Breakpoints|断点)[：:]/) breakpoints = 1
+      if ($0 ~ /(Required imagegen boards|高保真参考图|设计板)[：:]/) boards = 1
+      if ($0 ~ /(Visual acceptance|视觉验收)[：:]/) visual = 1
+      if ($0 ~ /(Accessibility acceptance|无障碍验收)[：:]/) accessibility = 1
+    }
+    END {
+      flush()
+      if (!seen) {
+        print "Missing screen acceptance headings: add one or more ## Screen Name sections to design/SCREEN_ACCEPTANCE.md." > "/dev/stderr"
+        failures++
+      }
+      exit failures
+    }
+  ' "$path"
+}
+
+check_imagegen_screen_coverage() {
+  local dir="$1"
+  local missing=0
+  local required=0
+  local screen
+  while IFS= read -r screen; do
+    required=$((required + 1))
+    if ! screen_has_final_imagegen_board "$dir" "$screen"; then
+      echo "Missing final imagegen board for screen: $screen (add a raster/PDF path for this screen in design/imagegen-prompts.md)." >&2
+      missing=$((missing + 1))
+    fi
+  done < <(required_design_screens "$dir")
+  if [[ "$required" -eq 0 ]]; then
+    echo "Missing screen acceptance headings: add one or more '## Screen Name' sections to design/SCREEN_ACCEPTANCE.md." >&2
+    return 1
+  fi
+  [[ "$missing" -eq 0 ]]
+}
+
+check_visual_comparison_screen_coverage() {
+  local dir="$1"
+  local path="$dir/reviews/VISUAL_COMPARISON.md"
+  local missing screen required
+  missing=0
+  required=0
+  [[ -f "$path" ]] || return 1
+  while IFS= read -r screen; do
+    required=$((required + 1))
+    if ! grep -Fq "$screen" "$path"; then
+      echo "Missing visual comparison coverage for screen: $screen" >&2
+      missing=$((missing + 1))
+    fi
+  done < <(required_design_screens "$dir")
+  [[ "$required" -gt 0 && "$missing" -eq 0 ]]
+}
+
+plan_references_design_contract() {
+  local dir="$1"
+  local path="$dir/tasks/PLAN.md"
+  [[ -f "$path" ]] || return 1
+  grep -Eiq 'DESIGN\.md|VISUAL_SYSTEM\.md|SCREEN_ACCEPTANCE\.md|imagegen|design/imagegen|VISUAL_COMPARISON' "$path"
 }
 
 count_invalid_imagegen_artifacts() {
@@ -506,7 +789,7 @@ verify_phase_impl() {
     echo "Invalid phase: ${phase:-<missing>}" >&2
     return 1
   fi
-  local dir failures assets links mockups imagegen_assets screenshots java_sources
+  local dir failures assets links mockups imagegen_assets final_imagegen_assets screenshots java_sources
   dir="$(project_path "$project")"
   failures=0
   case "$phase" in
@@ -531,6 +814,7 @@ verify_phase_impl() {
       links="$(count_reference_links "$dir")"
       mockups="$(count_design_mockups "$dir")"
       imagegen_assets="$(count_imagegen_artifacts "$dir")"
+      final_imagegen_assets="$(count_final_imagegen_artifacts "$dir")"
       if references_required "$project" && [[ $((assets + links)) -eq 0 ]]; then
         echo "Missing references: add reference assets/software or reference links before design verification." >&2
         failures=$((failures + 1))
@@ -546,6 +830,13 @@ verify_phase_impl() {
           echo "Missing imagegen design boards: generate 1-N layout/state images per UI screen under design/imagegen/ before implementation planning." >&2
           failures=$((failures + 1))
         fi
+        if [[ "$final_imagegen_assets" -eq 0 ]]; then
+          echo "Missing final imagegen design board: SVG/Mermaid/code-native drafts are allowed as layout references, but design/imagegen/ must include at least one raster image or PDF generated by imagegen." >&2
+          failures=$((failures + 1))
+        fi
+        if ! check_imagegen_screen_coverage "$dir"; then
+          failures=$((failures + 1))
+        fi
       fi
       if setting_enabled "$UI_MOCKUPS" && [[ "$mockups" -eq 0 ]]; then
         echo "Missing design mockups: add image/SVG/PDF/Figma artifacts under design/mocks/." >&2
@@ -554,11 +845,18 @@ verify_phase_impl() {
       for file in design/DESIGN.md design/VISUAL_SYSTEM.md design/SCREEN_ACCEPTANCE.md; do
         require_content_file "$dir" "$file" || failures=$((failures + 1))
       done
+      if ! check_design_package_structure "$dir"; then
+        failures=$((failures + 1))
+      fi
       ;;
     plan)
       for file in tasks/PLAN.md tasks/quality-gates.md; do
         require_content_file "$dir" "$file" || failures=$((failures + 1))
       done
+      if phase_is_applicable "$project" design && ! plan_references_design_contract "$dir"; then
+        echo "Missing design handoff in tasks/PLAN.md: reference DESIGN.md, SCREEN_ACCEPTANCE.md, imagegen boards, or visual comparison criteria before UI implementation." >&2
+        failures=$((failures + 1))
+      fi
       ;;
     build)
       require_any_file "$dir" "implemented source under apps/ or packages/" "apps/*" "packages/*" || failures=$((failures + 1))
@@ -596,7 +894,7 @@ verify_phase_impl() {
 
 qa_check_impl() {
   local project="$1"
-  local dir failures mockups imagegen_assets screenshots score
+  local dir failures mockups imagegen_assets final_imagegen_assets screenshots score
   require_project "$project"
   dir="$(project_path "$project")"
   failures=0
@@ -608,6 +906,7 @@ qa_check_impl() {
   done
   mockups="$(count_design_mockups "$dir")"
   imagegen_assets="$(count_imagegen_artifacts "$dir")"
+  final_imagegen_assets="$(count_final_imagegen_artifacts "$dir")"
   screenshots="$(count_visual_screenshots "$dir")"
   load_project_applicability "$project"
   if setting_enabled "$UI_IMAGEGEN"; then
@@ -623,6 +922,13 @@ qa_check_impl() {
       echo "Missing imagegen UI boards under design/imagegen/." >&2
       failures=$((failures + 1))
     fi
+    if [[ "$final_imagegen_assets" -eq 0 ]]; then
+      echo "Missing final imagegen UI board under design/imagegen/: SVG/Mermaid/code-native drafts do not satisfy the imagegen gate without a raster image or PDF output." >&2
+      failures=$((failures + 1))
+    fi
+    if ! check_imagegen_screen_coverage "$dir"; then
+      failures=$((failures + 1))
+    fi
   fi
   if setting_enabled "$UI_MOCKUPS" && [[ "$mockups" -eq 0 ]]; then
     echo "Missing design mockup evidence under design/mocks/." >&2
@@ -635,8 +941,13 @@ qa_check_impl() {
   elif [[ "$score" -gt 100 ]]; then
     echo "Visual comparison score out of range: $score/100." >&2
     failures=$((failures + 1))
-  elif [[ "$score" -lt 80 ]]; then
-    echo "Visual comparison score too low: $score/100, expected at least 80/100." >&2
+  elif [[ "$score" -lt 90 ]]; then
+    echo "Visual comparison score too low: $score/100, expected at least 90/100 for high-fidelity UI delivery." >&2
+    failures=$((failures + 1))
+  fi
+  check_required_headings "$dir/reviews/VISUAL_COMPARISON.md" "reviews/VISUAL_COMPARISON.md" \
+    "Compared Inputs" "Screen Fidelity Matrix" "Score Breakdown" "Differences" "Decision" || failures=$((failures + 1))
+  if ! check_visual_comparison_screen_coverage "$dir"; then
     failures=$((failures + 1))
   fi
   if qa_exception_recorded "$dir"; then
@@ -655,6 +966,66 @@ qa_check_impl() {
   else
     echo "Runtime screenshot artifacts found: $screenshots."
   fi
+}
+
+pdca_check_impl() {
+  local project="$1"
+  local dir path failures
+  require_project "$project"
+  dir="$(project_path "$project")"
+  path="$dir/tasks/PDCA.md"
+  failures=0
+
+  require_content_file "$dir" "tasks/PDCA.md" || failures=$((failures + 1))
+  if [[ -f "$path" ]]; then
+    check_required_headings "$path" "tasks/PDCA.md" "Current Cycle" "Plan" "Do" "Check" "Act" || failures=$((failures + 1))
+    if ! pdca_section_has_evidence "$path" "Current Cycle"; then
+      echo "Missing Current Cycle evidence in tasks/PDCA.md: fill the section with cycle scope, owner, date, or checkpoint." >&2
+      failures=$((failures + 1))
+    fi
+    if ! pdca_section_has_evidence "$path" "Plan"; then
+      echo "Missing Plan section evidence in tasks/PDCA.md: fill the section with concrete objective, source artifacts, acceptance criteria, or gates." >&2
+      failures=$((failures + 1))
+    fi
+    if ! pdca_section_has_evidence "$path" "Do"; then
+      echo "Missing Do section evidence in tasks/PDCA.md: fill the section with implemented slices, changed areas, or build artifacts." >&2
+      failures=$((failures + 1))
+    fi
+    if ! pdca_section_has_evidence "$path" "Check"; then
+      echo "Missing Check section evidence in tasks/PDCA.md: fill the section with verification, functional, monkey, or visual QA results." >&2
+      failures=$((failures + 1))
+    fi
+    if ! pdca_section_has_evidence "$path" "Act"; then
+      echo "Missing Act section evidence in tasks/PDCA.md: fill the section with decision, standardization, follow-up, or rollback notes." >&2
+      failures=$((failures + 1))
+    fi
+    if ! grep -Eiq 'cycle|scope|SPEC\.md|DESIGN\.md|SCREEN_ACCEPTANCE\.md|PLAN\.md|acceptance|objective|hypothesis|quality gate|checkpoint' "$path"; then
+      echo "Missing Plan evidence in tasks/PDCA.md: cite objective, acceptance criteria, source artifacts, or quality gates." >&2
+      failures=$((failures + 1))
+    fi
+    if ! grep -Eiq 'build|implementation|implemented|task|slice|apps/|packages/|changed|commit' "$path"; then
+      echo "Missing Do evidence in tasks/PDCA.md: record implementation slices, changed areas, or build artifacts." >&2
+      failures=$((failures + 1))
+    fi
+    if ! grep -Eiq 'VERIFICATION\.md|FUNCTIONAL_TEST\.md|MONKEY_TEST\.md|VISUAL_COMPARISON\.md|test|qa-check|ship-check|score|verification' "$path"; then
+      echo "Missing Check evidence in tasks/PDCA.md: record verification, functional tests, monkey tests, and QA evidence." >&2
+      failures=$((failures + 1))
+    fi
+    if ! grep -Eiq 'decision|standardize|iterate|rollback|follow-up|next cycle|adjust|lesson' "$path"; then
+      echo "Missing Act evidence in tasks/PDCA.md: record the decision, follow-up, rollback, standardization, or next-cycle adjustment." >&2
+      failures=$((failures + 1))
+    fi
+    if phase_is_applicable "$project" design && ! grep -Eiq 'VISUAL_COMPARISON\.md|visual comparison|imagegen|90/100|score' "$path"; then
+      echo "Missing UI Check evidence in tasks/PDCA.md: link imagegen boards and visual comparison score for customer-facing UI." >&2
+      failures=$((failures + 1))
+    fi
+  fi
+
+  if [[ "$failures" -gt 0 ]]; then
+    echo "PDCA check failed for $project." >&2
+    return 1
+  fi
+  echo "PDCA check passed for $project."
 }
 
 ship_check_impl() {
@@ -683,6 +1054,10 @@ ship_check_impl() {
       echo "Project QA check failed for $project." >&2
       return 1
     fi
+  fi
+  if ! pdca_check_impl "$project"; then
+    echo "Project PDCA check failed for $project." >&2
+    return 1
   fi
   echo "Ship check passed for $project."
 }
@@ -1020,6 +1395,7 @@ Load only the files needed for the current phase.
 - Design: read \`specs/SPEC.md\`, \`design/reference-intake.md\`, \`design/imagegen-prompts.md\`, user-provided references, existing screens, and platform constraints.
 - Plan: read approved spec/design and inspect likely source boundaries.
 - Build: read the assigned task, approved design docs, \`design/imagegen/\` layout/state boards, nearby source files, and tests.
+- PDCA: keep \`tasks/PDCA.md\` current across Current Cycle, Plan, Do, Check, and Act so decisions and evidence survive handoffs.
 - Review: read the diff, tests, and quality-gate output.
 - QA: read verification evidence, functional and monkey test logs, visual comparison score, and exception screenshots only when a flow is blocked.
 - Ship: read review results, QA evidence, verification evidence, and launch notes.
@@ -1043,13 +1419,59 @@ Use this before customer-facing UI design or visual polish.
 - If reference assets or software are provided, extract visual patterns before designing: layout density, navigation model, component style, spacing, typography, color, motion, and tone.
 - If this is customer-facing UI and no reference is provided, ask the user for examples unless the user has explicitly delegated visual direction.
 - If the user delegates visual direction, create a short reference board first and save it under \`design/\` before implementation planning."
+    write_if_missing "$dir/design/DESIGN.md" "# Design: $project
+
+## UX Problem
+
+## Recommended Direction
+
+## Alternatives Considered
+
+## Information Architecture
+
+## Interaction Model
+
+## Visual System
+
+## Design Artifacts
+
+## Build Implications
+"
+    write_if_missing "$dir/design/VISUAL_SYSTEM.md" "# Visual System: $project
+
+## Reference Influence
+
+## Palette
+
+## Typography
+
+## Spacing and Layout
+
+## Components and Motion
+
+## Forbidden Patterns
+"
+    write_if_missing "$dir/design/SCREEN_ACCEPTANCE.md" "# Screen Acceptance: $project
+
+## [Screen Name]
+- Required content:
+- Required states:
+- Breakpoints:
+- Required imagegen boards:
+- Visual acceptance:
+- Accessibility acceptance:
+"
     write_if_missing "$dir/design/imagegen-prompts.md" "# Imagegen Prompts: $project
 
 Use the installed imagegen skill before implementation planning for every UI screen.
 
 ## Required Coverage
-- Generate 1-N layout and state images for each screen listed in SCREEN_ACCEPTANCE.md.
+- Derive the canonical screen list from the PRD/spec/design/interaction model and record every required screen as a \`##\` section in \`SCREEN_ACCEPTANCE.md\`.
+- Generate 1-N layout and state images for each \`SCREEN_ACCEPTANCE.md\` screen.
+- Add at least one Screen Coverage row for each exact \`SCREEN_ACCEPTANCE.md\` screen heading, pointing to a final raster/PDF path under \`design/imagegen/\`.
 - Save final selected images under \`design/imagegen/\`.
+- SVG/Mermaid/Markdown drafts are allowed as structure references only. If used, render or screenshot the draft, feed it to imagegen as a reference, and save the final raster/PDF output under \`design/imagegen/\`.
+- \`design-check\` requires a raster/PDF imagegen board for every \`SCREEN_ACCEPTANCE.md\` screen; SVG drafts alone do not satisfy the gate.
 - Record the prompt, intended screen/state, saved path, and design decision for each image.
 - If bitmap icons, illustrations, or UI cut assets are needed, save them under \`design/cut-assets/\` and list them in \`design/cut-assets/ASSET_MANIFEST.md\`.
 
@@ -1116,9 +1538,46 @@ folder and mirror them in \`bin/check\` when they become stable.
 - [ ] Browser or device smoke test, when user-facing
 - [ ] Functional flow test, when user-facing
 - [ ] Monkey or exploratory stress test, when user-facing
-- [ ] Visual comparison score against approved imagegen boards, when user-facing
+- [ ] Visual comparison score is at least 90/100 against approved imagegen boards, when user-facing
+- [ ] \`tasks/PDCA.md\` records Current Cycle, Plan, Do, Check, and Act evidence for the current cycle
+- [ ] \`bin/dev-flow pdca-check $project\`, before delivery
 - [ ] \`bin/dev-flow design-check $project\`, before implementation planning for customer-facing UI
 - [ ] \`bin/dev-flow qa-check $project\`, before delivery for customer-facing UI"
+    write_if_missing "$dir/tasks/PDCA.md" "# PDCA: $project
+
+Use this as the handoff ledger for each delivery cycle. Keep each section current
+instead of reconstructing decisions at release time.
+
+## Current Cycle
+- Cycle ID:
+- Scope:
+- Owner / agent:
+- Started:
+- Checkpoint:
+
+## Plan
+- Objective:
+- Source artifacts: ideas/idea-brief.md, specs/SPEC.md, design/DESIGN.md when UI applies, tasks/PLAN.md
+- Acceptance evidence:
+- Quality gates:
+
+## Do
+- Implementation slices:
+- Changed areas:
+- Build artifacts:
+
+## Check
+- Verification evidence:
+- Functional test evidence:
+- Monkey test evidence:
+- UI visual comparison evidence, when applicable:
+
+## Act
+- Decision:
+- Standardize:
+- Iterate / follow-up:
+- Rollback or recovery notes:
+"
     write_if_missing "$dir/reviews/FUNCTIONAL_TEST.md" "# Functional Test: $project
 
 Record normal happy-path and critical user-flow verification here after implementation.
@@ -1150,6 +1609,10 @@ Overall score: 0/100
 - Runtime UI surfaces:
 - Exception screenshots, only if a flow was blocked:
 
+## Screen Fidelity Matrix
+| Screen | Approved board path | Runtime surface | Fidelity score | Notes |
+|---|---|---|---|---|
+
 ## Score Breakdown
 - Layout and hierarchy:
 - Component fidelity:
@@ -1172,7 +1635,7 @@ for d in \"\${required_dirs[@]}\"; do
   [[ -d \"\$ROOT/\$d\" ]] || { echo \"Missing directory: \$d\" >&2; exit 1; }
 done
 
-required_files=(.dev-flow/state.env .dev-flow/context.md design/reference-intake.md design/reference-links.md design/imagegen-prompts.md design/cut-assets/ASSET_MANIFEST.md tasks/status.md tasks/quality-gates.md reviews/FUNCTIONAL_TEST.md reviews/MONKEY_TEST.md reviews/VISUAL_COMPARISON.md)
+required_files=(.dev-flow/state.env .dev-flow/context.md design/reference-intake.md design/reference-links.md design/imagegen-prompts.md design/cut-assets/ASSET_MANIFEST.md tasks/status.md tasks/quality-gates.md tasks/PDCA.md reviews/FUNCTIONAL_TEST.md reviews/MONKEY_TEST.md reviews/VISUAL_COMPARISON.md)
 for f in \"\${required_files[@]}\"; do
   [[ -f \"\$ROOT/\$f\" ]] || { echo \"Missing file: \$f\" >&2; exit 1; }
 done
@@ -1260,6 +1723,11 @@ echo \"Default workflow gate passed for \$(basename \"\$ROOT\").\""
     ship_check_impl "$project"
     record_verification "$project" "ship-check passed at $(date -u '+%Y-%m-%dT%H:%M:%SZ')"
     ;;
+  pdca-check)
+    project="${2:-}"
+    pdca_check_impl "$project"
+    record_verification "$project" "pdca-check passed at $(date -u '+%Y-%m-%dT%H:%M:%SZ')"
+    ;;
   reference-check)
     project="${2:-}"
     mode="${3:-}"
@@ -1300,6 +1768,7 @@ echo \"Default workflow gate passed for \$(basename \"\$ROOT\").\""
     dir="$(project_path "$project")"
     failures=0
     imagegen_assets="$(count_imagegen_artifacts "$dir")"
+    final_imagegen_assets="$(count_final_imagegen_artifacts "$dir")"
     load_project_applicability "$project"
     if [[ "$mode" == "--allow-no-reference" ]]; then
       set_project_applicability "$project" "UI_REFERENCES" "delegated"
@@ -1326,6 +1795,13 @@ echo \"Default workflow gate passed for \$(basename \"\$ROOT\").\""
         echo "Missing imagegen UI boards: save 1-N layout/state images per screen under design/imagegen/ before implementation planning." >&2
         failures=$((failures + 1))
       fi
+      if [[ "$final_imagegen_assets" -eq 0 ]]; then
+        echo "Missing final imagegen UI board: SVG/Mermaid/code-native drafts are allowed as layout references, but design/imagegen/ must include at least one raster image or PDF generated by imagegen." >&2
+        failures=$((failures + 1))
+      fi
+      if ! check_imagegen_screen_coverage "$dir"; then
+        failures=$((failures + 1))
+      fi
     fi
     for file in design/DESIGN.md design/VISUAL_SYSTEM.md design/SCREEN_ACCEPTANCE.md; do
       if ! has_content "$dir/$file"; then
@@ -1333,11 +1809,14 @@ echo \"Default workflow gate passed for \$(basename \"\$ROOT\").\""
         failures=$((failures + 1))
       fi
     done
+    if ! check_design_package_structure "$dir"; then
+      failures=$((failures + 1))
+    fi
     if [[ "$failures" -gt 0 ]]; then
       echo "Design check failed for $project." >&2
       exit 1
     fi
-    echo "Design check passed for $project with $imagegen_assets imagegen UI board(s)."
+    echo "Design check passed for $project with $imagegen_assets imagegen artifact(s), including $final_imagegen_assets final raster/PDF board(s), covering every SCREEN_ACCEPTANCE screen."
     ;;
   qa-check|visual-check)
     project="${2:-}"

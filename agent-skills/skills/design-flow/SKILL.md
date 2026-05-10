@@ -58,17 +58,22 @@ Save design artifacts under `work/<project-name>/design/`:
    - Avoid generic AI aesthetics: purple-heavy gradients, decorative blobs, oversized hero layouts inside utility apps, and nested card stacks.
 
 8. **Define screen acceptance**
-   - For each key screen, list required states, breakpoints, primary actions, and visual acceptance criteria.
+   - Derive the canonical key-screen list from the PRD, spec, interaction model, and platform scope.
+   - For each key screen, create one `## [Screen Name]` section and list required states, breakpoints, primary actions, and visual acceptance criteria.
    - Include at least empty, loading, error, success, disabled, selected, long-content, and narrow-screen states when applicable.
    - Name what later must be exercised by functional tests, monkey/exploratory testing, and visual comparison against imagegen boards. Do not require runtime screenshots unless a flow is blocked or an exception occurs.
 
 9. **Generate imagegen UI boards before planning implementation**
    - Use the installed `imagegen` skill for every customer-facing UI screen before implementation planning.
-   - Produce 1-N high-fidelity layout and state images for each screen listed in `SCREEN_ACCEPTANCE.md`.
+   - If you create a deterministic SVG, Mermaid, Markdown, wireframe, or code-native layout draft first, treat it only as a structure reference. Render or screenshot that draft, use it as an explicit imagegen reference, then generate a high-fidelity raster/PDF board from it.
+   - Produce 1-N high-fidelity layout and state images for each `##` screen listed in `SCREEN_ACCEPTANCE.md`.
+   - Add at least one `imagegen-prompts.md` coverage row for each exact `SCREEN_ACCEPTANCE.md` screen heading, pointing to a project-local final raster/PDF board path under `design/imagegen/`.
    - Cover important states such as default, empty, loading, error, success, selected, disabled, long-content, and narrow-screen where applicable.
    - Save prompts and a screen/state coverage table in `work/<project-name>/design/imagegen-prompts.md`.
    - Save final selected imagegen outputs under `work/<project-name>/design/imagegen/`.
+   - Save structure drafts under `design/imagegen/` or `design/mocks/` only as drafts; they do not satisfy the imagegen gate by themselves.
    - Imagegen outputs must be real non-empty image or PDF files; do not use placeholder text files with image extensions.
+   - Final imagegen boards must include at least one raster image or PDF output such as `.png`, `.jpg`, `.webp`, `.heic`, `.gif`, or `.pdf`; SVG alone is not an acceptable final imagegen board.
    - If bitmap icons, illustrations, background images, or UI elements are needed in implementation, cut or derive them and save them under `work/<project-name>/design/cut-assets/` with `ASSET_MANIFEST.md`.
    - Prefer deterministic Mermaid/SVG/Markdown for exact diagrams with important text.
    - Load `references/imagegen-design-artifacts.md` before writing imagegen prompts.
@@ -144,7 +149,7 @@ Save design artifacts under `work/<project-name>/design/`:
 - Required content:
 - Required states:
 - Breakpoints:
-- Required imagegen boards:
+- Required imagegen boards: [final raster/PDF paths under design/imagegen/]
 - Visual acceptance:
 - Accessibility acceptance:
 ```
@@ -153,7 +158,8 @@ Save design artifacts under `work/<project-name>/design/`:
 # imagegen-prompts.md
 
 ## Required Coverage
-- [Screen]: [1-N layout/state boards saved under design/imagegen/]
+- One row in Screen Coverage for each exact `##` screen heading in `SCREEN_ACCEPTANCE.md`.
+- Each screen must point to at least one final raster/PDF imagegen board under `design/imagegen/`.
 
 ## Screen Coverage
 | Screen | State | Prompt summary | Saved image path | Build notes |
@@ -167,8 +173,8 @@ Save design artifacts under `work/<project-name>/design/`:
 
 - [ ] `DESIGN.md`, `VISUAL_SYSTEM.md`, and `SCREEN_ACCEPTANCE.md` are saved under `work/<project-name>/design/`
 - [ ] Customer-facing UI has reference intake or an explicit user delegation for visual direction
-- [ ] `imagegen-prompts.md` maps every screen/state to 1-N generated imagegen boards
-- [ ] Final selected imagegen boards are saved under `work/<project-name>/design/imagegen/`
+- [ ] `imagegen-prompts.md` maps every `SCREEN_ACCEPTANCE.md` `##` screen to 1-N generated imagegen boards
+- [ ] Final selected imagegen boards are saved under `work/<project-name>/design/imagegen/` as raster images or PDFs, not only SVG drafts
 - [ ] Any required bitmap cut assets are saved under `work/<project-name>/design/cut-assets/` and listed in `ASSET_MANIFEST.md`
 - [ ] Interaction alternatives and recommendation are explicit
 - [ ] Platform and accessibility requirements are listed

@@ -61,6 +61,7 @@ bin/dev-flow verify-phase <project-name> spec
 bin/dev-flow reference-check <project-name> --required
 bin/dev-flow design-check <project-name>
 bin/dev-flow qa-check <project-name>
+bin/dev-flow pdca-check <project-name>
 bin/dev-flow ship-check <project-name>
 bin/dev-flow check <project-name>
 ```
@@ -78,6 +79,7 @@ and a control layer under `work/<project-name>/` when a project actually starts:
 - `design/cut-assets/`: bitmap UI assets cut or derived from imagegen outputs when needed
 - `tasks/status.md`: human-readable project ledger and review gates
 - `tasks/quality-gates.md`: project-specific verification checklist
+- `tasks/PDCA.md`: Current Cycle/Plan/Do/Check/Act handoff ledger
 - `reviews/FUNCTIONAL_TEST.md`: normal critical-flow test evidence after implementation
 - `reviews/MONKEY_TEST.md`: exploratory, random, repeated, or stress test evidence
 - `reviews/VISUAL_COMPARISON.md`: comparison against approved imagegen boards with `Overall score: N/100`
@@ -94,6 +96,21 @@ artifacts are ready. Use `verify-phase` to check one stage and `ship-check`
 before delivery. Use `next` at the start of a session to get the next prompt
 and artifact target.
 
+## PDCA Handoff
+
+Use `tasks/PDCA.md` as the persistent operating loop for every delivery cycle:
+
+- Current Cycle records cycle ID, scope, owner or agent, and checkpoint.
+- Plan records objective, source artifacts, acceptance criteria, risk, and gates.
+- Do records implementation slices, changed areas, and build artifacts.
+- Check records verification, functional tests, monkey tests, visual comparison, and blockers.
+- Act records the decision, what becomes standard, what iterates next, and rollback or recovery notes.
+
+Update this file as work moves across phases. Run `bin/dev-flow pdca-check
+<project-name>` before delivery; `ship-check` invokes the same gate so a project
+cannot ship with only an empty PDCA template. The reusable handoff contract is
+documented in `agent-skills/references/pdca-delivery-loop.md`.
+
 ## UI Quality Gates
 
 For customer-facing apps, run `bin/dev-flow reference-check <project-name>
@@ -109,18 +126,34 @@ If the user explicitly delegates visual direction, run
 `UI_REFERENCES="delegated"` in `.dev-flow/applicability.env` so later phase and
 ship checks use the same decision.
 
-Use the installed imagegen skill before implementation planning. Every
+Use the installed imagegen skill before implementation planning. Derive the
+canonical screen list from the PRD, spec, design, and interaction model, then
+record each required screen as a `##` section in `SCREEN_ACCEPTANCE.md`. Every
 customer-facing screen must have 1-N generated layout/state boards saved under
 `work/<project-name>/design/imagegen/`, with prompts and screen/state coverage
-recorded in `design/imagegen-prompts.md`. If bitmap icons, illustrations,
+recorded in `design/imagegen-prompts.md`. The coverage table must include a row
+for each exact `SCREEN_ACCEPTANCE.md` screen heading and point to a final
+raster/PDF board path under `design/imagegen/`. `DESIGN.md`, `VISUAL_SYSTEM.md`,
+and each `SCREEN_ACCEPTANCE.md` screen section must use the required template
+headings so design intent, visual system, screen states, accessibility, and
+implementation handoff are explicit. If bitmap icons, illustrations,
 backgrounds, or UI elements are needed, save cut assets under
 `design/cut-assets/` and list them in `ASSET_MANIFEST.md`.
+
+Deterministic SVG, Mermaid, Markdown, or code-native drafts are useful for
+structure but are not final imagegen boards. If a draft is created first, render
+or screenshot it, use that image as an imagegen reference, then save the
+selected high-fidelity raster/PDF output back under `design/imagegen/`. The
+`design-check` gate requires at least one raster/PDF imagegen board for every
+`SCREEN_ACCEPTANCE.md` screen when `UI_IMAGEGEN` is enabled.
 
 Use `design-check` after writing `DESIGN.md`, `VISUAL_SYSTEM.md`,
 `SCREEN_ACCEPTANCE.md`, imagegen prompts, and imagegen boards. Use `qa-check`
 after implementation. Normal QA requires functional-flow evidence,
 monkey/exploratory testing evidence, and a visual comparison score against the
-approved imagegen boards. Runtime screenshots are required only when
+approved imagegen boards. The visual comparison must include every
+`SCREEN_ACCEPTANCE.md` screen and score at least 90/100 for high-fidelity UI
+delivery. Runtime screenshots are required only when
 `reviews/EXCEPTION.md` or `reviews/BLOCKED_FLOW.md` records an exception or a
 flow that cannot be completed.
 
@@ -160,6 +193,7 @@ Every phase should produce a named artifact:
 | Spec | `work/<project-name>/specs/SPEC.md` |
 | Design | `work/<project-name>/design/DESIGN.md`, `VISUAL_SYSTEM.md`, `SCREEN_ACCEPTANCE.md`, `imagegen-prompts.md`, `design/imagegen/*` |
 | Plan | `work/<project-name>/tasks/PLAN.md` |
+| PDCA | `work/<project-name>/tasks/PDCA.md` |
 | Build | Working source under `apps/` or `packages/` |
 | Test | Verification evidence in `tasks/status.md` or `reviews/` |
 | QA | `work/<project-name>/reviews/FUNCTIONAL_TEST.md`, `MONKEY_TEST.md`, `VISUAL_COMPARISON.md` |
@@ -238,12 +272,13 @@ bin/dev-flow verify-phase <project-name> <phase>
 bin/dev-flow phase <project-name> <next-phase> "next task"
 ```
 
-Use `bin/dev-flow ship-check <project-name>` before delivery. It verifies all
-required phases plus optional phases that have artifacts or are marked
-`required` in `.dev-flow/applicability.env`. If a runtime gate cannot run, such
-as Android APK build in an environment without Java/Gradle/Android SDK, record
-the blocker in `reviews/BLOCKED_BUILD.md` rather than silently passing the
-phase.
+Use `bin/dev-flow pdca-check <project-name>` and `bin/dev-flow ship-check
+<project-name>` before delivery. `ship-check` verifies all required phases plus
+optional phases that have artifacts or are marked `required` in
+`.dev-flow/applicability.env`, runs the project default gate, runs UI QA when
+applicable, and then runs the PDCA gate. If a runtime gate cannot run, such as
+Android APK build in an environment without Java/Gradle/Android SDK, record the
+blocker in `reviews/BLOCKED_BUILD.md` rather than silently passing the phase.
 
 After changing this workflow pack, run:
 
@@ -253,4 +288,5 @@ tests/dev-flow-smoke.sh
 
 The smoke test creates ignored temporary `work/` projects and verifies that UI
 planning cannot bypass design, delegated visual direction persists, invalid fake
-image files fail, a complete fixture reaches `ship-check`, and adapters package.
+image files fail, empty PDCA templates fail, a complete fixture reaches
+`ship-check`, and adapters package.

@@ -12,6 +12,7 @@ Pick the next pending task under `work/<project-name>/tasks/`:
 4. Implement the smallest slice that satisfies the task.
 5. Run the relevant lint, test, typecheck, and build commands from the project-local source directory.
 6. For customer-facing UI, also invoke `frontend-ui-engineering`, record functional and monkey test evidence, compare against imagegen boards, and run `bin/dev-flow qa-check <project-name>` when available. Capture screenshots only for exceptions or blocked flows.
-7. Update task status and verification evidence.
+7. Update the Do section of `work/<project-name>/tasks/PDCA.md` with implementation slices, changed areas, and build artifacts.
+8. Update task status and verification evidence.
 
 If the implementation stalls or fails, invoke `debugging-and-error-recovery`.

@@ -379,5 +379,6 @@ After completing any implementation:
 - [ ] Test names describe the behavior being verified
 - [ ] No tests were skipped or disabled
 - [ ] Coverage hasn't decreased (if tracked)
+- [ ] `work/<project-name>/tasks/PDCA.md` Check records verification, functional tests, monkey tests, visual comparison, and blocker evidence as applicable
 
 **Note:** Run each test command after a change that could affect the result. After a clean run, don't repeat the same command unless the code has changed since — re-running on unchanged code adds no confidence.

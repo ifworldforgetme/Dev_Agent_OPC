@@ -7,7 +7,8 @@ Use this rubric after implementation.
 - `reviews/FUNCTIONAL_TEST.md` covers critical happy paths and recovery paths.
 - `reviews/MONKEY_TEST.md` covers random, repeated, invalid, resize, navigation, and stress interactions.
 - `reviews/VISUAL_COMPARISON.md` compares the implemented UI to approved imagegen boards, cut assets, references, and screen acceptance criteria.
-- `VISUAL_COMPARISON.md` includes `Overall score: N/100`; the workflow gate expects at least 80/100.
+- `VISUAL_COMPARISON.md` includes a per-screen fidelity matrix covering every `SCREEN_ACCEPTANCE.md` screen.
+- `VISUAL_COMPARISON.md` includes `Overall score: N/100`; the workflow gate expects at least 90/100 for high-fidelity delivery.
 - `reviews/visual-screenshots/` is used only when an exception occurs or a flow cannot be completed.
 
 ## Blocking Issues

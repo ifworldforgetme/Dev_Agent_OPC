@@ -13,7 +13,7 @@ Use this when implementing screens, components, interactions, responsive layouts
 5. Verify core states, empty states, loading states, and error states.
 6. Run functional-flow checks and record them in `work/<project-name>/reviews/FUNCTIONAL_TEST.md`.
 7. Run monkey or exploratory stress checks and record them in `work/<project-name>/reviews/MONKEY_TEST.md`.
-8. Compare the implemented UI against the approved imagegen boards and any cut assets in `work/<project-name>/reviews/VISUAL_COMPARISON.md` with `Overall score: N/100`.
+8. Compare the implemented UI against the approved imagegen boards and any cut assets in `work/<project-name>/reviews/VISUAL_COMPARISON.md` with a per-screen fidelity matrix and `Overall score: N/100`; high-fidelity delivery requires at least 90/100.
 9. Capture screenshots under `work/<project-name>/reviews/visual-screenshots/` only when an exception occurs or a flow cannot be completed.
 10. Run `bin/dev-flow qa-check <project-name>` when available.
 

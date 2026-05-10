@@ -321,7 +321,7 @@ After implementing customer-facing UI, verify it against the design contract:
 2. Review imagegen boards under `work/<project-name>/design/imagegen/`, prompt coverage in `imagegen-prompts.md`, cut assets under `design/cut-assets/`, and references under `references/`, `mocks/`, `screenshots/`, and `reference-links.md`.
 3. Run functional-flow checks for the critical happy paths and recovery paths; save `work/<project-name>/reviews/FUNCTIONAL_TEST.md`.
 4. Run monkey or exploratory stress checks across navigation, repeated actions, invalid inputs, resizing, and state changes; save `work/<project-name>/reviews/MONKEY_TEST.md`.
-5. Compare the implemented UI against approved imagegen boards and cut assets; save `work/<project-name>/reviews/VISUAL_COMPARISON.md` with `Overall score: N/100`, score breakdown, differences, and decision.
+5. Compare the implemented UI against approved imagegen boards and cut assets; save `work/<project-name>/reviews/VISUAL_COMPARISON.md` with `Overall score: N/100`, a per-screen fidelity matrix covering every `SCREEN_ACCEPTANCE.md` screen, score breakdown, differences, and decision. High-fidelity delivery requires at least 90/100 unless the user explicitly lowers the bar.
 6. Capture screenshots under `work/<project-name>/reviews/visual-screenshots/` only when an exception occurs or a flow cannot be completed; document the blocker in `reviews/EXCEPTION.md` or `reviews/BLOCKED_FLOW.md`.
 7. Check console/runtime errors when the platform supports it.
 8. Run `bin/dev-flow qa-check <project-name>` when this workspace helper is available.
@@ -349,6 +349,8 @@ Blocking visual issues include text overlap, clipped controls, unusable mobile o
 - Missing functional-flow evidence for customer-facing UI
 - Missing monkey or exploratory test evidence for customer-facing UI
 - Missing visual comparison score against approved imagegen boards
+- Visual comparison does not cover every `SCREEN_ACCEPTANCE.md` screen
+- Visual comparison score below 90/100 for customer-facing UI
 - Implementation that ignores `SCREEN_ACCEPTANCE.md`
 - Missing imagegen boards before UI implementation
 - Runtime UI that does not match approved imagegen boards or cut assets
@@ -368,6 +370,6 @@ After building UI:
 - [ ] No accessibility warnings in dev tools or axe-core
 - [ ] `FUNCTIONAL_TEST.md` exists for customer-facing UI
 - [ ] `MONKEY_TEST.md` exists for customer-facing UI
-- [ ] `VISUAL_COMPARISON.md` exists with `Overall score: N/100`
+- [ ] `VISUAL_COMPARISON.md` exists with `Overall score: N/100`, a per-screen fidelity matrix, and at least 90/100 for high-fidelity delivery
 - [ ] Runtime screenshots exist only when `EXCEPTION.md` or `BLOCKED_FLOW.md` records an exception or blocked flow
 - [ ] `bin/dev-flow qa-check <project-name>` passes when available

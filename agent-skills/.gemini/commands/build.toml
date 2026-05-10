@@ -13,8 +13,9 @@ Pick the next pending task from `work/<project-name>/tasks/`. Run implementation
 5. Run the full test suite to check for regressions
 6. Run the build to verify compilation
 7. For customer-facing UI, record functional and monkey test evidence, compare implementation against approved imagegen boards, and run `bin/dev-flow qa-check <project-name>` when available. Capture screenshots only for exceptions or blocked flows.
-8. Commit with a descriptive message when inside a git repo and commits are authorized; otherwise record a checkpoint in `work/<project-name>/tasks/status.md`
-9. Mark the task complete and move to the next one
+8. Update the Do section of `work/<project-name>/tasks/PDCA.md` with implementation slices, changed areas, and build artifacts.
+9. Commit with a descriptive message when inside a git repo and commits are authorized; otherwise record a checkpoint in `work/<project-name>/tasks/status.md`
+10. Mark the task complete and move to the next one
 
 If any step fails, follow the debugging-and-error-recovery skill.
 """

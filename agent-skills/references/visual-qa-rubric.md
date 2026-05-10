@@ -7,7 +7,7 @@ Use this after implementing customer-facing UI and before delivery.
 - Run critical functional flows from `SCREEN_ACCEPTANCE.md` and save results in `work/<project-name>/reviews/FUNCTIONAL_TEST.md`.
 - Run monkey or exploratory stress checks and save results in `work/<project-name>/reviews/MONKEY_TEST.md`.
 - Compare the implemented UI against imagegen boards, cut assets, references, and design requirements.
-- Save findings and `Overall score: N/100` in `work/<project-name>/reviews/VISUAL_COMPARISON.md`.
+- Save findings, a per-screen fidelity matrix covering every `SCREEN_ACCEPTANCE.md` screen, and `Overall score: N/100` in `work/<project-name>/reviews/VISUAL_COMPARISON.md`.
 - Capture screenshots under `work/<project-name>/reviews/visual-screenshots/` only when an exception occurs or a flow cannot be completed.
 
 ## Review Axes
@@ -23,7 +23,7 @@ Use this after implementing customer-facing UI and before delivery.
 ## Score Guide
 
 - 90-100: polished, coherent, complete states, no blocking UX or visual issues.
-- 80-89: shippable with minor polish gaps.
+- 80-89: usable, but below the high-fidelity gate unless the user explicitly lowers the bar.
 - 60-79: usable but not ready; notable mismatches, state gaps, or rough responsiveness.
 - Below 60: visually or functionally incomplete.
 
