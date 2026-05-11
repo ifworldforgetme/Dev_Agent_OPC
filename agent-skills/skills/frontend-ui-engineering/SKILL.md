@@ -19,7 +19,9 @@ Build production-quality user interfaces that are accessible, performant, and vi
 - Reviewing implemented UI against references, design requirements, screenshots, or responsive acceptance criteria
 
 For substantial UI or mobile product changes, load `design-flow` before implementation planning so information architecture, platform interaction requirements, and visual direction are explicit before code is written.
-For customer-facing UI, do not start implementation until `DESIGN.md`, `VISUAL_SYSTEM.md`, `SCREEN_ACCEPTANCE.md`, `imagegen-prompts.md`, and 1-N saved imagegen layout/state boards per screen exist under `work/<project-name>/design/`.
+For customer-facing UI, do not start implementation until `DESIGN.md`, `VISUAL_SYSTEM.md`, `SCREEN_ACCEPTANCE.md`, `DESIGN_ARTIFACTS.md`, `tasks/IMPLEMENTATION_TRACE.md`, 1-N approved layout/state assets per screen, and `bin/dev-flow asset-check <project-name>` plus `bin/dev-flow design-check <project-name>` all pass under `work/<project-name>/`.
+Do not substitute browser, Playwright, Chrome, simulator, local HTML/CSS, prototype, draft, or running-app screenshots for approved design assets. If the formal design source, approved asset path, resolution/export detail, or approved/final status cannot be confirmed from `DESIGN_ARTIFACTS.md`, stop and return to the design phase instead of implementing UI code.
+For mobile apps with approved design assets, implement against them as a visual contract: use the layout, hierarchy, color, icon style, and product illustration direction; cut or regenerate runtime assets from the approved boards where needed; replace default app icons before release packaging; and capture runtime screenshots only for exception evidence or explicit visual review. A UI that only uses text glyph placeholders while approved assets contain illustrated icons is not acceptable.
 
 ## Platform Adaptation
 
@@ -313,20 +315,28 @@ function useToggleTask() {
 For detailed accessibility requirements and testing tools, see `references/accessibility-checklist.md`.
 For UI delivery review, load `references/visual-qa-rubric.md`.
 
+## Implementing From Approved Assets
+
+- Start with `DESIGN_ARTIFACTS.md`, `SCREEN_ACCEPTANCE.md`, and `tasks/IMPLEMENTATION_TRACE.md`; create a screen/state checklist before editing UI code.
+- Convert the approved asset into implementation primitives: layout grid, breakpoints, spacing scale, typography scale, color tokens, component variants, icon/illustration assets, and motion/state rules.
+- Preserve the approved hierarchy first: navigation, primary action, content grouping, empty/loading/error/success states, and responsive density. Do not copy pixels blindly when platform conventions require adaptation, but record any intentional deviation.
+- For bitmap-dependent visuals, use `design/cut-assets/ASSET_MANIFEST.md` as the source of truth. Transparent PNGs must preserve alpha. Icon matrices and spritesheets must record grid, frame size, frame order, anchor point, scale, intended FPS or state mapping, output path, and runtime path.
+- Do not cut assets from drafts, browser screenshots, simulator captures, or runtime screenshots. If a needed asset is missing, return to design and create an approved asset or cut-asset entry before implementing around a placeholder.
+
 ## UI QA
 
 After implementing customer-facing UI, verify it against the design contract:
 
 1. Read `work/<project-name>/design/DESIGN.md`, `VISUAL_SYSTEM.md`, and `SCREEN_ACCEPTANCE.md`.
-2. Review imagegen boards under `work/<project-name>/design/imagegen/`, prompt coverage in `imagegen-prompts.md`, cut assets under `design/cut-assets/`, and references under `references/`, `mocks/`, `screenshots/`, and `reference-links.md`.
+2. Review approved design assets under `work/<project-name>/design/approved/`, screen coverage and source contract in `DESIGN_ARTIFACTS.md`, cut assets under `design/cut-assets/`, drafts under `drafts/` and `mocks/`, and references under `references/`, `screenshots/`, and `reference-links.md`.
 3. Run functional-flow checks for the critical happy paths and recovery paths; save `work/<project-name>/reviews/FUNCTIONAL_TEST.md`.
 4. Run monkey or exploratory stress checks across navigation, repeated actions, invalid inputs, resizing, and state changes; save `work/<project-name>/reviews/MONKEY_TEST.md`.
-5. Compare the implemented UI against approved imagegen boards and cut assets; save `work/<project-name>/reviews/VISUAL_COMPARISON.md` with `Overall score: N/100`, a per-screen fidelity matrix covering every `SCREEN_ACCEPTANCE.md` screen, score breakdown, differences, and decision. High-fidelity delivery requires at least 90/100 unless the user explicitly lowers the bar.
+5. Compare the implemented UI against approved design assets and cut assets; save `work/<project-name>/reviews/VISUAL_COMPARISON.md` with `Overall score: N/100`, a per-screen fidelity matrix covering every `SCREEN_ACCEPTANCE.md` screen with approved asset path, runtime surface, score, decision, score breakdown, differences, and final decision. High-fidelity delivery requires at least 90/100 unless the user explicitly lowers the bar.
 6. Capture screenshots under `work/<project-name>/reviews/visual-screenshots/` only when an exception occurs or a flow cannot be completed; document the blocker in `reviews/EXCEPTION.md` or `reviews/BLOCKED_FLOW.md`.
 7. Check console/runtime errors when the platform supports it.
 8. Run `bin/dev-flow qa-check <project-name>` when this workspace helper is available.
 
-Blocking visual issues include text overlap, clipped controls, unusable mobile or desktop layout, missing required states, inaccessible primary actions, output that ignores provided reference direction, and implementation that materially diverges from approved imagegen layout/state boards without a recorded design reason.
+Blocking visual issues include text overlap, clipped controls, unusable mobile or desktop layout, missing required states, inaccessible primary actions, output that ignores provided reference direction, and implementation that materially diverges from approved design assets without a recorded design reason.
 
 ## Common Rationalizations
 
@@ -348,19 +358,25 @@ Blocking visual issues include text overlap, clipped controls, unusable mobile o
 - Generic "AI look" (purple gradients, oversized cards, stock layouts)
 - Missing functional-flow evidence for customer-facing UI
 - Missing monkey or exploratory test evidence for customer-facing UI
-- Missing visual comparison score against approved imagegen boards
+- Missing implementation trace before customer-facing UI build
+- Missing visual comparison score against approved design assets
 - Visual comparison does not cover every `SCREEN_ACCEPTANCE.md` screen
 - Visual comparison score below 90/100 for customer-facing UI
 - Implementation that ignores `SCREEN_ACCEPTANCE.md`
-- Missing imagegen boards before UI implementation
-- Runtime UI that does not match approved imagegen boards or cut assets
+- Missing approved design assets before UI implementation
+- Missing formal design artifact contract before UI implementation
+- Browser, Playwright, Chrome, simulator, local HTML/CSS, prototype, draft, or running-app screenshots used as approved design assets
+- Runtime UI that does not match approved design assets or cut assets
 
 ## Verification
 
 After building UI:
 
-- [ ] `bin/dev-flow design-check <project-name>` passed before UI implementation
-- [ ] Imagegen layout/state boards under `work/<project-name>/design/imagegen/` were used as visual targets
+- [ ] `bin/dev-flow asset-check <project-name>` and `bin/dev-flow design-check <project-name>` passed before UI implementation
+- [ ] `tasks/IMPLEMENTATION_TRACE.md` maps every accepted screen to implementation target, approved asset, cut asset decision, and test evidence
+- [ ] Approved layout/state assets under `work/<project-name>/design/approved/` were used as visual targets
+- [ ] `DESIGN_ARTIFACTS.md` records source type, source reference, approved asset path, resolution/export detail, approved/final status, and implementation notes for every final board
+- [ ] Cut assets preserve alpha, frame grids, runtime paths, and usage metadata where bitmap/icon/sprite assets are required
 - [ ] Component renders without console errors
 - [ ] All interactive elements are keyboard accessible (Tab through the page)
 - [ ] Screen reader can convey the page's content and structure

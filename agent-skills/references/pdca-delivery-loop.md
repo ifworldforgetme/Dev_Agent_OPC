@@ -11,7 +11,8 @@ User: Build a polished habit tracker app.
 Agent: init project, clarify requirements, and record the idea.
 
 Plan:
-- Spec, design, imagegen boards, task plan, acceptance criteria, and quality gates are written.
+- Spec, design, approved design assets, task plan, acceptance criteria, and quality gates are written.
+- UI work records `tasks/IMPLEMENTATION_TRACE.md` so each accepted screen maps to implementation and test evidence.
 - `tasks/PDCA.md` Current Cycle records scope and checkpoint.
 - `tasks/PDCA.md` Plan records objective, source artifacts, and expected evidence.
 
@@ -21,7 +22,7 @@ Do:
 
 Check:
 - Verification, functional tests, monkey tests, and visual comparison run.
-- UI delivery compares runtime UI against approved imagegen boards and requires at least 90/100.
+- UI delivery compares runtime UI against approved design assets and requires at least 90/100.
 - `tasks/PDCA.md` Check records the evidence and blockers.
 
 Act:
@@ -34,6 +35,6 @@ Act:
 - Phase state is not evidence. `bin/dev-flow phase` records progress only.
 - Empty templates are not evidence. `pdca-check` requires concrete content in Current Cycle, Plan, Do, Check, and Act.
 - Act is mandatory before delivery. A project that has built and tested still has not closed the loop until the decision and next-cycle handling are recorded.
-- UI Check must link visual comparison and imagegen evidence when design is applicable.
+- UI Check must link visual comparison and approved design evidence when design is applicable.
 - Blocked runtime checks must be recorded as blocker evidence, not silently skipped.
 - Follow-up work belongs in Act, then becomes the Plan input for the next cycle.

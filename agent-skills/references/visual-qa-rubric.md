@@ -6,8 +6,9 @@ Use this after implementing customer-facing UI and before delivery.
 
 - Run critical functional flows from `SCREEN_ACCEPTANCE.md` and save results in `work/<project-name>/reviews/FUNCTIONAL_TEST.md`.
 - Run monkey or exploratory stress checks and save results in `work/<project-name>/reviews/MONKEY_TEST.md`.
-- Compare the implemented UI against imagegen boards, cut assets, references, and design requirements.
+- Compare the implemented UI against approved design assets, cut assets, references, and design requirements.
 - Save findings, a per-screen fidelity matrix covering every `SCREEN_ACCEPTANCE.md` screen, and `Overall score: N/100` in `work/<project-name>/reviews/VISUAL_COMPARISON.md`.
+- Every matrix row must include screen, approved asset path, runtime surface, fidelity score, decision, and notes.
 - Capture screenshots under `work/<project-name>/reviews/visual-screenshots/` only when an exception occurs or a flow cannot be completed.
 
 ## Review Axes
@@ -18,7 +19,7 @@ Use this after implementing customer-facing UI and before delivery.
 - Interaction: primary actions, disabled states, focus states, and error recovery are visible and usable.
 - Accessibility: contrast, labels, keyboard/focus, touch targets, reduced motion, and screen reader structure are acceptable.
 - Runtime: no console errors, missing assets, blank canvases, or broken network-dependent UI.
-- Imagegen fidelity: runtime UI materially follows the approved board layout, density, state coverage, and visual system unless a design reason is recorded.
+- Design fidelity: runtime UI materially follows the approved asset layout, density, state coverage, and visual system unless a design reason is recorded.
 
 ## Score Guide
 

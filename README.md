@@ -60,10 +60,12 @@ bin/dev-flow refs
 创建一个运行项目：
 
 ```bash
-bin/dev-flow init my-project
+bin/dev-flow init my-project --type ui
 bin/dev-flow status my-project
 bin/dev-flow next my-project
 ```
+
+`--type` 支持 `ui`、`agent`、`api`、`library`、`docs`。默认 `ui` 会启用严格设计门禁；非 UI 类型会自动关闭 UI 设计资产要求。
 
 推进阶段并验证：
 
@@ -73,6 +75,7 @@ bin/dev-flow verify-phase my-project spec
 bin/dev-flow check my-project
 bin/dev-flow pdca-check my-project
 bin/dev-flow ship-check my-project
+bin/dev-flow doctor my-project
 ```
 
 修改流程包后运行冒烟测试：
@@ -89,7 +92,7 @@ tests/dev-flow-smoke.sh
 | 产品 | `pm` / `/pm` | PRD、用户故事、指标、验收标准 |
 | Agent 流程 | `agent` / `/agent` | 工具、权限、提示词、恢复机制、评估 |
 | 规格 | `spec` / `/spec` | 可构建的产品和技术规格 |
-| 设计 | `design` / `/design` | UX、视觉系统、屏幕验收标准、imagegen 设计图 |
+| 设计 | `design` / `/design` | UX、视觉系统、屏幕验收标准、正式设计资产 |
 | 计划 | `plan` / `/plan` | 小粒度、可验证的实现任务 |
 | 开发 | `build` / `/build` | 带证据的实现切片 |
 | 测试 | `test` / `/test` | 测试和回归证据 |
@@ -100,13 +103,18 @@ tests/dev-flow-smoke.sh
 
 ### UI 与交付门禁
 
-面向用户的 UI 任务需要先通过 reference/design/imagegen 阶段，再进入实现。设计阶段会产出
-`DESIGN.md`、`VISUAL_SYSTEM.md`、`SCREEN_ACCEPTANCE.md` 和 `design/imagegen/`
-下的布局图或状态图；实现后需要记录功能测试、monkey 测试和视觉对比评分。正常 QA
+面向用户的 UI 任务需要先通过 reference/design/approved-assets 阶段，再进入实现。设计阶段会产出
+`DESIGN.md`、`VISUAL_SYSTEM.md`、`SCREEN_ACCEPTANCE.md`、`DESIGN_ARTIFACTS.md`
+和 `design/approved/` 下的正式布局图或状态图；实现后需要记录功能测试、monkey 测试和视觉对比评分。正常 QA
 不要求截图，只有异常或流程阻塞时才需要截图证据。
+`design/approved/` 的正式设计资产可以来自 imagegen/GPT Image、Figma MCP 或 Figma 导出、设计师上传、手工设计系统稿等已批准来源。
+浏览器、Playwright、模拟器、本地 HTML/CSS、运行态截图、草图和原型图不能作为开发实现目标。
+如果没有外部参考而由 Agent 负责视觉方向，需要写入 `design/REFERENCE_BOARD.md`。切图资产、透明 PNG、图标矩阵、spritesheet 或动画帧需要提供 manifest；如果不需要切图，也要显式记录原因。
+进入开发计划前，`tasks/IMPLEMENTATION_TRACE.md` 需要把每个界面映射到实现目标、正式设计图、切图资产和测试证据。
 
 ```bash
 bin/dev-flow reference-check my-project --required
+bin/dev-flow asset-check my-project
 bin/dev-flow design-check my-project
 bin/dev-flow qa-check my-project
 ```
@@ -127,6 +135,8 @@ agent-skills/
   agents/          Specialist agent personas
   commands/        Command prompts for agent hosts
   references/      Shared checklists, rubrics, and workflow references
+  templates/       Project templates rendered by bin/dev-flow init/migrate
+  lib/             Internal helpers for the local dev-flow runtime
   .claude/         Claude Code command files
   .gemini/         Gemini CLI command files
 assets/            README and project media assets
@@ -149,7 +159,8 @@ bin/dev-flow install openclaw --scope user
 bin/dev-flow install opencode --scope project
 ```
 
-生成的适配器目录属于构建输出，应从 `agent-skills/` 重新生成，不应手动编辑。
+生成的适配器目录属于构建输出，应从 `agent-skills/` 重新生成，不应手动编辑。adapter
+目录提供规则提示层；`package-adapters` 额外生成 `runtime/`，包含 `bin/dev-flow`、模板和 smoke test，用于需要可执行门禁的平台用户。
 
 ### 发布状态
 
@@ -187,10 +198,12 @@ bin/dev-flow refs
 Create a runtime project:
 
 ```bash
-bin/dev-flow init my-project
+bin/dev-flow init my-project --type ui
 bin/dev-flow status my-project
 bin/dev-flow next my-project
 ```
+
+Project types are `ui`, `agent`, `api`, `library`, and `docs`. `ui` keeps strict design gates enabled; non-UI types disable UI asset gates by default.
 
 Move and verify:
 
@@ -200,6 +213,7 @@ bin/dev-flow verify-phase my-project spec
 bin/dev-flow check my-project
 bin/dev-flow pdca-check my-project
 bin/dev-flow ship-check my-project
+bin/dev-flow doctor my-project
 ```
 
 Run the repo smoke test after changing the workflow pack:
@@ -216,7 +230,7 @@ tests/dev-flow-smoke.sh
 | Product | `pm` / `/pm` | PRD, stories, metrics, acceptance |
 | Agent Flow | `agent` / `/agent` | Tools, permissions, prompts, recovery, evals |
 | Spec | `spec` / `/spec` | Buildable product and technical spec |
-| Design | `design` / `/design` | UX, visual system, screen acceptance, imagegen boards |
+| Design | `design` / `/design` | UX, visual system, screen acceptance, approved design assets |
 | Plan | `plan` / `/plan` | Small verifiable tasks |
 | Build | `build` / `/build` | Implemented slices with proof |
 | Test | `test` / `/test` | Tests and regression evidence |
@@ -228,13 +242,23 @@ records state only; it does not replace the work itself.
 
 ### Quality Gates
 
-Customer-facing UI work must pass reference intake, design checks, and imagegen
-board coverage before implementation. After implementation, QA records functional
+Customer-facing UI work must pass reference intake, design checks, and approved
+design asset coverage before implementation. After implementation, QA records functional
 tests, monkey testing, and visual comparison. Screenshots are required only for
 exceptions or blocked flows.
+Final assets under `design/approved/` can come from imagegen/GPT Image, Figma MCP
+or Figma exports, designer uploads, manual design-system comps, or another
+explicitly approved source, and must be recorded in `DESIGN_ARTIFACTS.md`.
+Browser, Playwright, simulator, local HTML/CSS, runtime screenshots, drafts, and
+prototypes are not substitutes for approved design assets. Cut assets,
+transparent PNGs, icon matrices, spritesheets, and animation frames need a
+manifest; when none are needed, the design record must say so. Delegated visual
+direction requires `design/REFERENCE_BOARD.md`, and UI build planning requires
+`tasks/IMPLEMENTATION_TRACE.md`.
 
 ```bash
 bin/dev-flow reference-check my-project --required
+bin/dev-flow asset-check my-project
 bin/dev-flow design-check my-project
 bin/dev-flow qa-check my-project
 ```
@@ -254,6 +278,8 @@ agent-skills/
   agents/          Specialist agent personas
   commands/        Command prompts for agent hosts
   references/      Shared checklists, rubrics, and workflow references
+  templates/       Project templates rendered by bin/dev-flow init/migrate
+  lib/             Internal helpers for the local dev-flow runtime
   .claude/         Claude Code command files
   .gemini/         Gemini CLI command files
 assets/            README and project media assets
@@ -278,7 +304,9 @@ bin/dev-flow install opencode --scope project
 ```
 
 Generated adapter directories are build output. Regenerate them from
-`agent-skills/` instead of editing them by hand.
+`agent-skills/` instead of editing them by hand. Adapter folders provide the
+rules prompt layer; `package-adapters` also emits `runtime/` with `bin/dev-flow`,
+templates, and smoke tests for users who need executable gates.
 
 ### Release Status
 
