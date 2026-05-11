@@ -174,7 +174,7 @@ Check the author's verification story:
 - What tests were run?
 - Did the build pass?
 - Was the change tested manually?
-- Are there screenshots for UI changes?
+- For UI changes, does `VISUAL_COMPARISON.md` compare runtime surfaces against approved design assets, with screenshots only for exceptions, blocked flows, or explicit review needs?
 - Is there a before/after comparison?
 ```
 

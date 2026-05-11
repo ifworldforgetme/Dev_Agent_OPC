@@ -24,6 +24,7 @@ Use this as the handoff ledger for each delivery cycle. Keep each section curren
 - Verification evidence:
 - Functional test evidence:
 - Monkey test evidence:
+- UI batch completion before visual acceptance, when applicable:
 - UI visual comparison evidence, when applicable:
 
 ## Act

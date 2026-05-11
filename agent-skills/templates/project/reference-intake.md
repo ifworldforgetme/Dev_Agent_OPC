@@ -11,8 +11,12 @@ Use this before customer-facing UI design or visual polish.
 ## Approved Design Assets
 - Put implementation-ready design boards and exports only under `design/approved/`.
 - Recommended approved subfolders: `design/approved/screens/` and `design/approved/components/`.
-- Allowed sources include imagegen/GPT Image 2, Figma MCP or Figma exports, designer uploads, manual design-system comps, or another explicitly approved design source.
-- Browser screenshots, simulator screenshots, Playwright/Chrome captures, low-quality drafts, prototypes, and runtime app output are verification or draft assets; they must not be used as approved design assets.
+- Follow the formal source contract in `agent-skills/references/design-artifacts.md`.
+- Keep browser/simulator/runtime screenshots, HTML/CSS mock captures, and SVG layout sketches out of `design/approved/`.
+
+## Figma Handoff
+- After approved imagegen/GPT Image assets exist, record file/node and export mappings in `design/FIGMA_HANDOFF.md` when Figma formalizes them.
+- Export approved Figma frames or component boards to `design/approved/` and record them in `DESIGN_ARTIFACTS.md` with Source type `figma` or `figma-mcp`.
 
 ## Reference Software
 - Put product names, app store links, websites, Figma links, or competitor notes in `design/reference-links.md`.

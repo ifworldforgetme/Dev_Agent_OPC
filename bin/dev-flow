@@ -21,7 +21,7 @@ Usage:
   bin/dev-flow list
   bin/dev-flow show <alias-or-skill>
   bin/dev-flow path <alias-or-skill>
-  bin/dev-flow command <idea|pm|agent|spec|design|plan|build|test|review|ship|debug|ui|api|security|code-simplify>
+  bin/dev-flow command <idea|pm|agent|spec|design|figma-design|figma-library|plan|build|test|review|ship|debug|ui|api|security|code-simplify>
   bin/dev-flow agent <code-reviewer|product-designer|test-engineer|security-auditor|ui-quality-reviewer>
   bin/dev-flow refs
   bin/dev-flow install <codex|claude-code|gemini|openclaw|opencode> [--scope project|user] [--dest path]
@@ -36,6 +36,7 @@ Usage:
   bin/dev-flow migrate <project-name> [--type ui|agent|api|library|docs]
   bin/dev-flow reference-check <project-name> [--required|--delegated]
   bin/dev-flow asset-check <project-name>
+  bin/dev-flow figma-check <project-name>
   bin/dev-flow design-check <project-name> [--allow-no-reference]
   bin/dev-flow qa-check <project-name>
   bin/dev-flow visual-check <project-name>
@@ -60,7 +61,7 @@ Aliases:
 
 Applicability:
   Optional phases are controlled by work/<project-name>/.dev-flow/applicability.env.
-  Set PM_FLOW, AGENT_FLOW, UI_FLOW, UI_REFERENCES, UI_DESIGN_ASSETS, or UI_MOCKUPS to auto, required, delegated, or disabled.
+  Set PM_FLOW, AGENT_FLOW, UI_FLOW, UI_REFERENCES, UI_DESIGN_ASSETS, UI_FIGMA_HANDOFF, or UI_MOCKUPS to auto, required, delegated, or disabled.
   Project type is recorded in work/<project-name>/.dev-flow/schema.env.
 EOF
 }
@@ -200,8 +201,8 @@ ensure_project_dirs() {
   local dir="$1"
   mkdir -p "$dir"/{ideas,product,agent,specs,design,tasks,reviews,ship,apps,packages,bin,.dev-flow}
   mkdir -p "$dir/design"/{references,drafts,mocks,screenshots,sources,approved,cut-assets}
-  mkdir -p "$dir/design/sources"/{imagegen,gpt-image,figma,uploads}
-  mkdir -p "$dir/design/approved"/{screens,components}
+  mkdir -p "$dir/design/sources"/{imagegen,gpt-image,figma,uploads,approved,design-system,html}
+  mkdir -p "$dir/design/approved"/{screens,components,html}
   mkdir -p "$dir/design/cut-assets"/{icons,sprites,illustrations,backgrounds}
   mkdir -p "$dir/reviews/visual-screenshots"
 }
@@ -233,10 +234,12 @@ write_project_templates() {
   write_project_template "$dir" "design/reference-intake.md" "reference-intake.md" "$project" "$project_type"
   write_project_template "$dir" "design/reference-links.md" "reference-links.md" "$project" "$project_type"
   write_project_template "$dir" "design/REFERENCE_BOARD.md" "reference-board.md" "$project" "$project_type"
+  write_project_template "$dir" "design/FIGMA_HANDOFF.md" "figma-handoff.md" "$project" "$project_type"
   write_project_template "$dir" "design/DESIGN.md" "design.md" "$project" "$project_type"
   write_project_template "$dir" "design/VISUAL_SYSTEM.md" "visual-system.md" "$project" "$project_type"
   write_project_template "$dir" "design/SCREEN_ACCEPTANCE.md" "screen-acceptance.md" "$project" "$project_type"
   write_project_template "$dir" "design/DESIGN_ARTIFACTS.md" "design-artifacts.md" "$project" "$project_type"
+  write_project_template "$dir" "design/DESIGN_IMAGE_DESCRIPTIONS.md" "design-image-descriptions.md" "$project" "$project_type"
   write_project_template "$dir" "design/cut-assets/ASSET_MANIFEST.md" "cut-assets-manifest.md" "$project" "$project_type"
   write_project_template "$dir" "tasks/status.md" "status.md" "$project" "$project_type"
   write_project_template "$dir" "tasks/quality-gates.md" "quality-gates.md" "$project" "$project_type"
@@ -249,60 +252,293 @@ write_project_templates() {
   chmod +x "$dir/bin/check"
 }
 
-next_prompt_for_phase() {
-  case "${1:-idea}" in
-    idea)
-      echo "Use local flow: idea"
-      echo "Goal: refine the rough idea and save the result under work/<project>/ideas/."
-      ;;
-    pm)
-      echo "Use local flow: pm"
-      echo "Goal: turn product intent into PRD, user stories, metrics, and acceptance criteria under work/<project>/product/."
-      ;;
-    agent)
-      echo "Use local flow: agent"
-      echo "Goal: design an agent product workflow: goals, tools, permissions, state machine, handoffs, failure recovery, and evals."
-      ;;
-    spec)
-      echo "Use local flow: spec"
-      echo "Goal: turn the approved idea into work/<project>/specs/SPEC.md."
-      ;;
-    design)
-      echo "Use local flow: design"
-      echo "Goal: define UX, interaction, visual, and platform requirements under work/<project>/design/."
-      echo "Before designing customer-facing UI, run: bin/dev-flow reference-check <project> --required"
-      echo "For UI work, approve 1-N formal design assets per screen before planning or implementation."
-      ;;
-    plan)
-      echo "Use local flow: plan"
-      echo "Goal: break the approved spec/design into verifiable tasks under work/<project>/tasks/."
-      echo "Update tasks/PDCA.md with the Plan intent, acceptance evidence, and next checkpoint."
-      ;;
+phase_default_task() {
+  case "${1:-}" in
+    idea) echo "Refine the initial idea" ;;
+    pm) echo "Write product requirements and acceptance criteria" ;;
+    agent) echo "Design agent workflow and evaluations" ;;
+    spec) echo "Write buildable SPEC.md" ;;
+    design) echo "Create approved design package" ;;
+    plan) echo "Plan implementation from approved artifacts" ;;
+    build) echo "Implement the next task slice" ;;
+    test) echo "Verify implemented behavior" ;;
+    review) echo "Review current changes" ;;
+    ship) echo "Prepare launch evidence and go/no-go decision" ;;
+    *) echo "Continue workflow" ;;
+  esac
+}
+
+next_applicable_phase_after() {
+  local project="$1"
+  local current="$2"
+  local phase seen
+  seen="false"
+  for phase in idea pm agent spec design plan build test review ship; do
+    if [[ "$seen" == "true" ]]; then
+      if phase_is_applicable "$project" "$phase"; then
+        echo "$phase"
+        return 0
+      fi
+    fi
+    if [[ "$phase" == "$current" ]]; then
+      seen="true"
+    fi
+  done
+  echo ""
+}
+
+phase_skill_files() {
+  local project="$1"
+  local phase="$2"
+  case "$phase" in
     build)
-      echo "Use local flow: build"
-      echo "Goal: implement the next task slice, then run bin/dev-flow check <project>."
-      echo "For UI work, confirm bin/dev-flow design-check <project> passes before writing code."
-      echo "Update tasks/PDCA.md with the Do evidence after each implementation slice."
-      ;;
-    test)
-      echo "Use local flow: test"
-      echo "Goal: add or run proof for the implemented slice."
-      echo "Update tasks/PDCA.md with the Check evidence: verification, functional tests, monkey tests, and visual comparison when UI applies."
-      ;;
-    review)
-      echo "Use local flow: review"
-      echo "Goal: review correctness, readability, architecture, security, and performance."
-      ;;
-    ship)
-      echo "Use local flow: ship"
-      echo "Goal: prepare launch notes, rollback notes, and release evidence."
-      echo "Before delivery, run: bin/dev-flow pdca-check <project>"
+      echo "- agent-skills/skills/incremental-implementation/SKILL.md"
+      echo "- agent-skills/skills/test-driven-development/SKILL.md"
+      if phase_is_applicable "$project" design; then
+        echo "- agent-skills/skills/frontend-ui-engineering/SKILL.md"
+      fi
       ;;
     *)
-      echo "Unknown phase: ${1:-<missing>}"
-      echo "Valid phases: idea, pm, agent, spec, design, plan, build, test, review, ship"
+      echo "- agent-skills/skills/$(skill_name "$phase")/SKILL.md"
       ;;
   esac
+}
+
+phase_load_list() {
+  local project="$1"
+  local phase="$2"
+  echo "- work/$project/.dev-flow/context.md"
+  echo "- agent-skills/commands/$phase.md"
+  phase_skill_files "$project" "$phase"
+  case "$phase" in
+    idea)
+      echo "- user request and existing work/$project/ideas/ notes"
+      ;;
+    pm)
+      echo "- work/$project/ideas/idea-brief.md"
+      echo "- work/$project/product/ when artifacts already exist"
+      ;;
+    agent)
+      echo "- work/$project/ideas/idea-brief.md"
+      echo "- work/$project/product/ when product artifacts apply"
+      echo "- existing work/$project/agent/ artifacts"
+      ;;
+    spec)
+      echo "- work/$project/ideas/idea-brief.md"
+      echo "- work/$project/product/ when PM_FLOW applies"
+      echo "- work/$project/agent/ when AGENT_FLOW applies"
+      echo "- existing work/$project/apps/ and work/$project/packages/ when present"
+      ;;
+    design)
+      echo "- work/$project/specs/SPEC.md"
+      echo "- work/$project/design/reference-intake.md"
+      echo "- work/$project/design/reference-links.md"
+      echo "- work/$project/design/references/ and design/screenshots/"
+      echo "- agent-skills/references/design-artifacts.md"
+      echo "- agent-skills/references/figma-handoff.md when Figma is used"
+      ;;
+    plan)
+      echo "- work/$project/specs/SPEC.md"
+      if phase_is_applicable "$project" design; then
+        echo "- work/$project/design/DESIGN.md"
+        echo "- work/$project/design/SCREEN_ACCEPTANCE.md"
+        echo "- work/$project/design/DESIGN_ARTIFACTS.md"
+      fi
+      echo "- existing work/$project/apps/ and work/$project/packages/ source boundaries"
+      ;;
+    build)
+      echo "- work/$project/tasks/PLAN.md"
+      echo "- assigned task and nearby source/tests under work/$project/apps/ or packages/"
+      if phase_is_applicable "$project" design; then
+        echo "- work/$project/tasks/IMPLEMENTATION_TRACE.md"
+        echo "- work/$project/design/approved/ and design/cut-assets/ASSET_MANIFEST.md"
+        echo "- work/$project/design/approved/html/ and FIGMA_HANDOFF.md when applicable"
+      fi
+      ;;
+    test)
+      echo "- work/$project/tasks/PLAN.md"
+      echo "- implemented source and existing tests"
+      echo "- work/$project/tasks/PDCA.md"
+      ;;
+    review)
+      echo "- current diff, task plan, spec, tests, and verification evidence"
+      echo "- work/$project/reviews/ when prior review artifacts exist"
+      ;;
+    ship)
+      echo "- work/$project/ship/ and work/$project/reviews/"
+      echo "- work/$project/tasks/PDCA.md"
+      echo "- final build/test/package evidence"
+      ;;
+  esac
+}
+
+phase_required_outputs() {
+  local project="$1"
+  local phase="$2"
+  case "$phase" in
+    idea)
+      echo "- ideas/idea-brief.md"
+      ;;
+    pm)
+      echo "- product/PRD.md"
+      echo "- product/USER_STORIES.md"
+      echo "- product/ACCEPTANCE.md"
+      echo "- product/METRICS.md"
+      ;;
+    agent)
+      echo "- agent/AGENT_SPEC.md"
+      echo "- agent/WORKFLOW.md"
+      echo "- agent/TOOLS_AND_PERMISSIONS.md"
+      echo "- agent/PROMPTS_AND_SKILLS.md"
+      echo "- agent/EVALS.md"
+      echo "- agent/FAILURE_RECOVERY.md"
+      echo "- agent/OPERATIONS.md"
+      ;;
+    spec)
+      echo "- specs/SPEC.md"
+      ;;
+    design)
+      echo "- design/DESIGN.md"
+      echo "- design/VISUAL_SYSTEM.md"
+      echo "- design/SCREEN_ACCEPTANCE.md"
+      echo "- design/DESIGN_ARTIFACTS.md"
+      echo "- design/approved/ real raster/PDF assets"
+      echo "- design/DESIGN_IMAGE_DESCRIPTIONS.md and design/approved/html/ when AI-generated images are used"
+      echo "- design/FIGMA_HANDOFF.md when Figma-backed assets are used"
+      echo "- design/cut-assets/ASSET_MANIFEST.md"
+      ;;
+    plan)
+      echo "- tasks/PLAN.md"
+      echo "- tasks/quality-gates.md"
+      echo "- tasks/PDCA.md Plan section"
+      if phase_is_applicable "$project" design; then
+        echo "- tasks/IMPLEMENTATION_TRACE.md"
+      fi
+      ;;
+    build)
+      echo "- implemented source under apps/ or packages/"
+      echo "- tests or executable proof for the slice"
+      echo "- tasks/PDCA.md Do section"
+      ;;
+    test)
+      echo "- reviews/VERIFICATION.md or reviews/BLOCKED_BUILD.md"
+      echo "- tasks/PDCA.md Check section"
+      if phase_is_applicable "$project" design; then
+        echo "- reviews/FUNCTIONAL_TEST.md"
+        echo "- reviews/MONKEY_TEST.md"
+        echo "- reviews/VISUAL_COMPARISON.md after the UI batch is complete"
+      fi
+      ;;
+    review)
+      echo "- reviews/REVIEW.md"
+      ;;
+    ship)
+      echo "- ship/LAUNCH.md"
+      echo "- tasks/PDCA.md Act section"
+      echo "- rollback plan and GO/NO-GO decision"
+      ;;
+  esac
+}
+
+phase_gate_list() {
+  local project="$1"
+  local phase="$2"
+  case "$phase" in
+    design)
+      echo "- bin/dev-flow design-check $project"
+      ;;
+    build)
+      echo "- bin/dev-flow verify-phase $project build"
+      echo "- bin/dev-flow check $project"
+      ;;
+    test)
+      echo "- bin/dev-flow verify-phase $project test"
+      if phase_is_applicable "$project" design; then
+        echo "- bin/dev-flow qa-check $project after the planned UI batch is complete"
+      fi
+      ;;
+    ship)
+      echo "- bin/dev-flow pdca-check $project"
+      echo "- bin/dev-flow ship-check $project"
+      ;;
+    *)
+      echo "- bin/dev-flow verify-phase $project $phase"
+      ;;
+  esac
+}
+
+phase_blockers() {
+  local project="$1"
+  local phase="$2"
+  case "$phase" in
+    design)
+      echo "- no reference assets/links and UI_REFERENCES is not delegated"
+      echo "- delegated visual direction without design/REFERENCE_BOARD.md"
+      echo "- missing formal raster/PDF/Figma approved assets for accepted screens"
+      echo "- AI-generated approved images without semantic HTML companions"
+      echo "- SVG or runtime screenshots used as screen layout source"
+      ;;
+    plan)
+      echo "- missing approved spec"
+      if phase_is_applicable "$project" design; then
+        echo "- missing design-check pass or implementation trace"
+      fi
+      ;;
+    build)
+      echo "- unclear task acceptance criteria"
+      echo "- missing local verification command"
+      if phase_is_applicable "$project" design; then
+        echo "- missing design-check pass before UI code"
+      fi
+      ;;
+    test)
+      echo "- proof cannot reproduce or verify the behavior"
+      echo "- blocked build without reviews/BLOCKED_BUILD.md"
+      ;;
+    ship)
+      echo "- missing rollback plan"
+      echo "- failed pdca-check, ship-check, or launch blocker review"
+      ;;
+    *)
+      echo "- required source artifact is missing or too thin"
+      echo "- assumptions, tradeoffs, or human-review blockers are unresolved"
+      ;;
+  esac
+}
+
+next_prompt_for_phase() {
+  local project="$1"
+  local phase="${2:-idea}"
+  local next_phase
+  if ! is_valid_phase "$phase"; then
+    echo "Unknown phase: ${phase:-<missing>}"
+    echo "Valid phases: idea, pm, agent, spec, design, plan, build, test, review, ship"
+    return 0
+  fi
+  next_phase="$(next_applicable_phase_after "$project" "$phase")"
+  echo "Next command: Use local flow: $phase"
+  echo "Command file: agent-skills/commands/$phase.md"
+  echo "Primary skill files:"
+  phase_skill_files "$project" "$phase"
+  echo
+  echo "Load:"
+  phase_load_list "$project" "$phase"
+  echo
+  echo "Required outputs:"
+  phase_required_outputs "$project" "$phase"
+  echo
+  echo "Gate before next phase:"
+  phase_gate_list "$project" "$phase"
+  echo
+  echo "Blocked if:"
+  phase_blockers "$project" "$phase"
+  echo
+  echo "After pass:"
+  if [[ -n "$next_phase" ]]; then
+    echo "- bin/dev-flow phase $project $next_phase \"$(phase_default_task "$next_phase")\""
+  else
+    echo "- Workflow is at the final phase; keep ship evidence and PDCA Act current."
+  fi
 }
 
 mime_type_for_file() {
@@ -318,8 +554,16 @@ is_supported_artifact() {
   if command -v file >/dev/null 2>&1; then
     mime="$(mime_type_for_file "$path")"
     case "$kind:$mime" in
+      image:image/svg+xml|image:text/xml|image:application/xml) return 1 ;;
+      cut:image/svg+xml) return 0 ;;
+      cut:text/xml|cut:application/xml)
+        case "$path" in
+          *.[Ss][Vv][Gg]) return 0 ;;
+          *) return 1 ;;
+        esac
+        ;;
       image:image/*|image:application/pdf) return 0 ;;
-      cut:image/*|cut:application/pdf|cut:text/xml|cut:application/xml) return 0 ;;
+      cut:image/*|cut:application/pdf) return 0 ;;
       reference:image/*|reference:application/pdf|reference:application/json) return 0 ;;
     esac
     case "$kind:$path" in
@@ -379,6 +623,25 @@ count_unsupported_artifacts() {
         if ! is_supported_artifact "$path" "$kind"; then
           printf '.\n'
         fi
+      done \
+    | wc -l \
+    | tr -d ' '
+}
+
+count_forbidden_svg_artifacts() {
+  local existing=()
+  local candidate
+  for candidate in "$@"; do
+    [[ -d "$candidate" ]] && existing+=("$candidate")
+  done
+  if [[ "${#existing[@]}" -eq 0 ]]; then
+    echo 0
+    return
+  fi
+  find "${existing[@]}" \
+    -type f \( -iname '*.svg' -o -iname '*.xml' \) -print0 2>/dev/null \
+    | while IFS= read -r -d '' _path; do
+        printf '.\n'
       done \
     | wc -l \
     | tr -d ' '
@@ -482,7 +745,7 @@ cut_asset_manifest_entries() {
 cut_assets_declared_not_required() {
   local path="$1/design/cut-assets/ASSET_MANIFEST.md"
   [[ -f "$path" ]] || return 1
-  grep -Eiq '(CUT_ASSETS_REQUIRED:[[:space:]]*(no|false|none|not required)|No bitmap cut assets required|No cut assets required)' "$path"
+  grep -Eiq '(CUT_ASSETS_REQUIRED:[[:space:]]*(no|false|none|not required)|No cut assets required)' "$path"
 }
 
 mobile_app_has_custom_icon_assets() {
@@ -617,6 +880,11 @@ design_artifact_ledger_path() {
   printf '%s/design/DESIGN_ARTIFACTS.md' "$dir"
 }
 
+design_image_description_ledger_path() {
+  local dir="$1"
+  printf '%s/design/DESIGN_IMAGE_DESCRIPTIONS.md' "$dir"
+}
+
 design_artifacts_has_header() {
   local dir="$1"
   local path
@@ -630,7 +898,7 @@ is_forbidden_design_source() {
   local lower
   lower="$(printf '%s' "$raw" | tr '[:upper:]' '[:lower:]')"
   case "$lower" in
-    *screenshot*|*playwright*|*chrome*|*localhost*|*browser*|*simulator*|*runtime*|*design/drafts*|*design/mocks*|*design/screenshots*|*reviews/visual-screenshots*|*apps/*|*prototype*|*wireframe*|*sketch*|*draft*|*草图*|*原型*)
+    *screenshot*|*screencap*|*screencapture*|*snapshot*|*capture*|*playwright*|*puppeteer*|*chrome*|*localhost*|*browser*|*simulator*|*runtime*|*render*|*rasteriz*|*html-to-image*|*html2canvas*|*canvas*|*svg*|*design/drafts*|*design/mocks*|*design/screenshots*|*reviews/visual-screenshots*|*apps/*|*prototype*|*wireframe*|*sketch*|*draft*|*草图*|*原型*|*截图*|*截屏*|*渲染*)
       return 1
       ;;
   esac
@@ -642,14 +910,41 @@ is_allowed_design_source_type() {
   local lower
   lower="$(printf '%s' "$raw" | tr '[:upper:]' '[:lower:]')"
   case "$lower" in
-    imagegen|gpt-image-2|gpt-image|figma|figma-mcp|designer-upload|manual-design|design-system|uploaded-approved|other-approved|local-approved)
+    imagegen|gpt-image-2|gpt-image|figma|figma-mcp|designer-upload|uploaded-approved|design-system|external-design)
       return 0
       ;;
-    *screenshot*|*playwright*|*chrome*|*browser*|*simulator*|*runtime*|*draft*|*prototype*|*wireframe*|*sketch*|*草图*|*原型*)
+    *screenshot*|*screencap*|*capture*|*playwright*|*puppeteer*|*chrome*|*browser*|*simulator*|*runtime*|*render*|*rasteriz*|*html*|*canvas*|*svg*|*draft*|*prototype*|*wireframe*|*sketch*|*manual*|*local*|*草图*|*原型*|*截图*|*渲染*)
       return 1
       ;;
   esac
   return 1
+}
+
+is_valid_formal_design_source_ref() {
+  local source_type="$1"
+  local source_ref="$2"
+  local lower_type lower_ref
+  source_ref="$(trim_md_cell "$source_ref")"
+  lower_type="$(printf '%s' "$source_type" | tr '[:upper:]' '[:lower:]')"
+  lower_ref="$(printf '%s' "$source_ref" | tr '[:upper:]' '[:lower:]')"
+  [[ -n "$source_ref" && "$source_ref" != "-" && "$source_ref" != "TBD" && "$source_ref" != "TODO" ]] || return 1
+  is_forbidden_design_source "$source_ref" || return 1
+  case "$lower_type" in
+    imagegen) [[ "$lower_ref" == imagegen://* ]] ;;
+    gpt-image) [[ "$lower_ref" == gpt-image://* ]] ;;
+    gpt-image-2) [[ "$lower_ref" == gpt-image-2://* ]] ;;
+    figma|figma-mcp) is_valid_figma_source_ref "$source_ref" ;;
+    designer-upload|uploaded-approved)
+      [[ "$lower_ref" == upload://* || "$lower_ref" == designer-upload://* || "$lower_ref" == design/sources/uploads/* || "$lower_ref" == ./design/sources/uploads/* ]]
+      ;;
+    design-system)
+      [[ "$lower_ref" == design-system://* || "$lower_ref" == component-library://* || "$lower_ref" == token://* || "$lower_ref" == design/sources/design-system/* || "$lower_ref" == ./design/sources/design-system/* ]]
+      ;;
+    external-design)
+      [[ "$lower_ref" == external-design://* || "$lower_ref" == approved://* || "$lower_ref" == design/sources/approved/* || "$lower_ref" == ./design/sources/approved/* ]]
+      ;;
+    *) return 1 ;;
+  esac
 }
 
 is_project_approved_design_path() {
@@ -669,12 +964,176 @@ is_project_approved_design_path() {
   esac
 }
 
+is_figma_design_source_type() {
+  local raw="$1"
+  local lower
+  lower="$(printf '%s' "$raw" | tr '[:upper:]' '[:lower:]')"
+  case "$lower" in
+    figma|figma-mcp) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+is_ai_generated_design_source_type() {
+  local raw="$1"
+  local lower
+  lower="$(printf '%s' "$raw" | tr '[:upper:]' '[:lower:]')"
+  case "$lower" in
+    imagegen|gpt-image|gpt-image-2) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+html_description_path_from_notes() {
+  local raw="$1"
+  printf '%s\n' "$raw" \
+    | grep -Eo '(\./)?design/approved/html/[^[:space:]|,;)]*\.html' \
+    | head -n 1 \
+    | sed 's#^\./##'
+}
+
+is_project_html_description_path() {
+  local dir="$1"
+  local saved_path="$2"
+  local full_path="$3"
+  case "$saved_path" in
+    design/approved/html/*.html|./design/approved/html/*.html)
+      [[ "$full_path" == "$dir/"* && -s "$full_path" ]]
+      ;;
+    /*)
+      [[ "$full_path" == "$dir/design/approved/html/"*.html && -s "$full_path" ]]
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
+image_html_description_mentions() {
+  local dir="$1"
+  local asset_path="$2"
+  local html_path="$3"
+  local path
+  path="$(design_image_description_ledger_path "$dir")"
+  [[ -f "$path" ]] || return 1
+  grep -Fq "$asset_path" "$path" && grep -Fq "$html_path" "$path"
+}
+
+is_missing_trace_value() {
+  local raw lower
+  raw="$(trim_md_cell "${1:-}")"
+  lower="$(printf '%s' "$raw" | tr '[:upper:]' '[:lower:]')"
+  case "$lower" in
+    ""|"-"|"tbd"|"todo") return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+design_artifact_row_field_for_screen_asset() {
+  local dir="$1"
+  local screen="$2"
+  local asset="$3"
+  local field="$4"
+  local path line in_coverage
+  local screen_cell source_type_cell source_ref_cell asset_cell notes_cell
+  local screen_name source_type source_ref asset_path notes html_path
+  path="$(design_artifact_ledger_path "$dir")"
+  [[ -f "$path" ]] || return 1
+  in_coverage=false
+  while IFS= read -r line; do
+    if [[ "$line" =~ ^##[[:space:]]+Screen[[:space:]]+Coverage ]]; then
+      in_coverage=true
+      continue
+    fi
+    if [[ "$in_coverage" == true && "$line" =~ ^##[[:space:]]+ ]]; then
+      break
+    fi
+    [[ "$in_coverage" == true && "$line" == \|* ]] || continue
+    [[ "$line" == *"|---"* || "$line" == *"---|"* ]] && continue
+    [[ "$line" =~ ^\|[[:space:]]*Screen[[:space:]]*\| ]] && continue
+    IFS='|' read -r _ screen_cell _ source_type_cell source_ref_cell asset_cell _ _ notes_cell _ <<< "$line"
+    screen_name="$(trim_md_cell "$screen_cell")"
+    source_type="$(trim_md_cell "$source_type_cell")"
+    source_ref="$(trim_md_cell "$source_ref_cell")"
+    asset_path="$(trim_md_cell "$asset_cell")"
+    notes="$(trim_md_cell "$notes_cell")"
+    [[ "$screen_name" == "$screen" && "$asset_path" == "$asset" ]] || continue
+    case "$field" in
+      source_type) printf '%s\n' "$source_type" ;;
+      source_ref) printf '%s\n' "$source_ref" ;;
+      html)
+        if is_ai_generated_design_source_type "$source_type"; then
+          html_path="$(html_description_path_from_notes "$notes" || true)"
+          printf '%s\n' "$html_path"
+        fi
+        ;;
+      *) return 1 ;;
+    esac
+    return 0
+  done < "$path"
+  return 1
+}
+
+is_valid_figma_source_ref() {
+  local raw="$1"
+  local lower
+  raw="$(trim_md_cell "$raw")"
+  lower="$(printf '%s' "$raw" | tr '[:upper:]' '[:lower:]')"
+  [[ -n "$raw" && "$raw" != "-" && "$raw" != "TBD" && "$raw" != "TODO" ]] || return 1
+  case "$lower" in
+    figma://*|https://figma.com/*|https://www.figma.com/*) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+count_figma_design_artifact_rows() {
+  local dir="$1"
+  local path line source_type_cell source_type rows in_coverage
+  path="$(design_artifact_ledger_path "$dir")"
+  [[ -f "$path" ]] || { echo 0; return; }
+  rows=0
+  in_coverage=false
+  while IFS= read -r line; do
+    if [[ "$line" =~ ^##[[:space:]]+Screen[[:space:]]+Coverage ]]; then
+      in_coverage=true
+      continue
+    fi
+    if [[ "$in_coverage" == true && "$line" =~ ^##[[:space:]]+ ]]; then
+      break
+    fi
+    [[ "$in_coverage" == true && "$line" == \|* ]] || continue
+    [[ "$line" == *"|---"* || "$line" == *"---|"* ]] && continue
+    [[ "$line" =~ ^\|[[:space:]]*Screen[[:space:]]*\| ]] && continue
+    IFS='|' read -r _ _ _ source_type_cell _ _ _ _ _ <<< "$line"
+    source_type="$(trim_md_cell "$source_type_cell")"
+    if is_figma_design_source_type "$source_type"; then
+      rows=$((rows + 1))
+    fi
+  done < "$path"
+  echo "$rows"
+}
+
+figma_handoff_path() {
+  local dir="$1"
+  printf '%s/design/FIGMA_HANDOFF.md' "$dir"
+}
+
+figma_handoff_mentions() {
+  local dir="$1"
+  local source_ref="$2"
+  local asset_path="$3"
+  local path
+  path="$(figma_handoff_path "$dir")"
+  [[ -f "$path" ]] || return 1
+  grep -Fq "$source_ref" "$path" && grep -Fq "$asset_path" "$path"
+}
+
 check_design_artifact_contract() {
   local dir="$1"
   local path
   local line in_coverage rows failures
   local screen_cell state_cell source_type_cell source_ref_cell asset_cell resolution_cell status_cell notes_cell
-  local screen source_type source_ref asset_path asset_full_path resolution status
+  local screen source_type source_ref asset_path asset_full_path resolution status notes html_path html_full_path
   path="$(design_artifact_ledger_path "$dir")"
   [[ -f "$path" ]] || return 1
   failures=0
@@ -689,7 +1148,7 @@ check_design_artifact_contract() {
       in_coverage=true
       continue
     fi
-    if [[ "$in_coverage" == true && "$line" =~ ^##[[:space:]]+ && "$rows" -gt 0 ]]; then
+    if [[ "$in_coverage" == true && "$line" =~ ^##[[:space:]]+ ]]; then
       break
     fi
     [[ "$in_coverage" == true && "$line" == \|* ]] || continue
@@ -702,14 +1161,15 @@ check_design_artifact_contract() {
     asset_path="$(trim_md_cell "$asset_cell")"
     resolution="$(trim_md_cell "$resolution_cell")"
     status="$(trim_md_cell "$status_cell")"
+    notes="$(trim_md_cell "$notes_cell")"
     [[ -n "$screen" ]] || continue
     rows=$((rows + 1))
     if ! is_allowed_design_source_type "$source_type"; then
-      echo "Invalid formal design source for screen: $screen (Source type must be an approved design source such as imagegen, gpt-image-2, figma, figma-mcp, designer-upload, manual-design, design-system, uploaded-approved, or other-approved; screenshots, browser captures, prototypes, and drafts are forbidden)." >&2
+      echo "Invalid formal design source for screen: $screen (Source type must be a formal producer: imagegen, gpt-image, gpt-image-2, figma, figma-mcp, designer-upload, uploaded-approved, design-system, or external-design. Manual/local/rendered/screenshot sources are forbidden)." >&2
       failures=$((failures + 1))
     fi
-    if [[ -z "$source_ref" || "$source_ref" == "-" || "$source_ref" == "TBD" || "$source_ref" == "TODO" ]] || ! is_forbidden_design_source "$source_ref"; then
-      echo "Invalid design source reference for screen: $screen (record the official source reference; do not use drafts, screenshots, browser captures, simulator captures, local app output, or prototype paths as development-ready design sources)." >&2
+    if ! is_valid_formal_design_source_ref "$source_type" "$source_ref"; then
+      echo "Invalid design source reference for screen: $screen (record a formal producer reference such as imagegen://, gpt-image-2://, figma:// or Figma URL, upload://, designer-upload://, design-system://, external-design://, or design/sources/approved/. Do not use SVG/HTML renders, screenshots, browser captures, simulator captures, local app output, or prototype paths as development-ready design sources)." >&2
       failures=$((failures + 1))
     fi
     if [[ ! "$status" =~ [Aa]pproved|[Ff]inal|正式|批准|通过 ]]; then
@@ -727,6 +1187,26 @@ check_design_artifact_contract() {
     if ! is_forbidden_design_source "$asset_path" || ! is_project_approved_design_path "$dir" "$asset_path" "$asset_full_path" || ! is_formal_design_artifact "$asset_full_path"; then
       echo "Invalid approved design asset for screen: $screen (Approved asset path must be a real raster/PDF under design/approved/, not a draft, screenshot, prototype, or runtime capture)." >&2
       failures=$((failures + 1))
+    fi
+    if is_ai_generated_design_source_type "$source_type"; then
+      html_path="$(html_description_path_from_notes "$notes" || true)"
+      if [[ -z "$html_path" ]]; then
+        echo "Missing AI design HTML description for screen: $screen (Implementation notes must include a path such as 'HTML: design/approved/html/${screen}.html')." >&2
+        failures=$((failures + 1))
+      else
+        case "$html_path" in
+          /*) html_full_path="$html_path" ;;
+          *) html_full_path="$dir/$html_path" ;;
+        esac
+        if ! is_project_html_description_path "$dir" "$html_path" "$html_full_path"; then
+          echo "Invalid AI design HTML description for screen: $screen (HTML companion must be a real non-empty .html file under design/approved/html/)." >&2
+          failures=$((failures + 1))
+        fi
+        if ! image_html_description_mentions "$dir" "$asset_path" "$html_path"; then
+          echo "Missing AI design HTML description ledger row for screen: $screen (design/DESIGN_IMAGE_DESCRIPTIONS.md must map the approved image to the HTML companion)." >&2
+          failures=$((failures + 1))
+        fi
+      fi
     fi
   done < "$path"
   if [[ "$rows" -eq 0 ]]; then
@@ -853,12 +1333,15 @@ delegated_reference_board_present() {
 check_implementation_trace_coverage() {
   local dir="$1"
   local path="$dir/tasks/IMPLEMENTATION_TRACE.md"
-  local missing required line screen screen_cell target_cell asset_cell test_cell status_cell
+  local missing required line screen
+  local screen_cell state_cell target_cell asset_cell design_source_cell html_cell cut_cell test_cell status_cell
+  local target_path asset_path design_source html_companion cut_assets test_evidence status
+  local asset_full_path html_full_path expected_source_type expected_source_ref expected_html
   missing=0
   required=0
   [[ -f "$path" ]] || return 1
-  if ! grep -Eiq '^\|[[:space:]]*Screen[[:space:]]*\|[[:space:]]*State[[:space:]]*\|[[:space:]]*Implementation target[[:space:]]*\|[[:space:]]*Approved asset[[:space:]]*\|[[:space:]]*Cut assets[[:space:]]*\|[[:space:]]*Test evidence[[:space:]]*\|[[:space:]]*Status[[:space:]]*\|[[:space:]]*$' "$path"; then
-    echo "Missing implementation trace columns in tasks/IMPLEMENTATION_TRACE.md: use '| Screen | State | Implementation target | Approved asset | Cut assets | Test evidence | Status |'." >&2
+  if ! grep -Eiq '^\|[[:space:]]*Screen[[:space:]]*\|[[:space:]]*State[[:space:]]*\|[[:space:]]*Implementation target[[:space:]]*\|[[:space:]]*Approved asset[[:space:]]*\|[[:space:]]*Design source[[:space:]]*\|[[:space:]]*HTML companion[[:space:]]*\|[[:space:]]*Cut assets[[:space:]]*\|[[:space:]]*Test evidence[[:space:]]*\|[[:space:]]*Status[[:space:]]*\|[[:space:]]*$' "$path"; then
+    echo "Missing implementation trace columns in tasks/IMPLEMENTATION_TRACE.md: use '| Screen | State | Implementation target | Approved asset | Design source | HTML companion | Cut assets | Test evidence | Status |'." >&2
     return 1
   fi
   while IFS= read -r screen; do
@@ -868,15 +1351,55 @@ check_implementation_trace_coverage() {
       [[ "$line" == \|* ]] || continue
       [[ "$line" == *"|---"* || "$line" == *"---|"* ]] && continue
       [[ "$line" =~ ^\|[[:space:]]*Screen[[:space:]]*\| ]] && continue
-      IFS='|' read -r _ screen_cell _ target_cell asset_cell _ test_cell status_cell _ <<< "$line"
+      IFS='|' read -r _ screen_cell state_cell target_cell asset_cell design_source_cell html_cell cut_cell test_cell status_cell _ <<< "$line"
       [[ "$(trim_md_cell "$screen_cell")" == "$screen" ]] || continue
-      target_cell="$(trim_md_cell "$target_cell")"
-      asset_cell="$(trim_md_cell "$asset_cell")"
-      test_cell="$(trim_md_cell "$test_cell")"
-      status_cell="$(trim_md_cell "$status_cell")"
-      if [[ -z "$target_cell" || "$target_cell" == "-" || "$target_cell" == "TBD" || "$target_cell" == "TODO" || -z "$asset_cell" || "$asset_cell" == "-" || "$asset_cell" == "TBD" || "$asset_cell" == "TODO" || -z "$test_cell" || "$test_cell" == "-" || "$test_cell" == "TBD" || "$test_cell" == "TODO" || -z "$status_cell" || "$status_cell" == "-" || "$status_cell" == "TBD" || "$status_cell" == "TODO" ]]; then
+      target_path="$(trim_md_cell "$target_cell")"
+      asset_path="$(trim_md_cell "$asset_cell")"
+      design_source="$(trim_md_cell "$design_source_cell")"
+      html_companion="$(trim_md_cell "$html_cell")"
+      cut_assets="$(trim_md_cell "$cut_cell")"
+      test_evidence="$(trim_md_cell "$test_cell")"
+      status="$(trim_md_cell "$status_cell")"
+      if is_missing_trace_value "$target_path" || is_missing_trace_value "$asset_path" || is_missing_trace_value "$design_source" || is_missing_trace_value "$cut_assets" || is_missing_trace_value "$test_evidence" || is_missing_trace_value "$status"; then
         echo "Incomplete implementation trace row for screen: $screen" >&2
         missing=$((missing + 1))
+      fi
+      case "$asset_path" in
+        /*) asset_full_path="$asset_path" ;;
+        *) asset_full_path="$dir/$asset_path" ;;
+      esac
+      if ! is_project_approved_design_path "$dir" "$asset_path" "$asset_full_path" || ! is_formal_design_artifact "$asset_full_path"; then
+        echo "Invalid implementation trace approved asset for screen: $screen (Approved asset must be a real raster/PDF under design/approved/)." >&2
+        missing=$((missing + 1))
+      fi
+      expected_source_type="$(design_artifact_row_field_for_screen_asset "$dir" "$screen" "$asset_path" source_type || true)"
+      expected_source_ref="$(design_artifact_row_field_for_screen_asset "$dir" "$screen" "$asset_path" source_ref || true)"
+      expected_html="$(design_artifact_row_field_for_screen_asset "$dir" "$screen" "$asset_path" html || true)"
+      if [[ -z "$expected_source_type" || -z "$expected_source_ref" ]]; then
+        echo "Missing design artifact mapping for implementation trace screen: $screen (Approved asset must match design/DESIGN_ARTIFACTS.md Screen Coverage)." >&2
+        missing=$((missing + 1))
+      elif [[ "$design_source" != *"$expected_source_ref"* ]]; then
+        echo "Implementation trace design source mismatch for screen: $screen (Design source must reference $expected_source_ref)." >&2
+        missing=$((missing + 1))
+      fi
+      if is_figma_design_source_type "$expected_source_type" && ! is_valid_figma_source_ref "$design_source"; then
+        echo "Missing implementation trace Figma source for screen: $screen (Design source must be a figma://... reference or Figma URL)." >&2
+        missing=$((missing + 1))
+      fi
+      if is_ai_generated_design_source_type "$expected_source_type"; then
+        if [[ -z "$expected_html" || "$html_companion" != *"$expected_html"* ]]; then
+          echo "Missing implementation trace HTML companion for screen: $screen (HTML companion must reference ${expected_html:-the HTML path from design/DESIGN_ARTIFACTS.md})." >&2
+          missing=$((missing + 1))
+        else
+          case "$expected_html" in
+            /*) html_full_path="$expected_html" ;;
+            *) html_full_path="$dir/$expected_html" ;;
+          esac
+          if ! is_project_html_description_path "$dir" "$expected_html" "$html_full_path"; then
+            echo "Invalid implementation trace HTML companion for screen: $screen (HTML companion must be a real non-empty .html file under design/approved/html/)." >&2
+            missing=$((missing + 1))
+          fi
+        fi
       fi
       found=1
       break
@@ -934,7 +1457,7 @@ check_visual_comparison_contract() {
 
 asset_check_impl() {
   local project="$1"
-  local dir failures design_assets final_design_assets cut_assets cut_manifest_entries
+  local dir failures design_assets final_design_assets cut_assets cut_manifest_entries forbidden_design_svgs
   require_project "$project"
   dir="$(project_path "$project")"
   failures=0
@@ -945,11 +1468,16 @@ asset_check_impl() {
   fi
   design_assets="$(count_approved_design_artifacts "$dir")"
   final_design_assets="$(count_final_design_artifacts "$dir")"
+  forbidden_design_svgs="$(count_forbidden_svg_artifacts "$dir/design/approved")"
   if ! has_content "$dir/design/DESIGN_ARTIFACTS.md"; then
     echo "Missing or too thin: design/DESIGN_ARTIFACTS.md" >&2
     failures=$((failures + 1))
   fi
   if [[ -f "$dir/design/DESIGN_ARTIFACTS.md" ]] && ! check_design_artifact_contract "$dir"; then
+    failures=$((failures + 1))
+  fi
+  if [[ "$forbidden_design_svgs" -gt 0 ]]; then
+    echo "Forbidden SVG/XML file under design/approved/: keep SVG, Mermaid, and code-native sketches under design/drafts/ or design/mocks/; approved design boards must be raster/PDF exports." >&2
     failures=$((failures + 1))
   fi
   if [[ "$(count_invalid_approved_design_artifacts "$dir")" -gt 0 ]]; then
@@ -961,7 +1489,7 @@ asset_check_impl() {
     failures=$((failures + 1))
   fi
   if [[ "$final_design_assets" -eq 0 ]]; then
-    echo "Missing final approved design asset: SVG/Mermaid/code-native drafts are allowed as layout references, but design/approved/ must include at least one formal raster image or PDF." >&2
+    echo "Missing final approved design asset: SVG/Mermaid/code-native drafts are structure drafts only, not implementation targets; design/approved/ must include at least one formal raster image or PDF." >&2
     failures=$((failures + 1))
   fi
   if ! check_design_screen_coverage "$dir"; then
@@ -971,11 +1499,11 @@ asset_check_impl() {
   cut_manifest_entries="$(cut_asset_manifest_entries "$dir")"
   if [[ "$cut_assets" -gt 0 || "$cut_manifest_entries" -gt 0 ]]; then
     if [[ "$cut_assets" -eq 0 || "$cut_manifest_entries" -eq 0 ]]; then
-      echo "Incomplete cut-asset manifest: files under design/cut-assets/ and rows in ASSET_MANIFEST.md must both exist when bitmap assets are required." >&2
+      echo "Incomplete cut-asset manifest: files under design/cut-assets/ and rows in ASSET_MANIFEST.md must both exist when cut assets are required." >&2
       failures=$((failures + 1))
     fi
   elif ! cut_assets_declared_not_required "$dir"; then
-    echo "Missing cut-asset decision: list required bitmap assets in design/cut-assets/ASSET_MANIFEST.md or record 'CUT_ASSETS_REQUIRED: no' with rationale." >&2
+    echo "Missing cut-asset decision: list required SVG/bitmap element assets in design/cut-assets/ASSET_MANIFEST.md or record 'CUT_ASSETS_REQUIRED: no' with rationale." >&2
     failures=$((failures + 1))
   fi
   if [[ "$failures" -gt 0 ]]; then
@@ -983,6 +1511,98 @@ asset_check_impl() {
     return 1
   fi
   echo "Asset check passed for $project with $design_assets approved design asset(s), including $final_design_assets final raster/PDF board(s)."
+}
+
+figma_check_impl() {
+  local project="$1"
+  local dir path line in_coverage rows failures
+  local screen_cell source_type_cell source_ref_cell asset_cell resolution_cell status_cell
+  local screen source_type source_ref asset_path resolution status asset_full_path
+  require_project "$project"
+  dir="$(project_path "$project")"
+  path="$(design_artifact_ledger_path "$dir")"
+  failures=0
+  rows=0
+  in_coverage=false
+  load_project_applicability "$project"
+  if setting_disabled "$UI_FIGMA_HANDOFF"; then
+    echo "Figma handoff check skipped for $project: UI_FIGMA_HANDOFF=$UI_FIGMA_HANDOFF."
+    return 0
+  fi
+  if [[ ! -f "$path" ]]; then
+    if setting_enabled "$UI_FIGMA_HANDOFF"; then
+      echo "Missing design artifact ledger: design/DESIGN_ARTIFACTS.md" >&2
+      return 1
+    fi
+    echo "Figma handoff check skipped for $project: no DESIGN_ARTIFACTS.md ledger."
+    return 0
+  fi
+  while IFS= read -r line; do
+    if [[ "$line" =~ ^##[[:space:]]+Screen[[:space:]]+Coverage ]]; then
+      in_coverage=true
+      continue
+    fi
+    if [[ "$in_coverage" == true && "$line" =~ ^##[[:space:]]+ ]]; then
+      break
+    fi
+    [[ "$in_coverage" == true && "$line" == \|* ]] || continue
+    [[ "$line" == *"|---"* || "$line" == *"---|"* ]] && continue
+    [[ "$line" =~ ^\|[[:space:]]*Screen[[:space:]]*\| ]] && continue
+    IFS='|' read -r _ screen_cell _ source_type_cell source_ref_cell asset_cell resolution_cell status_cell _ _ <<< "$line"
+    screen="$(trim_md_cell "$screen_cell")"
+    source_type="$(trim_md_cell "$source_type_cell")"
+    source_ref="$(trim_md_cell "$source_ref_cell")"
+    asset_path="$(trim_md_cell "$asset_cell")"
+    resolution="$(trim_md_cell "$resolution_cell")"
+    status="$(trim_md_cell "$status_cell")"
+    [[ -n "$screen" ]] || continue
+    is_figma_design_source_type "$source_type" || continue
+    rows=$((rows + 1))
+    if ! is_valid_figma_source_ref "$source_ref"; then
+      echo "Missing Figma source reference for screen: $screen (use figma://... or a Figma URL with file/node context)." >&2
+      failures=$((failures + 1))
+    fi
+    if [[ -z "$resolution" || "$resolution" == "-" || "$resolution" == "TBD" || "$resolution" == "TODO" ]]; then
+      echo "Missing Figma export detail for screen: $screen (record frame size, node, export scale, and format)." >&2
+      failures=$((failures + 1))
+    fi
+    if [[ ! "$status" =~ [Aa]pproved|[Ff]inal|正式|批准|通过 ]]; then
+      echo "Missing approved Figma handoff status for screen: $screen." >&2
+      failures=$((failures + 1))
+    fi
+    case "$asset_path" in
+      /*) asset_full_path="$asset_path" ;;
+      *) asset_full_path="$dir/$asset_path" ;;
+    esac
+    if ! is_project_approved_design_path "$dir" "$asset_path" "$asset_full_path" || ! is_formal_design_artifact "$asset_full_path"; then
+      echo "Invalid Figma approved export for screen: $screen (export must be a real raster/PDF under design/approved/)." >&2
+      failures=$((failures + 1))
+    fi
+    if is_valid_figma_source_ref "$source_ref" && is_project_approved_design_path "$dir" "$asset_path" "$asset_full_path" && ! figma_handoff_mentions "$dir" "$source_ref" "$asset_path"; then
+      echo "Missing Figma handoff ledger row for screen: $screen (design/FIGMA_HANDOFF.md must mention the Figma source and approved export)." >&2
+      failures=$((failures + 1))
+    fi
+  done < "$path"
+  if [[ "$rows" -eq 0 ]]; then
+    if setting_enabled "$UI_FIGMA_HANDOFF"; then
+      echo "Missing Figma handoff rows: add figma or figma-mcp Screen Coverage rows in design/DESIGN_ARTIFACTS.md." >&2
+      failures=$((failures + 1))
+    else
+      echo "Figma handoff check skipped for $project: no Figma-backed design artifact rows."
+      return 0
+    fi
+  fi
+  if [[ "$rows" -gt 0 ]]; then
+    if ! has_content "$(figma_handoff_path "$dir")"; then
+      echo "Missing or too thin: design/FIGMA_HANDOFF.md" >&2
+      failures=$((failures + 1))
+    fi
+  fi
+  if [[ "$failures" -gt 0 ]]; then
+    echo "Figma handoff check failed for $project." >&2
+    return 1
+  fi
+  echo "Figma handoff check passed for $project with $rows Figma-backed design artifact row(s)."
 }
 
 count_invalid_approved_design_artifacts() {
@@ -1011,18 +1631,21 @@ load_project_applicability() {
       UI_FLOW="disabled"
       UI_REFERENCES="disabled"
       UI_DESIGN_ASSETS="disabled"
+      UI_FIGMA_HANDOFF="disabled"
       UI_MOCKUPS="disabled"
       ;;
     api|library|docs)
       UI_FLOW="disabled"
       UI_REFERENCES="disabled"
       UI_DESIGN_ASSETS="disabled"
+      UI_FIGMA_HANDOFF="disabled"
       UI_MOCKUPS="disabled"
       ;;
     *)
       UI_FLOW="required"
       UI_REFERENCES="required"
       UI_DESIGN_ASSETS="required"
+      UI_FIGMA_HANDOFF="auto"
       UI_MOCKUPS="auto"
       ;;
   esac
@@ -1256,6 +1879,9 @@ verify_phase_impl() {
       fi
       if setting_enabled "$UI_DESIGN_ASSETS"; then
         asset_check_impl "$project" >/dev/null || failures=$((failures + 1))
+      fi
+      if setting_enabled "$UI_FIGMA_HANDOFF" || [[ "$(count_figma_design_artifact_rows "$dir")" -gt 0 ]]; then
+        figma_check_impl "$project" >/dev/null || failures=$((failures + 1))
       fi
       if setting_enabled "$UI_MOCKUPS" && [[ "$mockups" -eq 0 ]]; then
         echo "Missing design mockups: add image/SVG/PDF/Figma artifacts under design/mocks/." >&2
@@ -1494,14 +2120,14 @@ doctor_check_impl() {
     fi
   fi
   local dir_name
-  for dir_name in ideas product agent specs design design/references design/drafts design/mocks design/screenshots design/sources design/sources/imagegen design/sources/gpt-image design/sources/figma design/sources/uploads design/approved design/approved/screens design/approved/components design/cut-assets design/cut-assets/icons design/cut-assets/sprites design/cut-assets/illustrations design/cut-assets/backgrounds tasks reviews reviews/visual-screenshots ship apps packages .dev-flow; do
+  for dir_name in ideas product agent specs design design/references design/drafts design/mocks design/screenshots design/sources design/sources/imagegen design/sources/gpt-image design/sources/figma design/sources/uploads design/sources/html design/approved design/approved/screens design/approved/components design/approved/html design/cut-assets design/cut-assets/icons design/cut-assets/sprites design/cut-assets/illustrations design/cut-assets/backgrounds tasks reviews reviews/visual-screenshots ship apps packages .dev-flow; do
     if [[ ! -d "$dir/$dir_name" ]]; then
       echo "Missing template directory: $dir_name" >&2
       failures=$((failures + 1))
     fi
   done
   local file_name
-  for file_name in .dev-flow/state.env .dev-flow/applicability.env .dev-flow/context.md design/reference-intake.md design/reference-links.md design/REFERENCE_BOARD.md design/DESIGN_ARTIFACTS.md design/cut-assets/ASSET_MANIFEST.md tasks/status.md tasks/quality-gates.md tasks/PDCA.md tasks/IMPLEMENTATION_TRACE.md reviews/FUNCTIONAL_TEST.md reviews/MONKEY_TEST.md reviews/VISUAL_COMPARISON.md bin/check; do
+  for file_name in .dev-flow/state.env .dev-flow/applicability.env .dev-flow/context.md design/reference-intake.md design/reference-links.md design/REFERENCE_BOARD.md design/FIGMA_HANDOFF.md design/DESIGN_ARTIFACTS.md design/DESIGN_IMAGE_DESCRIPTIONS.md design/cut-assets/ASSET_MANIFEST.md tasks/status.md tasks/quality-gates.md tasks/PDCA.md tasks/IMPLEMENTATION_TRACE.md reviews/FUNCTIONAL_TEST.md reviews/MONKEY_TEST.md reviews/VISUAL_COMPARISON.md bin/check; do
     if [[ ! -f "$dir/$file_name" ]]; then
       echo "Missing template file: $file_name" >&2
       failures=$((failures + 1))
@@ -1887,6 +2513,7 @@ AGENT_FLOW=\"auto\"
 UI_FLOW=\"required\"
 UI_REFERENCES=\"required\"
 UI_DESIGN_ASSETS=\"required\"
+UI_FIGMA_HANDOFF=\"auto\"
 UI_MOCKUPS=\"auto\"
 GIT_CHECKPOINTS=\"auto\""
     write_if_missing "$dir/.dev-flow/context.md" "# Context Loading: $project
@@ -1897,12 +2524,12 @@ Load only the files needed for the current phase.
 - Product: read \`product/\` only when PM_FLOW is required or product artifacts exist.
 - Agent: read \`agent/\` only when AGENT_FLOW is required or agent artifacts exist.
 - Spec: read approved idea/product/agent artifacts that apply, and existing app files if present.
-- Design: read \`specs/SPEC.md\`, \`design/reference-intake.md\`, \`design/DESIGN_ARTIFACTS.md\`, user-provided references, existing screens, and platform constraints.
+- Design: read \`specs/SPEC.md\`, \`design/reference-intake.md\`, \`design/DESIGN_ARTIFACTS.md\`, \`design/DESIGN_IMAGE_DESCRIPTIONS.md\`, \`design/FIGMA_HANDOFF.md\`, user-provided references, existing screens, and platform constraints.
 - Plan: read approved spec/design and inspect likely source boundaries.
-- Build: read the assigned task, approved design docs, \`design/approved/\` layout/state assets, cut-asset manifest, nearby source files, and tests.
+- Build: read the assigned task, approved design docs, \`design/approved/\` layout/state assets, \`design/approved/html/\` semantic companions when AI-generated images are used, \`design/FIGMA_HANDOFF.md\` when Figma is used, cut-asset manifest, implementation trace, nearby source files, and tests.
 - PDCA: keep \`tasks/PDCA.md\` current across Current Cycle, Plan, Do, Check, and Act so decisions and evidence survive handoffs.
 - Review: read the diff, tests, and quality-gate output.
-- QA: read verification evidence, functional and monkey test logs, visual comparison score, and exception screenshots only when a flow is blocked.
+- QA: after the current planned UI implementation batch is complete or explicitly blocked, read verification evidence, functional and monkey test logs, visual comparison score, and exception screenshots only when a flow is blocked.
 - Ship: read review results, QA evidence, verification evidence, and launch notes.
 
 Do not bulk-load \`agent-skills/\` or unrelated project folders."
@@ -1923,8 +2550,12 @@ Use this before customer-facing UI design or visual polish.
 ## Approved Design Assets
 - Put implementation-ready design boards and exports only under:
   - \`design/approved/\`
-- Allowed sources include imagegen/GPT Image 2, Figma MCP or Figma exports, designer uploads, manual design-system comps, or another explicitly approved design source.
-- Browser screenshots, simulator screenshots, Playwright/Chrome captures, low-quality drafts, prototypes, and runtime app output are verification or draft assets; they must not be used as approved design assets.
+- Follow the formal source contract in \`agent-skills/references/design-artifacts.md\`.
+- Keep browser/simulator/runtime screenshots, HTML/CSS mock captures, and SVG layout sketches out of \`design/approved/\`.
+
+## Figma Handoff
+- After approved imagegen/GPT Image assets exist, record frame, component, or library handoff details in \`design/FIGMA_HANDOFF.md\` when Figma formalizes them.
+- Export approved Figma frames or component boards to \`design/approved/\` and record them in \`DESIGN_ARTIFACTS.md\` with Source type \`figma\` or \`figma-mcp\`.
 
 ## Reference Software
 - Put product names, app store links, websites, Figma links, or competitor notes in \`design/reference-links.md\`.
@@ -1981,25 +2612,40 @@ Use formal design assets before implementation planning for every customer-facin
 
 ## Asset Classes
 - Drafts: sketches, SVG/Mermaid/Markdown wireframes, low-fidelity prototypes, local HTML/CSS mock screenshots, files named draft/sketch/prototype. Save under \`design/drafts/\` or \`design/mocks/\`. Drafts are forbidden as implementation targets.
-- Approved assets: high-fidelity raster/PDF design boards, Figma exports, GPT Image/Imagegen outputs, designer uploads, or other explicitly approved design sources. Save under \`design/approved/\`.
+- Approved assets: high-fidelity raster/PDF/Figma exports from formal producers only. Save under \`design/approved/\`.
+- AI image HTML descriptions: save semantic companions under \`design/approved/html/\` and record them in \`design/DESIGN_IMAGE_DESCRIPTIONS.md\`.
 - Verification assets: browser screenshots, simulator captures, Playwright/Chrome captures, and runtime app output. Save under \`reviews/visual-screenshots/\` only when an exception or blocked flow needs evidence.
+- Figma handoff: record file/node and export mappings in \`design/FIGMA_HANDOFF.md\` when used.
 
 ## Required Coverage
 - Derive the canonical screen list from the PRD/spec/design/interaction model and record every required screen as a \`##\` section in \`SCREEN_ACCEPTANCE.md\`.
 - Produce or collect 1-N approved layout/state assets for each \`SCREEN_ACCEPTANCE.md\` screen.
 - Add at least one Screen Coverage row for each exact \`SCREEN_ACCEPTANCE.md\` screen heading.
-- \`design-check\` requires a raster/PDF approved asset for every \`SCREEN_ACCEPTANCE.md\` screen; SVG drafts alone do not satisfy the gate.
-- Browser, Playwright, Chrome, simulator, local HTML/CSS, and runtime screenshots are QA/draft artifacts only. They must not be recorded as approved design assets.
-- If bitmap icons, illustrations, UI cutouts, spritesheets, or animation frames are needed, save them under \`design/cut-assets/\` and list them in \`design/cut-assets/ASSET_MANIFEST.md\`.
+- Follow \`agent-skills/references/design-artifacts.md\` for allowed source types, SVG/cut-asset rules, AI-image HTML companions, and Figma handoff.
+- Run \`bin/dev-flow design-check $project\` before planning or build.
 
 ## Screen Coverage
 | Screen | State | Source type | Source reference | Approved asset path | Resolution / export | Status | Implementation notes |
 |---|---|---|---|---|---|---|---|
 "
+    write_if_missing "$dir/design/DESIGN_IMAGE_DESCRIPTIONS.md" "# Design Image HTML Descriptions: $project
+
+When an approved design asset is generated by imagegen, GPT Image, or another AI image model, generate an HTML companion at the same time.
+
+## Rules
+- Save implementation-ready HTML companions under \`design/approved/html/\`.
+- Store provider/source originals or rough HTML notes under \`design/sources/html/\`.
+- Each AI-generated \`DESIGN_ARTIFACTS.md\` row must include the companion path in \`Implementation notes\`, for example \`HTML: design/approved/html/dashboard.html\`.
+- The companion HTML should describe layout, hierarchy, content, components, states, colors, spacing, typography, interactions, and implementation notes.
+
+## Description Coverage
+| Screen | State | Source image | HTML description | Status | Notes |
+|---|---|---|---|---|---|
+"
 write_if_missing "$dir/design/cut-assets/ASSET_MANIFEST.md" "# Cut Assets: $project
 
-List bitmap icons, illustrations, UI cutouts, icon matrices, spritesheets, or animation frames cut from approved design assets when implementation needs them.
-If no bitmap cut assets are required, record \`CUT_ASSETS_REQUIRED: no\` with a short rationale.
+List SVG icons, bitmap icons, illustrations, UI cutouts, icon matrices, spritesheets, or animation frames cut from approved design assets when implementation needs them.
+If no cut assets are required, record \`CUT_ASSETS_REQUIRED: no\` with a short rationale.
 
 ## Decision
 - CUT_ASSETS_REQUIRED: TBD
@@ -2010,6 +2656,7 @@ If no bitmap cut assets are required, record \`CUT_ASSETS_REQUIRED: no\` with a 
 
 ## Sprite / Matrix Rules
 - Transparent PNG assets must preserve alpha.
+- SVG files are allowed here only as element/runtime assets, not as screen layout references.
 - Icon matrices and spritesheets must record grid, frame size, frame order, anchor point, scale, and intended FPS or state mapping.
 - Do not cut assets from drafts, browser screenshots, simulator captures, or runtime screenshots.
 "
@@ -2017,7 +2664,32 @@ If no bitmap cut assets are required, record \`CUT_ASSETS_REQUIRED: no\` with a 
 
 Add user-provided reference apps, websites, Figma links, screenshots descriptions, or competitor notes below.
 
-## References"
+	## References"
+    write_if_missing "$dir/design/FIGMA_HANDOFF.md" "# Figma Handoff: $project
+
+Use this after approved imagegen/GPT Image high-fidelity assets are formalized
+into Figma screens, components, or a design-system library before implementation.
+
+## Decision
+- FIGMA_HANDOFF_REQUIRED: auto
+- Flow: reference/spec direction -> imagegen/GPT Image approved raster/PDF -> semantic HTML companion -> Figma frame/component/library -> exported approved asset under \`design/approved/\`
+- Draft warning: HTML/CSS mock captures and Figma frames created from those captures are reference drafts only, not approved design sources.
+- Library required: no
+- Rationale:
+
+## Figma Sources
+| Screen | Figma source | Approved export | Role | Status | Notes |
+|---|---|---|---|---|---|
+
+## Source Inputs
+| Input | Source path or URL | Used for | Notes |
+|---|---|---|---|
+
+## Export Rules
+- Export implementation-ready screen/state frames as PNG or PDF under \`design/approved/screens/\`.
+- Export component boards or component-set snapshots under \`design/approved/components/\`.
+- Record every Figma-backed approved export in \`DESIGN_ARTIFACTS.md\` with \`Source type\` set to \`figma\` or \`figma-mcp\`.
+- Keep drafts, running-app screenshots, browser screenshots, simulator screenshots, local HTML/CSS mock captures, and Figma frames created from those captures out of \`design/approved/\`."
     write_if_missing "$dir/tasks/status.md" "# Project Status: $project
 
 ## Current State
@@ -2053,8 +2725,8 @@ folder and mirror them in \`bin/check\` when they become stable.
 - [ ] Context loading guidance exists
 - [ ] Reference intake exists for customer-facing UI work
 - [ ] Approved design assets exist under \`design/approved/\` before UI implementation
-- [ ] Draft, approved, and verification assets are stored in their proper directories
-- [ ] Cut assets are listed under \`design/cut-assets/ASSET_MANIFEST.md\` when bitmap UI assets, icon matrices, spritesheets, or animation frames are needed
+- [ ] \`bin/dev-flow design-check $project\` passes before UI implementation, when UI applies
+- [ ] \`tasks/IMPLEMENTATION_TRACE.md\` maps required UI screens to implementation targets and evidence, when UI applies
 
 ## Add When The Project Has Code
 - [ ] Lint
@@ -2064,6 +2736,7 @@ folder and mirror them in \`bin/check\` when they become stable.
 - [ ] Browser or device smoke test, when user-facing
 - [ ] Functional flow test, when user-facing
 - [ ] Monkey or exploratory stress test, when user-facing
+- [ ] Current planned UI implementation batch is complete or explicitly blocked before visual comparison, when user-facing
 - [ ] Visual comparison score is at least 90/100 against approved design assets, when user-facing
 - [ ] \`tasks/PDCA.md\` records Current Cycle, Plan, Do, Check, and Act evidence for the current cycle
 - [ ] \`bin/dev-flow pdca-check $project\`, before delivery
@@ -2096,6 +2769,7 @@ instead of reconstructing decisions at release time.
 - Verification evidence:
 - Functional test evidence:
 - Monkey test evidence:
+- UI batch completion before visual acceptance, when applicable:
 - UI visual comparison evidence, when applicable:
 
 ## Act
@@ -2157,12 +2831,12 @@ set -euo pipefail
 
 ROOT=\"\$(cd \"\$(dirname \"\${BASH_SOURCE[0]}\")/..\" && pwd)\"
 
-required_dirs=(ideas product agent specs design design/references design/drafts design/mocks design/screenshots design/sources design/approved design/cut-assets tasks reviews reviews/visual-screenshots ship apps packages .dev-flow)
+required_dirs=(ideas product agent specs design design/references design/drafts design/mocks design/screenshots design/sources design/sources/imagegen design/sources/gpt-image design/sources/figma design/sources/uploads design/sources/html design/approved design/approved/screens design/approved/components design/approved/html design/cut-assets tasks reviews reviews/visual-screenshots ship apps packages .dev-flow)
 for d in \"\${required_dirs[@]}\"; do
   [[ -d \"\$ROOT/\$d\" ]] || { echo \"Missing directory: \$d\" >&2; exit 1; }
 done
 
-required_files=(.dev-flow/state.env .dev-flow/context.md design/reference-intake.md design/reference-links.md design/DESIGN_ARTIFACTS.md design/cut-assets/ASSET_MANIFEST.md tasks/status.md tasks/quality-gates.md tasks/PDCA.md reviews/FUNCTIONAL_TEST.md reviews/MONKEY_TEST.md reviews/VISUAL_COMPARISON.md)
+required_files=(.dev-flow/state.env .dev-flow/schema.env .dev-flow/context.md design/reference-intake.md design/reference-links.md design/REFERENCE_BOARD.md design/FIGMA_HANDOFF.md design/DESIGN_ARTIFACTS.md design/DESIGN_IMAGE_DESCRIPTIONS.md design/cut-assets/ASSET_MANIFEST.md tasks/status.md tasks/quality-gates.md tasks/PDCA.md tasks/IMPLEMENTATION_TRACE.md reviews/FUNCTIONAL_TEST.md reviews/MONKEY_TEST.md reviews/VISUAL_COMPARISON.md)
 for f in \"\${required_files[@]}\"; do
   [[ -f \"\$ROOT/\$f\" ]] || { echo \"Missing file: \$f\" >&2; exit 1; }
 done
@@ -2234,10 +2908,14 @@ echo \"Default workflow gate passed for \$(basename \"\$ROOT\").\""
     project="${2:-}"
     require_project "$project"
     load_project_state "$project"
+    load_project_schema "$project"
     echo "Project: $project"
+    echo "Type: $PROJECT_TYPE"
     echo "Current phase: $CURRENT_PHASE"
+    echo "Current task: $CURRENT_TASK"
+    echo "Blockers: $BLOCKERS"
     echo
-    next_prompt_for_phase "$CURRENT_PHASE"
+    next_prompt_for_phase "$project" "$CURRENT_PHASE"
     ;;
   verify-phase)
     project="${2:-}"
@@ -2303,6 +2981,11 @@ echo \"Default workflow gate passed for \$(basename \"\$ROOT\").\""
     asset_check_impl "$project"
     record_verification "$project" "asset-check passed at $(date -u '+%Y-%m-%dT%H:%M:%SZ')"
     ;;
+  figma-check)
+    project="${2:-}"
+    figma_check_impl "$project"
+    record_verification "$project" "figma-check passed at $(date -u '+%Y-%m-%dT%H:%M:%SZ')"
+    ;;
   design-check)
     project="${2:-}"
     mode="${3:-}"
@@ -2330,6 +3013,9 @@ echo \"Default workflow gate passed for \$(basename \"\$ROOT\").\""
     fi
     if setting_enabled "$UI_DESIGN_ASSETS"; then
       asset_check_impl "$project" >/dev/null || failures=$((failures + 1))
+    fi
+    if setting_enabled "$UI_FIGMA_HANDOFF" || [[ "$(count_figma_design_artifact_rows "$dir")" -gt 0 ]]; then
+      figma_check_impl "$project" >/dev/null || failures=$((failures + 1))
     fi
     for file in design/DESIGN.md design/VISUAL_SYSTEM.md design/SCREEN_ACCEPTANCE.md; do
       if ! has_content "$dir/$file"; then

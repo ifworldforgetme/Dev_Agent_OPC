@@ -12,6 +12,7 @@ direct adapter installation.
 - `agent-skills/.gemini/commands/`: Gemini CLI command files.
 - `AGENTS.md`: local instruction layer telling agents how to use the pack here.
 - `bin/dev-flow`: helper script for listing workflows, managing project state, enforcing gates, packaging adapters, and installing adapters.
+- `docs/WORKFLOW_EXECUTION_LOGIC.md`: maintainer map for task execution, AGENTS routing, command-to-skill calls, personas, and gates.
 - `work/`: runtime project-local specs, plans, source roots, reviews, and launch artifacts created on demand by `bin/dev-flow init`; ignored by git by default.
 
 ## Lifecycle Commands
@@ -26,6 +27,8 @@ the host supports them:
 | AI agent workflow design | `Use local flow: agent` | `/agent` | `agent-flow` |
 | Turn an idea into a buildable spec | `Use local flow: spec` | `/spec` | `spec-driven-development` |
 | Design the experience | `Use local flow: design` | `/design` | `design-flow` |
+| Formalize screens in Figma | `Use local flow: figma-design` | `/figma-design` | Figma plugin `figma-use` + `figma-generate-design` |
+| Build Figma library when needed | `Use local flow: figma-library` | `/figma-library` | Figma plugin `figma-use` + `figma-generate-library` |
 | Break a spec into tasks | `Use local flow: plan` | `/plan` | `planning-and-task-breakdown` |
 | Implement a slice | `Use local flow: build` | `/build` | `incremental-implementation` + `test-driven-development` |
 | Prove behavior works | `Use local flow: test` | `/test` | `test-driven-development` |
@@ -60,6 +63,7 @@ bin/dev-flow phase <project-name> spec "Write SPEC.md from the approved idea"
 bin/dev-flow verify-phase <project-name> spec
 bin/dev-flow reference-check <project-name> --required
 bin/dev-flow asset-check <project-name>
+bin/dev-flow figma-check <project-name>
 bin/dev-flow design-check <project-name>
 bin/dev-flow qa-check <project-name>
 bin/dev-flow pdca-check <project-name>
@@ -74,15 +78,17 @@ and a control layer under `work/<project-name>/` when a project actually starts:
 
 - `.dev-flow/state.env`: current phase, active task, blockers, last verification
 - `.dev-flow/schema.env`: project schema version and project type (`ui`, `agent`, `api`, `library`, or `docs`)
-- `.dev-flow/applicability.env`: phase gates for `PM_FLOW`, `AGENT_FLOW`, `UI_FLOW`, `UI_REFERENCES`, `UI_DESIGN_ASSETS`, `UI_MOCKUPS`, and `GIT_CHECKPOINTS`
+- `.dev-flow/applicability.env`: phase gates for `PM_FLOW`, `AGENT_FLOW`, `UI_FLOW`, `UI_REFERENCES`, `UI_DESIGN_ASSETS`, `UI_FIGMA_HANDOFF`, `UI_MOCKUPS`, and `GIT_CHECKPOINTS`
 - `.dev-flow/context.md`: what context to load at each lifecycle phase
 - `design/reference-intake.md`: rules for using reference images and software
 - `design/reference-links.md`: user-provided reference apps, sites, Figma links, or competitor notes
 - `design/REFERENCE_BOARD.md`: required when visual direction is delegated without external references
+- `design/FIGMA_HANDOFF.md`: Figma file/node to approved export mapping when approved imagegen/GPT Image assets or user-supplied Figma source designs are formalized in Figma
 - `design/DESIGN_ARTIFACTS.md`: screen/state ledger for approved design assets
+- `design/DESIGN_IMAGE_DESCRIPTIONS.md`: mapping from AI-generated approved images to semantic HTML companions
 - `design/drafts/` and `design/mocks/`: sketches, wireframes, SVG/Markdown drafts, low-fidelity prototypes, and local mock screenshots
-- `design/approved/`: implementation-ready raster/PDF design boards from approved sources such as imagegen, GPT Image, Figma MCP, Figma exports, or designer uploads; recommended subfolders are `screens/` and `components/`
-- `design/cut-assets/`: bitmap UI assets, transparent PNGs, icon matrices, spritesheets, or animation frames derived from approved design assets when needed; recommended subfolders are `icons/`, `sprites/`, `illustrations/`, and `backgrounds/`
+- `design/approved/`: implementation-ready raster/PDF design boards from approved sources such as imagegen, GPT Image, Figma MCP, Figma exports, or designer uploads; recommended subfolders are `screens/`, `components/`, and `html/` for AI-image semantic companions
+- `design/cut-assets/`: manifested element/runtime assets derived from approved design assets when needed, including SVG icons/marks, bitmap UI assets, transparent PNGs, icon matrices, spritesheets, or animation frames; recommended subfolders are `icons/`, `sprites/`, `illustrations/`, and `backgrounds/`
 - `tasks/IMPLEMENTATION_TRACE.md`: screen/state to implementation/test handoff for UI work
 - `tasks/status.md`: human-readable project ledger and review gates
 - `tasks/quality-gates.md`: project-specific verification checklist
@@ -103,7 +109,9 @@ agent workflow artifacts and disables UI gates unless explicitly changed. Use
 `--force` only when deliberately recording state before artifacts are ready. Use
 `verify-phase` to check one stage, `doctor` to audit generated structure,
 `migrate` to add missing v0.2 templates, and `ship-check` before delivery. Use
-`next` at the start of a session to get the next prompt and artifact target.
+`next` at the start of a session to get a phase execution brief: the command,
+skills, minimal context, required outputs, blockers, gate, and phase command to
+run after the gate passes.
 
 ## PDCA Handoff
 
@@ -146,29 +154,61 @@ table must include a row for each exact `SCREEN_ACCEPTANCE.md` screen heading
 and record source type, source reference, approved asset path, resolution/export
 detail, approved/final status, and implementation notes.
 
-Approved design assets may come from imagegen, GPT Image, Figma MCP, exported
-Figma frames, designer uploads, manual design-system comps, or another explicit
-approved source. Drafts are useful for structure but are not implementation
+Approved design assets may come only from formal producers: imagegen/GPT Image
+raster output, Figma MCP or exported Figma frames, designer uploads, uploaded
+approved files, established design-system board exports, or external design tool
+exports recorded under `design/sources/approved/`. `DESIGN_ARTIFACTS.md` Source
+type values are limited to `imagegen`, `gpt-image`, `gpt-image-2`, `figma`,
+`figma-mcp`, `designer-upload`, `uploaded-approved`, `design-system`, and
+`external-design`. Do not use `manual-design`, `local-approved`, SVG/HTML
+renders, browser captures, screenshots, canvas captures, or local app output as
+formal source provenance. For Codex-generated customer-facing UI, use this order by
+default: reference/spec direction -> imagegen/GPT Image high-fidelity raster/PDF
+design -> semantic HTML companion -> optional Figma formalization/export ->
+implementation. Figma is downstream processing after an approved high-fidelity
+image exists; HTML/CSS mock captures and Figma frames created from those captures
+are drafts, not approved design sources. Existing user-supplied Figma files may
+be formal sources only when the user provides them as source design input. When
+an approved asset is generated by imagegen, GPT Image, or another AI image model,
+generate a semantic HTML companion at the same time under
+`design/approved/html/`, record it in `design/DESIGN_IMAGE_DESCRIPTIONS.md`, and
+include the path in the matching `DESIGN_ARTIFACTS.md` Implementation notes
+cell. Use that HTML to preserve layout hierarchy, components, state, visual
+tokens, and implementation intent for Figma or code generation. When Figma is
+used after this approved-image step, or when the user supplies Figma as the source
+design, record the Figma
+file/node and approved export mapping in `design/FIGMA_HANDOFF.md`, use Source
+type `figma` or `figma-mcp` in `DESIGN_ARTIFACTS.md`, and run
+`bin/dev-flow figma-check <project-name>`. Drafts are useful for structure but are not implementation
 targets. Save deterministic SVG, Mermaid, Markdown, wireframes, local HTML/CSS
 mock screenshots, and files named draft/sketch/prototype under `design/drafts/`
 or `design/mocks/`. Chrome, Playwright, local browser, simulator, and runtime
 screenshots are verification artifacts, not approved design assets; keep them
 under `design/screenshots/` for references or `reviews/visual-screenshots/` for
 exception evidence. `design-check` rejects draft, screenshot, prototype, and
-runtime paths as approved assets.
+runtime paths as approved assets. SVG/XML sketches are rejected under
+`design/approved/`; use raster/PDF exports for approved boards. SVG files may
+live under `design/cut-assets/` only as manifested element/runtime assets derived
+from approved boards, not as screen layout references.
 
-If bitmap icons, illustrations, backgrounds, UI cutouts, spritesheets, or
+If SVG icons, bitmap icons, illustrations, backgrounds, UI cutouts, spritesheets, or
 animation frames are needed, save cut assets under `design/cut-assets/` and list
 them in `ASSET_MANIFEST.md`. If none are needed, record
 `CUT_ASSETS_REQUIRED: no` with rationale so the design gate can verify the
 decision.
 
-Use `asset-check` after writing `DESIGN_ARTIFACTS.md`, approved assets, and
-cut-asset decisions. Use `design-check` after writing `DESIGN.md`, `VISUAL_SYSTEM.md`,
+Use `design-check` after writing `DESIGN.md`, `VISUAL_SYSTEM.md`,
 `SCREEN_ACCEPTANCE.md`, `DESIGN_ARTIFACTS.md`, approved assets, and cut-asset
-decisions. Before entering build for UI work, `tasks/IMPLEMENTATION_TRACE.md`
+decisions; it invokes `asset-check` and Figma handoff checks when applicable.
+Use `asset-check` or `figma-check` separately when you need focused diagnostics
+or evidence. Before entering build for UI work, `tasks/IMPLEMENTATION_TRACE.md`
 must map every accepted screen to an implementation target, approved asset,
-cut-asset decision, and test evidence. Use `qa-check` after implementation. Normal QA requires
+design source reference, HTML companion when applicable, cut-asset decision, and
+test evidence. During UI build, finish the current
+planned implementation batch before running visual comparison scoring, broad
+runtime screenshot capture, or final `qa-check`; use cheap per-screen
+verification while developing, and capture mid-batch screenshots only for
+exceptions, blocked flows, or explicit user requests. Use `qa-check` after implementation. Normal QA requires
 functional-flow evidence, monkey/exploratory testing evidence, and a visual
 comparison score against the approved design assets. The visual comparison must
 include every `SCREEN_ACCEPTANCE.md` screen with approved asset path, runtime
@@ -177,8 +217,9 @@ high-fidelity UI delivery. Runtime screenshots are required only when
 `reviews/EXCEPTION.md` or `reviews/BLOCKED_FLOW.md` records an exception or a
 flow that cannot be completed.
 
-Approved design assets, cut assets, and exception screenshots must be real
-non-empty image or PDF files, not placeholder text files with image extensions.
+Approved design assets and exception screenshots must be real non-empty image or
+PDF files, not placeholder text files with image extensions. Cut assets may also
+include real SVG element assets when listed in `ASSET_MANIFEST.md`.
 If formal source, approved path, resolution/export detail, or final status
 cannot be confirmed, stop before planning or build.
 
@@ -204,6 +245,9 @@ work/<project-name>/design/sources/uploads/
 work/<project-name>/design/approved/
 work/<project-name>/design/approved/screens/
 work/<project-name>/design/approved/components/
+work/<project-name>/design/approved/html/
+work/<project-name>/design/FIGMA_HANDOFF.md
+work/<project-name>/design/DESIGN_IMAGE_DESCRIPTIONS.md
 work/<project-name>/design/cut-assets/
 work/<project-name>/design/cut-assets/icons/
 work/<project-name>/design/cut-assets/sprites/
@@ -225,7 +269,7 @@ Every phase should produce a named artifact:
 | Product, when applicable | `work/<project-name>/product/PRD.md`, `USER_STORIES.md`, `METRICS.md`, `ACCEPTANCE.md` |
 | Agent, when applicable | `work/<project-name>/agent/AGENT_SPEC.md`, `WORKFLOW.md`, `TOOLS_AND_PERMISSIONS.md`, `PROMPTS_AND_SKILLS.md`, `EVALS.md`, `FAILURE_RECOVERY.md`, `OPERATIONS.md` |
 | Spec | `work/<project-name>/specs/SPEC.md` |
-| Design | `work/<project-name>/design/DESIGN.md`, `VISUAL_SYSTEM.md`, `SCREEN_ACCEPTANCE.md`, `DESIGN_ARTIFACTS.md`, `design/approved/*` |
+| Design | `work/<project-name>/design/DESIGN.md`, `VISUAL_SYSTEM.md`, `SCREEN_ACCEPTANCE.md`, `DESIGN_ARTIFACTS.md`, `DESIGN_IMAGE_DESCRIPTIONS.md` when AI-generated images are used, `FIGMA_HANDOFF.md` when Figma-backed, `design/approved/*` |
 | Plan | `work/<project-name>/tasks/PLAN.md`, and `tasks/IMPLEMENTATION_TRACE.md` when UI applies |
 | PDCA | `work/<project-name>/tasks/PDCA.md` |
 | Build | Working source under `apps/` or `packages/` |

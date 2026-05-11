@@ -48,61 +48,43 @@ Agent 流程设计、技术规格、UI 设计、实现、测试、审查和发�
 
 ### 快速开始
 
-#### 方式一：临时引用，不安装
+#### 推荐方式：把 GitHub 地址交给你的大模型
 
-在任何支持读取本地文件或 GitHub 仓库的 Coding Agent 中，直接把 Dev Agent OPC 当作工作流参考引用即可：
+复制这个仓库地址，直接发给你的大模型或 Coding Agent，让它按这个 agent 工作流安装或执行：
 
 ```text
-请临时引用 Dev Agent OPC 作为本次任务的交付流程：
-读取 <Dev_Agent_OPC>/AGENTS.md 和 DEV_FLOW.md，并只加载当前任务需要的
+请使用这个 GitHub 仓库作为我的 AI Coding Agent 交付工作流：
+https://github.com/KevinKE93/Dev_Agent_OPC
+
+请先读取仓库里的 AGENTS.md 和 DEV_FLOW.md，再根据当前任务选择合适的
 agent-skills/skills、agent-skills/agents、agent-skills/references。
 
-本次任务使用 ui flow：先完成 spec -> design -> approved assets -> plan，
-再进入 build -> test -> review -> ship。命令、状态文件和检查步骤由执行机器自动安排；
-如果设计资产、QA 或 PDCA 门禁缺失，请停止并补齐，不要跳过。
+如果你的运行环境支持安装，请把它安装成可复用的 agent workflow；
+如果不支持安装，就临时按照这个仓库的工作流执行本次任务。
+执行时不要跳过 spec、design、plan、build、test、review、ship 中适用的质量门禁。
 ```
 
-也可以只指定某一个 flow：
+如果是 UI 项目，可以这样补一句：
 
 ```text
-请按 Dev Agent OPC 的 design flow 执行，只产出视觉方向、设计规范、
-screen acceptance、approved design assets 和 cut-assets manifest。
-暂时不要进入实现阶段。
+本次任务使用 ui flow。设计阶段必须先有 approved design assets；
+如果使用 imagegen/GPT Image 生成设计图，请同时生成 HTML 语义描述；
+如果使用 Figma，请记录 Figma handoff。通过 design/QA/PDCA 门禁后再交付。
 ```
 
-常用 flow 名称包括 `idea`、`pm`、`agent`、`spec`、`design`、`plan`、`build`、`test`、`review`、`ship`。
-项目类型可以指定为 `ui`、`agent`、`api`、`library` 或 `docs`。`ui` 默认启用严格设计门禁；非 UI 类型默认关闭 UI 设计资产要求。
+#### 其他用法
 
-#### 方式二：安装到全局工作区
+- 临时引用：让模型读取 `AGENTS.md`、`DEV_FLOW.md` 和当前需要的 `agent-skills/` 文件，不做安装。
+- 全局安装：在本仓库内运行 `bin/dev-flow install <host> --scope user`。
+- 项目安装：在本仓库内运行 `bin/dev-flow install <host> --scope project`。
+- 只跑某个阶段：指定 `idea`、`pm`、`agent`、`spec`、`design`、`figma-design`、`plan`、`build`、`test`、`review` 或 `ship`。
 
-如果你希望 Codex、Claude Code、Gemini、OpenClaw 或 OpenCode 在不同项目中都能复用这套流程，
-可以把 adapter 安装到用户级工作区。最简单的做法是让你的 Coding Agent 在本仓库中执行：
-
-```text
-请把 Dev Agent OPC 安装到 Codex 的全局工作区，使用 user scope。
-如果平台支持可执行门禁，请同时保留 runtime 包；不要复制 work/ 或 dist/ 输出。
-```
-
-手动安装时只需要选择目标 host：
+支持的 host 名称：`codex`、`claude-code`、`gemini`、`openclaw`、`opencode`。
+项目类型可以指定为 `ui`、`agent`、`api`、`library` 或 `docs`。
 
 ```bash
 bin/dev-flow install codex --scope user
 bin/dev-flow install claude-code --scope user
-```
-
-支持的 host 名称：`codex`、`claude-code`、`gemini`、`openclaw`、`opencode`。
-`--scope user` 表示全局可用；`--scope project` 表示只安装到当前项目。
-只安装 adapter/skills 是规则提示层；如果需要机器可执行门禁，应使用仓库 runtime 或 adapter package 里的 `runtime/`。
-
-#### 方式三：让 Agent 自动执行完整闭环
-
-对于实际开发任务，推荐用自然语言指定目标和 flow，让模型和执行机器自动安排命令：
-
-```text
-使用 Dev Agent OPC 开发一个 <目标项目>，项目类型为 ui。
-请按 idea -> spec -> design -> plan -> build -> test -> review -> ship 执行。
-设计阶段必须有正式 approved design assets；QA 需要功能测试、monkey 测试和视觉对比；
-交付前必须完成 PDCA 和 ship check。除非遇到阻塞，否则不要停在计划阶段。
 ```
 
 修改流程包本身后，再运行仓库 smoke test。
@@ -116,6 +98,8 @@ bin/dev-flow install claude-code --scope user
 | Agent 流程 | `agent` / `/agent` | 工具、权限、提示词、恢复机制、评估 |
 | 规格 | `spec` / `/spec` | 可构建的产品和技术规格 |
 | 设计 | `design` / `/design` | UX、视觉系统、屏幕验收标准、正式设计资产 |
+| Figma 设计稿 | `figma-design` | 将视觉方向沉淀为 Figma frame 和正式导出图 |
+| Figma 组件库 | `figma-library` | 可选的 tokens、组件变体和设计系统 |
 | 计划 | `plan` / `/plan` | 小粒度、可验证的实现任务 |
 | 开发 | `build` / `/build` | 带证据的实现切片 |
 | 测试 | `test` / `/test` | 测试和回归证据 |
@@ -130,15 +114,18 @@ bin/dev-flow install claude-code --scope user
 `DESIGN.md`、`VISUAL_SYSTEM.md`、`SCREEN_ACCEPTANCE.md`、`DESIGN_ARTIFACTS.md`
 和 `design/approved/` 下的正式布局图或状态图；实现后需要记录功能测试、monkey 测试和视觉对比评分。正常 QA
 不要求截图，只有异常或流程阻塞时才需要截图证据。
-`design/approved/` 的正式设计资产可以来自 imagegen/GPT Image、Figma MCP 或 Figma 导出、设计师上传、手工设计系统稿等已批准来源。
-浏览器、Playwright、模拟器、本地 HTML/CSS、运行态截图、草图和原型图不能作为开发实现目标。
+`design/approved/` 的正式设计资产只能来自 imagegen/GPT Image raster/PDF 输出、Figma MCP 或 Figma 导出、设计师上传或 uploaded-approved 文件、已建立设计系统的导出板、或带来源证据的外部设计工具导出。
+如果 imagegen/GPT Image 生成正式设计图，需要同步生成 `design/approved/html/` 下的 HTML 语义描述，并在 `DESIGN_IMAGE_DESCRIPTIONS.md` 与 `DESIGN_ARTIFACTS.md` 中记录映射，帮助后续 Figma 或开发理解图片里的布局、组件、状态和视觉规则。
+如果用 imagegen/GPT Image 探索方向后再进入 Figma，需要在 `design/FIGMA_HANDOFF.md` 记录 Figma file/node 和正式导出图的映射，并在 `DESIGN_ARTIFACTS.md` 中使用 `figma` 或 `figma-mcp` 作为 Source type。
+浏览器、Playwright、模拟器、本地 HTML/CSS、运行态截图、草图和原型图不能作为开发实现目标；自行生成的 SVG/XML 草图不能放入 `design/approved/` 作为正式设计图。SVG 可以作为元素素材放在 `design/cut-assets/`，但必须有 manifest，并且只能作为图标、标识、插画片段等运行时素材，不能作为界面布局参考。
 如果没有外部参考而由 Agent 负责视觉方向，需要写入 `design/REFERENCE_BOARD.md`。切图资产、透明 PNG、图标矩阵、spritesheet 或动画帧需要提供 manifest；如果不需要切图，也要显式记录原因。
-进入开发计划前，`tasks/IMPLEMENTATION_TRACE.md` 需要把每个界面映射到实现目标、正式设计图、切图资产和测试证据。
+进入开发计划前，`tasks/IMPLEMENTATION_TRACE.md` 需要把每个界面映射到实现目标、正式设计图、设计来源、必要的 HTML companion、切图资产和测试证据。
 
 ```bash
 bin/dev-flow reference-check my-project --required
-bin/dev-flow asset-check my-project
 bin/dev-flow design-check my-project
+bin/dev-flow asset-check my-project       # optional focused diagnostic
+bin/dev-flow figma-check my-project       # optional focused diagnostic when Figma-backed
 bin/dev-flow qa-check my-project
 ```
 
@@ -164,6 +151,7 @@ agent-skills/
   .gemini/         Gemini CLI command files
 assets/            README and project media assets
 bin/dev-flow       Local workflow CLI
+docs/              Maintainer docs for execution logic and call relationships
 DEV_FLOW.md        Detailed workflow documentation
 AGENTS.md          Repository instructions for agents
 work/              Runtime project state, created on demand and ignored by git
@@ -207,71 +195,48 @@ and visual standards before implementation begins.
 
 ### Quick Start
 
-#### Option 1: Reference It Temporarily
+#### Recommended: Give The GitHub URL To Your Model
 
-In any coding agent that can read local files or a GitHub repository, reference
-Dev Agent OPC as the operating workflow without installing it:
-
-```text
-Use Dev Agent OPC as the delivery workflow for this task.
-Load <Dev_Agent_OPC>/AGENTS.md and DEV_FLOW.md, then load only the relevant
-agent-skills/skills, agent-skills/agents, and agent-skills/references files.
-
-Use the ui flow: spec -> design -> approved assets -> plan -> build -> test
--> review -> ship. Let the agent and execution machine choose the exact
-commands and state updates. If design assets, QA evidence, or PDCA evidence are
-missing, stop and complete the gate instead of skipping it.
-```
-
-You can also request one specific flow:
+Copy this repository URL into your large model or coding agent and ask it to
+install or follow this workflow:
 
 ```text
-Run only the Dev Agent OPC design flow. Produce visual direction, design
-standards, screen acceptance, approved design assets, and the cut-assets
-manifest. Do not start implementation yet.
+Use this GitHub repository as my AI Coding Agent delivery workflow:
+https://github.com/KevinKE93/Dev_Agent_OPC
+
+First read AGENTS.md and DEV_FLOW.md, then load only the relevant
+agent-skills/skills, agent-skills/agents, and agent-skills/references.
+
+If your environment supports installation, install it as a reusable agent
+workflow. If not, follow the repository workflow temporarily for this task.
+Do not skip applicable quality gates across spec, design, plan, build, test,
+review, and ship.
 ```
 
-Common flow names are `idea`, `pm`, `agent`, `spec`, `design`, `plan`, `build`,
-`test`, `review`, and `ship`. Project types are `ui`, `agent`, `api`,
-`library`, and `docs`. `ui` keeps strict design gates enabled; non-UI types
-disable UI asset gates by default.
-
-#### Option 2: Install It Globally
-
-To reuse the workflow across Codex, Claude Code, Gemini, OpenClaw, or OpenCode
-projects, install the adapter into the user workspace. The easiest path is to
-ask your coding agent from inside this repository:
+For UI work, add:
 
 ```text
-Install Dev Agent OPC into the global Codex workspace with user scope.
-If executable gates are supported, keep the runtime package available.
-Do not copy work/ or dist/ outputs.
+Use the ui flow. Design must include approved design assets before build.
+If imagegen/GPT Image creates design images, generate semantic HTML companions
+at the same time. If Figma is used, record the Figma handoff. Deliver only
+after design, QA, and PDCA gates pass.
 ```
 
-For manual installation, choose the target host:
+#### Other Usage
+
+- Temporary reference: ask the model to read `AGENTS.md`, `DEV_FLOW.md`, and the
+  relevant `agent-skills/` files without installing anything.
+- User install: run `bin/dev-flow install <host> --scope user`.
+- Project install: run `bin/dev-flow install <host> --scope project`.
+- Single phase: request `idea`, `pm`, `agent`, `spec`, `design`,
+  `figma-design`, `plan`, `build`, `test`, `review`, or `ship`.
+
+Supported hosts are `codex`, `claude-code`, `gemini`, `openclaw`, and
+`opencode`. Project types are `ui`, `agent`, `api`, `library`, and `docs`.
 
 ```bash
 bin/dev-flow install codex --scope user
 bin/dev-flow install claude-code --scope user
-```
-
-Supported hosts are `codex`, `claude-code`, `gemini`, `openclaw`, and
-`opencode`. `--scope user` makes the workflow globally available; `--scope
-project` installs it only for the current project. Installing adapters/skills
-provides the rules prompt layer. For executable gates, use the repository
-runtime or the `runtime/` folder emitted by the adapter package.
-
-#### Option 3: Let the Agent Run the Loop
-
-For real work, describe the target and flow in natural language and let the
-model plus execution machine decide the exact commands:
-
-```text
-Use Dev Agent OPC to build <target project> as a ui project.
-Run idea -> spec -> design -> plan -> build -> test -> review -> ship.
-The design phase must include approved design assets. QA must include
-functional testing, monkey testing, and visual comparison. Complete PDCA and
-ship checks before delivery. Do not stop at planning unless blocked.
 ```
 
 After changing the workflow pack itself, run the repository smoke test.
@@ -285,6 +250,8 @@ After changing the workflow pack itself, run the repository smoke test.
 | Agent Flow | `agent` / `/agent` | Tools, permissions, prompts, recovery, evals |
 | Spec | `spec` / `/spec` | Buildable product and technical spec |
 | Design | `design` / `/design` | UX, visual system, screen acceptance, approved design assets |
+| Figma Design | `figma-design` | Formalized Figma frames and approved exports |
+| Figma Library | `figma-library` | Optional Figma tokens/components library |
 | Plan | `plan` / `/plan` | Small verifiable tasks |
 | Build | `build` / `/build` | Implemented slices with proof |
 | Test | `test` / `/test` | Tests and regression evidence |
@@ -300,20 +267,33 @@ Customer-facing UI work must pass reference intake, design checks, and approved
 design asset coverage before implementation. After implementation, QA records functional
 tests, monkey testing, and visual comparison. Screenshots are required only for
 exceptions or blocked flows.
-Final assets under `design/approved/` can come from imagegen/GPT Image, Figma MCP
-or Figma exports, designer uploads, manual design-system comps, or another
-explicitly approved source, and must be recorded in `DESIGN_ARTIFACTS.md`.
+Final assets under `design/approved/` must come from a formal producer and be
+recorded in `DESIGN_ARTIFACTS.md`: imagegen/GPT Image raster output, Figma MCP
+or Figma exports, designer uploads, uploaded-approved files, design-system board
+exports, or external design-tool exports stored under `design/sources/approved/`.
+Manual/local SVG or HTML rendering, browser screenshots, canvas captures, and
+runtime screenshots are not formal producers, even if the final file is PNG.
+When imagegen/GPT Image creates final design images, generate semantic HTML
+companions under `design/approved/html/` and map them in
+`DESIGN_IMAGE_DESCRIPTIONS.md` plus `DESIGN_ARTIFACTS.md`; this gives Figma or
+implementation agents a structured description of layout, components, states,
+and visual rules instead of relying only on bitmap interpretation.
+Figma-backed assets also require `design/FIGMA_HANDOFF.md` and
+`bin/dev-flow figma-check <project-name>`.
 Browser, Playwright, simulator, local HTML/CSS, runtime screenshots, drafts, and
-prototypes are not substitutes for approved design assets. Cut assets,
-transparent PNGs, icon matrices, spritesheets, and animation frames need a
+prototypes are not substitutes for approved design assets, and SVG/XML sketches
+must not be stored under `design/approved/`. SVG files may be stored under
+`design/cut-assets/` only as manifested element/runtime assets, not as screen
+layout references. SVG cut assets, transparent PNGs, icon matrices, spritesheets, and animation frames need a
 manifest; when none are needed, the design record must say so. Delegated visual
 direction requires `design/REFERENCE_BOARD.md`, and UI build planning requires
 `tasks/IMPLEMENTATION_TRACE.md`.
 
 ```bash
 bin/dev-flow reference-check my-project --required
-bin/dev-flow asset-check my-project
 bin/dev-flow design-check my-project
+bin/dev-flow asset-check my-project       # optional focused diagnostic
+bin/dev-flow figma-check my-project       # optional focused diagnostic when Figma-backed
 bin/dev-flow qa-check my-project
 ```
 
@@ -338,6 +318,7 @@ agent-skills/
   .gemini/         Gemini CLI command files
 assets/            README and project media assets
 bin/dev-flow       Local workflow CLI
+docs/              Maintainer docs for execution logic and call relationships
 DEV_FLOW.md        Detailed workflow documentation
 AGENTS.md          Repository instructions for agents
 work/              Runtime project state, created on demand and ignored by git
