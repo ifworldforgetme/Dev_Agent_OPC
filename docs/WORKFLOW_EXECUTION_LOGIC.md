@@ -40,13 +40,14 @@ flowchart TD
 |---|---|---|
 | `AGENTS.md` | 当前 workspace 的 agent 指令层，定义生命周期、技能加载、角色、门禁和产物规则。 | 否 |
 | `DEV_FLOW.md` | 面向用户和维护者的 workflow 使用说明。 | 否 |
+| `agent-skills/dev-agent-opc.manifest.json` | native flow、role、gate 索引，供 `/opc-flow`、`/opc-role`、`/opc-next`、`/opc-check` 使用。 | 否 |
 | `agent-skills/commands/` | 平台中立的 command prompt，例如 `design`、`build`、`figma-design`、`ship`。 | 否 |
 | `agent-skills/skills/` | Canonical `SKILL.md` 工作流，定义步骤、输出和退出条件。 | 否 |
 | `agent-skills/agents/` | 专家 persona prompt，例如 designer、reviewer、security auditor、test engineer。 | 否 |
 | `agent-skills/references/` | 通用 rubric、checklist、编排原则、设计产物规则、Figma handoff 规则。 | 否 |
 | `agent-skills/templates/project/` | `init` / `migrate` 渲染到 `work/<project>/` 的项目模板。 | 否 |
 | `agent-skills/lib/dev-flow/` | `bin/dev-flow` 使用的 shell helper，例如 project type 和模板渲染。 | 通过 `bin/dev-flow` 执行 |
-| `bin/dev-flow` | 本地 CLI：检查 pack、初始化项目、维护状态、执行门禁、打包/安装 adapter。 | 是 |
+| `bin/dev-flow` | 本地 CLI：检查 pack、初始化项目、维护状态、检查宿主机环境合同、执行门禁、打包/安装 adapter。 | 是 |
 | `tests/dev-flow-smoke.sh` | CLI、模板、门禁和 adapter 假设的回归 smoke test。 | 是 |
 | `work/<project>/` | 项目运行状态、产物、源码、review 和 launch 证据。默认被 git 忽略。 | 取决于具体项目 |
 
@@ -66,7 +67,7 @@ flowchart TD
 6. 按 command 中的说明调用对应 skill 或组合 skill。
 7. 将产物写入 `work/<project>/` 下对应目录。
 8. 运行对应 gate，例如 `verify-phase`、`design-check`、`figma-check`、
-   `qa-check`、`pdca-check`、`ship-check`。
+   `env-check`、`qa-check`、`pdca-check`、`ship-check`。
 9. gate 通过后，用 `bin/dev-flow phase <project-name> <phase> [task]` 记录
    状态。
 10. 重复上述过程，直到 `ship-check` 通过。
@@ -102,6 +103,17 @@ idea -> pm -> agent -> spec -> design -> plan -> build -> test -> review -> ship
 
 `figma-design` 和 `figma-library` 是 design 阶段内的子流程，不是
 `bin/dev-flow phase` 的状态机阶段。
+
+Native 入口是现有 command 的统一路由层：
+
+- `/opc-flow <flow-name> [project-name]` 读取 manifest，再进入对应
+  `agent-skills/commands/<flow-name>.md`。
+- `/opc-role <role-name>` 读取 manifest，再进入对应 `agent-skills/agents/*.md`。
+- `/opc-next <project-name>` 包装 `bin/dev-flow status` 和 `bin/dev-flow next`。
+- `/opc-check <gate-name> <project-name>` 包装现有 executable gates。
+
+这些入口不新增第二套生命周期；它们只把已有 flow、persona 和 gate 做成更容易安装
+和调用的 native surface。
 
 ## 项目类型和 Applicability
 
@@ -224,9 +236,10 @@ fan-out 模式只用于互相独立的 review pass，例如 ship 阶段并行使
 | `verify-phase` | 单个阶段的必需产物。design 和 plan 会在适用时调用更深的 UI gate。 |
 | `phase` | 验证 prior applicable phases，然后记录 `CURRENT_PHASE` 和当前 task。 |
 | `check` | 执行项目本地 `work/<project>/bin/check`。 |
+| `env-check` | 检查 `.dev-flow/HOST_REQUIREMENTS.md` 中的宿主机 SDK、CLI、服务、凭证和权限要求；不执行安装。 |
 | `qa-check` | functional test、monkey test、visual comparison matrix、`Overall score: N/100`，高保真 UI 最低 90/100；只有异常或阻塞流程需要截图。 |
 | `pdca-check` | `tasks/PDCA.md` 必须有 Current Cycle、Plan、Do、Check、Act 的真实证据。 |
-| `ship-check` | 运行所有 applicable phase verification、项目 `bin/check`、适用时的 UI QA、PDCA check。 |
+| `ship-check` | 运行所有 applicable phase verification、项目 `bin/check`、`env-check`、适用时的 UI QA、PDCA check。 |
 | `doctor` | 检查项目目录、schema、模板、可执行 `bin/check`、以及是否误跟踪 runtime output。 |
 | `migrate` | 给旧项目补齐当前模板和 schema。 |
 
@@ -290,12 +303,27 @@ prototype、draft 或 runtime screenshot。这些只能作为 draft、reference 
 | `tasks/PLAN.md` | Plan | 实现顺序和验证命令。 |
 | `tasks/IMPLEMENTATION_TRACE.md` | Plan / UI | screen/state 到 implementation target、approved asset、design source、HTML companion、cut asset、test 的映射。 |
 | `tasks/PDCA.md` | 全阶段 | 持久交付循环：Current Cycle、Plan、Do、Check、Act。 |
+| `.dev-flow/HOST_REQUIREMENTS.md` | 环境 | 宿主机 SDK、CLI、服务、凭证、权限和验证命令；不要把共享 SDK 装进 `work/<project>`。 |
 | `apps/`、`packages/` | Build | 仅项目本地源码。 |
 | `reviews/` | Test / Review / QA | verification、functional、monkey、visual comparison、review notes。 |
 | `ship/` | Ship | launch notes、go/no-go、rollback plan。 |
 
 不要创建项目专属的 root-level `apps/`、`packages/`、`src/` 等目录，除非用户明确说
 这些代码是跨项目共享的 workspace-level source。
+
+## 宿主机环境边界
+
+通用 SDK 和开发环境属于宿主机能力，不属于 `work/<project>` 运行态产物。Xcode、
+Android SDK、Java/JDK、Node/Python runtime、Docker、Playwright browsers、Figma
+MCP、模拟器、系统服务、凭证和权限应安装或授权在宿主机/用户级位置，并在
+`.dev-flow/HOST_REQUIREMENTS.md` 中记录。
+
+项目本地可以保存依赖声明和 lockfile，例如 `package.json`、Swift Package manifest、
+Python project file 或项目专用 virtual environment。构建输出、截图、QA 证据和
+生成设计资产属于 runtime artifacts，应可删除并重建。
+
+`env-check` 只验证合同和阻塞状态，不从 Markdown 执行安装命令。缺少宿主机能力时，
+记录 `missing` 或 `blocked`，并在需要权限、网络、设备或凭证时等待用户确认。
 
 ## Adapter 关系
 
@@ -313,6 +341,9 @@ Adapter 源文件位于 `agent-skills/` 内：
 
 - Codex、Claude Code、Gemini、OpenClaw、OpenCode 的 rules prompt layer。
 - 包含 `bin/dev-flow`、模板、文档、smoke tests 的 runtime layer。
+
+`bin/dev-flow install ...` 也会在目标目录下写入 `dev-agent-opc-runtime/`，
+因此直接安装后的 native command 仍可找到可执行 gate。
 
 ## 人工 review 边界
 

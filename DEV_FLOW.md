@@ -8,10 +8,11 @@ direct adapter installation.
 
 - `agent-skills/`: canonical workflow pack with skills, agents, commands, references, and platform docs.
 - `agent-skills/commands/`: platform-neutral stage prompts used by Codex, OpenClaw, OpenCode, and other hosts when native slash commands are unavailable.
+- `agent-skills/dev-agent-opc.manifest.json`: native flow, role, and gate index used by `/opc-flow`, `/opc-role`, `/opc-next`, and `/opc-check`.
 - `agent-skills/.claude/commands/`: Claude Code slash command files.
 - `agent-skills/.gemini/commands/`: Gemini CLI command files.
 - `AGENTS.md`: local instruction layer telling agents how to use the pack here.
-- `bin/dev-flow`: helper script for listing workflows, managing project state, enforcing gates, packaging adapters, and installing adapters.
+- `bin/dev-flow`: helper script for listing workflows, managing project state, checking host requirements, enforcing gates, packaging adapters, and installing adapters.
 - `docs/WORKFLOW_EXECUTION_LOGIC.md`: maintainer map for task execution, AGENTS routing, command-to-skill calls, personas, and gates.
 - `work/`: runtime project-local specs, plans, source roots, reviews, and launch artifacts created on demand by `bin/dev-flow init`; ignored by git by default.
 
@@ -38,10 +39,24 @@ the host supports them:
 Slash command support is host-specific. If a host does not support custom slash
 commands, use the prompt alias or the installed command snippet content.
 
+Installed native adapters also expose four generic entrypoints:
+
+```text
+/opc-flow <flow-name> [project-name]
+/opc-role <role-name> [task]
+/opc-next <project-name>
+/opc-check <gate-name> <project-name> [phase-or-options]
+```
+
+These route through `agent-skills/dev-agent-opc.manifest.json` and the existing
+command, skill, persona, and `bin/dev-flow` gate contracts. They are an entry
+surface over the current workflow pack, not a second workflow.
+
 ## Inspect The Pack
 
 ```bash
 bin/dev-flow list
+bin/dev-flow manifest
 bin/dev-flow show idea
 bin/dev-flow show spec
 bin/dev-flow command plan
@@ -65,6 +80,7 @@ bin/dev-flow reference-check <project-name> --required
 bin/dev-flow asset-check <project-name>
 bin/dev-flow figma-check <project-name>
 bin/dev-flow design-check <project-name>
+bin/dev-flow env-check <project-name>
 bin/dev-flow qa-check <project-name>
 bin/dev-flow pdca-check <project-name>
 bin/dev-flow ship-check <project-name>
@@ -80,6 +96,7 @@ and a control layer under `work/<project-name>/` when a project actually starts:
 - `.dev-flow/schema.env`: project schema version and project type (`ui`, `agent`, `api`, `library`, or `docs`)
 - `.dev-flow/applicability.env`: phase gates for `PM_FLOW`, `AGENT_FLOW`, `UI_FLOW`, `UI_REFERENCES`, `UI_DESIGN_ASSETS`, `UI_FIGMA_HANDOFF`, `UI_MOCKUPS`, and `GIT_CHECKPOINTS`
 - `.dev-flow/context.md`: what context to load at each lifecycle phase
+- `.dev-flow/HOST_REQUIREMENTS.md`: host-machine SDKs, CLIs, services, credentials, and permissions required by this project
 - `design/reference-intake.md`: rules for using reference images and software
 - `design/reference-links.md`: user-provided reference apps, sites, Figma links, or competitor notes
 - `design/REFERENCE_BOARD.md`: required when visual direction is delegated without external references
@@ -108,10 +125,35 @@ artifacts exist or their flow is marked `required` in
 agent workflow artifacts and disables UI gates unless explicitly changed. Use
 `--force` only when deliberately recording state before artifacts are ready. Use
 `verify-phase` to check one stage, `doctor` to audit generated structure,
-`migrate` to add missing v0.2 templates, and `ship-check` before delivery. Use
+`migrate` to add missing schema/templates, `env-check` to audit host-machine
+requirements, and `ship-check` before delivery. Use
 `next` at the start of a session to get a phase execution brief: the command,
 skills, minimal context, required outputs, blockers, gate, and phase command to
 run after the gate passes.
+
+## Host Environment Contract
+
+Project code and delivery evidence live under `work/<project-name>/`, but many
+developer SDKs are host-machine capabilities. Do not repeatedly install shared
+SDKs such as Xcode, Android SDK, Java/JDK, Node runtimes, Python runtimes,
+Docker, Playwright browsers, Figma MCP, simulators, or package-manager caches
+inside `work/<project-name>/`.
+
+Record those requirements in `.dev-flow/HOST_REQUIREMENTS.md` instead. The file
+separates:
+
+- Host environment: machine/user-level SDKs, CLIs, services, credentials,
+  devices, simulators, and MCP connections.
+- Project dependencies: source-level dependencies declared by the project, such
+  as `package.json`, lockfiles, Swift Package manifests, Python project files,
+  or a project-specific virtual environment.
+- Runtime artifacts: build outputs, screenshots, QA evidence, generated design
+  assets, logs, and release artifacts.
+
+`bin/dev-flow env-check <project-name>` validates that host dependencies are
+declared and satisfied, but it does not execute arbitrary install commands from
+the Markdown file. If a required SDK or permission is missing, mark it as
+`missing` or `blocked`; `ship-check` treats that as a blocker.
 
 ## PDCA Handoff
 
@@ -321,6 +363,10 @@ bin/dev-flow install openclaw --scope user
 bin/dev-flow install opencode --scope user
 ```
 
+The default install mode is `native`: install only the `dev-agent-opc` top-level
+skill, `opc-*` commands, and the runtime package. Use `--mode full` to also copy
+every internal `agent-skills/skills/*` folder as a top-level skill.
+
 Use `--dest <path>` for staging, CI checks, or custom agent homes:
 
 ```bash
@@ -338,7 +384,17 @@ Default destinations:
 | OpenCode | `.opencode/` | `~/.config/opencode` |
 
 Installer behavior is additive: it creates or updates matching files, but it
-does not delete old custom files in the destination.
+does not delete old custom files in the destination. Direct installs also copy a
+self-contained runtime to `dev-agent-opc-runtime/` under the target directory so
+installed commands can still reach `bin/dev-flow` gates when a project does not
+vendor this repository.
+
+Uninstall from the default scopes:
+
+```bash
+bin/dev-flow uninstall codex --scope user
+bin/dev-flow uninstall claude-code --scope user
+```
 
 ## Evidence Gates
 
@@ -356,10 +412,12 @@ bin/dev-flow phase <project-name> <next-phase> "next task"
 Use `bin/dev-flow pdca-check <project-name>` and `bin/dev-flow ship-check
 <project-name>` before delivery. `ship-check` verifies all required phases plus
 optional phases that have artifacts or are marked `required` in
-`.dev-flow/applicability.env`, runs the project default gate, runs UI QA when
-applicable, and then runs the PDCA gate. If a runtime gate cannot run, such as
-Android APK build in an environment without Java/Gradle/Android SDK, record the
-blocker in `reviews/BLOCKED_BUILD.md` rather than silently passing the phase.
+`.dev-flow/applicability.env`, runs the project default gate, runs
+`env-check`, runs UI QA when applicable, and then runs the PDCA gate. If a
+runtime gate cannot run, such as Android APK build in an environment without
+Java/Gradle/Android SDK, record the host requirement in
+`.dev-flow/HOST_REQUIREMENTS.md` and the blocker in `reviews/BLOCKED_BUILD.md`
+rather than silently passing the phase.
 
 After changing this workflow pack, run:
 

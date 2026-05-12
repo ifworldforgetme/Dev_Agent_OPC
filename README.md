@@ -18,7 +18,7 @@
 </p>
 
 <p align="center">
-  <a href="#发布状态"><img alt="Version" src="https://img.shields.io/badge/version-v0.2-blue.svg"></a>
+  <a href="#发布日志"><img alt="Version" src="https://img.shields.io/badge/version-v0.4-blue.svg"></a>
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-green.svg"></a>
   <a href="agent-skills/"><img alt="Agent Workflow" src="https://img.shields.io/badge/agent-workflow-111827.svg"></a>
   <img alt="Design Gated" src="https://img.shields.io/badge/design-gated-f97316.svg">
@@ -39,6 +39,15 @@ Dev Agent OPC 是一套给 AI Coding Agent 使用的自动化开发流程。它�
 
 它不是只提醒 Agent “写得更好一点”的提示词集合，而是一套面向真实交付的工作流：让 Agent 像一个小型产品开发团队一样工作，承担产品经理、架构师、设计师、工程师、测试、评审和发布负责人等职责。它特别适合 OPC、独立开发者、小型业务团队，以及需要用 Codex、Claude Code、Gemini、OpenClaw 或 OpenCode 交付完整软件/网站/工具的团队。
 
+### 目录
+
+- [它解决什么](#它解决什么)
+- [快速开始](#快速开始)
+- [高价值功能](#高价值功能)
+- [UI 与设计自动化管控](#ui-与设计自动化管控)
+- [与 agent-skills 的关系](#与-agent-skills-的关系)
+- [发布日志](#发布日志)
+
 ### 它解决什么
 
 - 把想法拆成可执行规格，而不是直接进入随机编码。
@@ -49,9 +58,68 @@ Dev Agent OPC 是一套给 AI Coding Agent 使用的自动化开发流程。它�
 
 ### 快速开始
 
-#### 方式一：临时引用，不安装
+#### 方式一：安装 Native Skill & Agent（推荐）
 
-把仓库地址发给你的 AI Coding Agent，让它按 Dev Agent OPC 执行本次任务：
+如果你希望 Codex、Claude Code 等工具在不同项目里都能复用这套流程，推荐安装
+native 入口。默认 `native` 模式只暴露一个顶层技能 `dev-agent-opc` 和四个
+命名空间命令，内部的 `design-flow`、`pm-flow`、`code-review-and-quality` 等
+workflow skills 会保留在 `dev-agent-opc-runtime/` 中，不会污染全局技能列表。
+
+首次安装：
+
+```bash
+git clone https://github.com/KevinKE93/Dev_Agent_OPC.git
+cd Dev_Agent_OPC
+
+bin/dev-flow install codex --scope user
+bin/dev-flow install claude-code --scope user
+```
+
+已经 clone 到本地时，直接在仓库目录执行安装即可：
+
+```bash
+cd "/path/to/Dev_Agent_OPC"
+bin/dev-flow install codex --scope user
+bin/dev-flow install claude-code --scope user
+```
+
+支持的 host：`codex`、`claude-code`、`gemini`、`openclaw`、`opencode`。
+
+常用 native 入口：
+
+```text
+/opc-flow design <project-name>
+/opc-flow pm <project-name>
+/opc-role opc-product-designer
+/opc-next <project-name>
+/opc-check ship-check <project-name>
+```
+
+更新已安装版本：
+
+```bash
+cd "/path/to/Dev_Agent_OPC"
+git pull --ff-only
+
+bin/dev-flow install codex --scope user
+bin/dev-flow install claude-code --scope user
+```
+
+安装或更新后，重启对应的 Agent 工具以重新加载 skills 和 commands。
+
+如需把所有内部 skills 也作为顶层 skills 展开安装，可显式使用 `--mode full`；
+一般不建议，因为会重新出现 `$design-flow`、`$pm-flow` 这类内部技能名。
+
+卸载：
+
+```bash
+bin/dev-flow uninstall codex --scope user
+bin/dev-flow uninstall claude-code --scope user
+```
+
+#### 方式二：GitHub 引用，不安装
+
+把 GitHub 仓库地址发给你的 AI Coding Agent，让它按 Dev Agent OPC 执行本次任务：
 
 ```text
 请使用 Dev Agent OPC 作为本次任务的自动化开发流程：
@@ -69,25 +137,19 @@ https://github.com/KevinKE93/Dev_Agent_OPC
 再进入实现。QA 需要功能测试、monkey 测试和视觉对比；只有异常或阻塞时才需要截图证据。
 ```
 
-#### 方式二：安装到全局工作区
+#### 方式三：本地路径引用，不安装
 
-如果你希望 Codex、Claude Code 等工具在不同项目里都能复用这套流程，可以让 Agent 在本仓库中执行全局安装：
+如果仓库已经在本机，也可以把本地路径直接交给 Agent：
 
 ```text
-请把 Dev Agent OPC 安装到我的全局工作区，目标 host 是 codex，scope 使用 user。
-如果当前平台支持 runtime 或可执行门禁，请一并保留；不要复制 work/ 或 dist/ 输出。
+请使用本地 Dev Agent OPC 作为本次任务的自动化开发流程：
+/path/to/Dev_Agent_OPC
+
+先读取该目录下的 AGENTS.md 和 DEV_FLOW.md，再按任务需要加载 agent-skills/ 下的相关
+skills、agents 和 references。项目产物必须放在当前项目的 work/<project-name>/ 下。
 ```
 
-手动安装时只需要选择 host：
-
-```bash
-bin/dev-flow install codex --scope user
-bin/dev-flow install claude-code --scope user
-```
-
-支持的 host：`codex`、`claude-code`、`gemini`、`openclaw`、`opencode`。
-
-#### 方式三：指定某个 flow 执行
+#### 方式四：指定某个 Flow 执行
 
 你可以让 Agent 只跑某个阶段，也可以指定项目类型：
 
@@ -97,73 +159,41 @@ bin/dev-flow install claude-code --scope user
 暂时不要进入 build。
 ```
 
-常用 flow：`idea`、`pm`、`agent`、`spec`、`design`、`figma-design`、`plan`、`build`、`test`、`review`、`ship`。
+常用 flow：`idea`、`pm`、`agent`、`spec`、`design`、`figma-design`、`figma-library`、`plan`、`build`、`test`、`review`、`ship`。
 
 项目类型：`ui`、`agent`、`api`、`library`、`docs`。
 
-### 核心流程与责任
+### 高价值功能
 
-| 阶段 | 角色责任 | 主要产物 |
-|---|---|---|
-| Idea | 理清目标、用户、约束和成功标准 | idea brief |
-| Spec | 把想法变成可构建规格 | product/technical spec |
-| Design | 产出视觉方向、正式设计图和界面验收标准 | design boards, visual system, screen acceptance |
-| Plan | 拆解可验证任务，建立实现映射 | implementation plan, trace |
-| Build | 按计划实现，保留变更证据 | working code, implementation notes |
-| Test | 验证功能、边界和回归风险 | functional test, monkey test, QA evidence |
-| Review | 从质量、架构、安全、体验角度审查 | review report |
-| Ship | 整理发布、回滚、后续迭代和 PDCA | launch notes, PDCA |
+Dev Agent OPC 的价值不是“多几个提示词”，而是让 Agent 按交付链路自动推进：
 
-可选扩展阶段包括 `pm`、`agent`、`figma-design` 和 `figma-library`，用于更复杂的产品定义、Agent 流程设计或 Figma 设计系统沉淀。
+- **一键进入流程**：通过 `/opc-flow`、`/opc-next`、`/opc-check`、`/opc-role` 直接在模型 Agent 中调用工作流、角色和检查门禁。
+- **从想法到发布的连续管控**：把 `idea → spec → design → plan → build → test → review → ship` 串成清晰路径，减少 Agent 跳步、乱写代码或忘记验收。
+- **阶段产物可追踪**：每一步都有对应交付物，例如 PRD、SPEC、设计包、任务计划、测试记录、review 结论和 launch notes。
+- **自动化质量门禁**：`bin/dev-flow` 会检查阶段产物、设计资产、QA 记录、PDCA、发布准备和本地项目检查，避免只靠一句“完成了”。
+- **角色化协作**：产品、设计、工程、测试、安全、审查和发布角色可以按需调用；发布前可组合 review / security / test 视角做 go/no-go 判断。
+- **适合小团队和 OPC**：把产品、设计、测试、审查这些容易缺位的环节固化成 Agent 可执行流程。
 
-### UI 与设计门禁
+### UI 与设计自动化管控
 
-Dev Agent OPC 对 UI 项目默认更严格：不能用运行截图、浏览器截图、低保真草图或本地 HTML mock 代替正式设计图。`design/approved/` 中的开发依据应来自 imagegen/GPT Image、Figma/Figma MCP、设计师上传、已批准的设计工具导出或明确记录来源的正式设计资产。
+对网站、App、dashboard、工具界面等 customer-facing UI，Dev Agent OPC 会把视觉质量前移到实现之前：
 
-设计阶段需要记录：
-
-- 参考和视觉方向：`design/REFERENCE_BOARD.md`
-- 视觉规范：`design/VISUAL_SYSTEM.md`
-- 界面验收：`design/SCREEN_ACCEPTANCE.md`
-- 正式设计资产映射：`design/DESIGN_ARTIFACTS.md`
-- 切图、透明 PNG、图标矩阵、spritesheet 或动画帧：`design/cut-assets/ASSET_MANIFEST.md`
-- 实现映射：`tasks/IMPLEMENTATION_TRACE.md`
-
-正常 QA 以功能测试、monkey 测试和视觉对比为主；只有异常或流程阻塞时才要求截图证据。
-
-### 仓库结构
-
-```text
-agent-skills/   Skills, agents, commands, references, templates
-bin/dev-flow    Local runtime and executable gates
-docs/           Maintainer docs
-assets/         README media assets
-work/           Runtime project output, ignored by git
-```
-
-`work/` 是运行时目录，干净 checkout 中不需要存在，也不会作为可复用工作流的一部分发布。
-
-### 发布状态
-
-`v0.2` 增加了结构化门禁、项目模板、runtime 打包、doctor/migrate 检查、Figma/design 资产合约和更严格的 UI 交付流程。`main` 用于发布，`dev` 用于默认迭代。
+- **先有设计依据再开发**：要求参考输入、视觉方向、screen acceptance 和正式设计资产，避免 Agent 直接凭感觉写 UI。
+- **正式资产可追溯**：开发依据应来自 imagegen/GPT Image、Figma/Figma MCP、设计师上传或明确来源的设计工具导出；运行截图和本地 HTML mock 只能作为草稿或 QA 证据。
+- **每个屏幕都有验收标准**：关键页面要覆盖默认、空状态、加载、错误、成功、禁用、长内容和窄屏等状态。
+- **实现映射不丢失**：`tasks/IMPLEMENTATION_TRACE.md` 把 screen acceptance、approved asset、代码目标和测试证据关联起来。
+- **QA 不只看功能**：交付前需要功能测试、monkey 测试和视觉对比评分；高保真交付默认要求视觉对比达到 90/100 以上。
+- **异常才保留截图证据**：正常流程用结构化记录和评分，只有阻塞或异常时才要求运行截图，降低无意义截图堆积。
 
 ### 与 agent-skills 的关系
 
-Dev Agent OPC 基于 Addy Osmani 的 [`agent-skills`](https://github.com/addyosmani/agent-skills)。`agent-skills` 提供了非常扎实的工程 skills、commands、personas 和 references；Dev Agent OPC 不替代它，而是在这个基础上增加一层面向 OPC 和小型业务团队的自动化交付流程。
+Dev Agent OPC 基于 Addy Osmani 的 [`agent-skills`](https://github.com/addyosmani/agent-skills)，保留其工程 skills、personas 和 references 作为底座，并在其上增加 native 安装、`opc-*` 命令入口、项目状态、质量门禁和面向交付的端到端流程。
 
-换句话说，`agent-skills` 是高质量工程技能底座，Dev Agent OPC 更关注如何把这些能力组织成一个可以从想法持续推进到发布的 Agent operating process。
+### 发布日志
 
-| 维度 | agent-skills 提供的基础 | Dev Agent OPC 的扩展 |
-|---|---|---|
-| 工作层级 | 可复用的工程 skills 和命令 | idea → spec → design → plan → build → test → review → ship 的端到端流程 |
-| 目标场景 | 提升 AI coding agent 的工程质量 | 帮助 OPC、独立开发者和小团队完成可交付产品 |
-| 角色责任 | Specialist personas 和工程检查表 | 产品、Agent 流程、设计、开发、测试、审查、发布的责任链 |
-| UI 交付 | 前端工程和质量建议 | 正式设计资产、视觉规范、screen acceptance 和 implementation trace 的硬门禁 |
-| 执行约束 | Markdown workflow guidance | runtime checks、doctor/migrate、asset/design/QA/PDCA/ship gates |
-| 项目管理 | Skills 仓库结构 | `work/<project>` 运行态项目空间、阶段状态、交付证据和回滚记录 |
-| 平台落地 | 多 Agent host 适配思路 | adapter + runtime 双层分发，区分规则提示层和可执行门禁层 |
-
-这种扩展保留了上游项目的工程精神，同时把使用方式调整为更适合小团队真实交付的软件开发流程。
+- `v0.4`：新增 native 安装方式，默认只暴露 `dev-agent-opc` 总技能和 `/opc-*` 命令，可直接在模型 Agent 中调用 flow、role、next 和 gate；内部 workflow skills 留在 runtime 中，避免全局技能列表混乱。
+- `v0.3`：增加宿主机环境合同、`env-check`、schema v3，以及 host SDK / project dependency / runtime artifact 的边界。
+- `v0.2`：增加结构化门禁、项目模板、runtime 打包、doctor/migrate、Figma/design 资产合约和更严格的 UI 交付流程。
 
 ---
 
@@ -172,6 +202,15 @@ Dev Agent OPC 基于 Addy Osmani 的 [`agent-skills`](https://github.com/addyosm
 Dev Agent OPC is an automatic development workflow for AI coding agents. It moves a rough idea into a shippable result through `idea → spec → design → plan → build → test → review → ship`, with clear role ownership, required artifacts, and executable quality gates.
 
 It is more than a prompt pack that asks an agent to “write better code.” It gives the agent a small product team operating model: product manager, architect, designer, engineer, QA, reviewer, and release owner responsibilities are represented in the flow. It is built for OPCs, independent builders, small business teams, and teams using Codex, Claude Code, Gemini, OpenClaw, or OpenCode to ship complete software, websites, tools, and agent-powered workflows.
+
+### Table Of Contents
+
+- [What It Solves](#what-it-solves)
+- [Quick Start](#quick-start)
+- [High-Value Features](#high-value-features)
+- [UI And Design Automation](#ui-and-design-automation)
+- [Relationship To agent-skills](#relationship-to-agent-skills)
+- [Release Notes](#release-notes)
 
 ### What It Solves
 
@@ -183,7 +222,68 @@ It is more than a prompt pack that asks an agent to “write better code.” It 
 
 ### Quick Start
 
-#### Option 1: Reference It Temporarily
+#### Option 1: Install Native Skill & Agent (Recommended)
+
+If you want to reuse Dev Agent OPC across Codex, Claude Code, and other agent
+hosts, install the native entrypoints. The default `native` mode exposes one
+top-level `dev-agent-opc` skill plus four namespaced commands. Internal workflow
+skills such as `design-flow`, `pm-flow`, and `code-review-and-quality` stay
+inside `dev-agent-opc-runtime/` instead of cluttering the global skill list.
+
+First install:
+
+```bash
+git clone https://github.com/KevinKE93/Dev_Agent_OPC.git
+cd Dev_Agent_OPC
+
+bin/dev-flow install codex --scope user
+bin/dev-flow install claude-code --scope user
+```
+
+If the repository is already cloned locally, install from that checkout:
+
+```bash
+cd "/path/to/Dev_Agent_OPC"
+bin/dev-flow install codex --scope user
+bin/dev-flow install claude-code --scope user
+```
+
+Supported hosts: `codex`, `claude-code`, `gemini`, `openclaw`, `opencode`.
+
+Common native entrypoints:
+
+```text
+/opc-flow design <project-name>
+/opc-flow pm <project-name>
+/opc-role opc-product-designer
+/opc-next <project-name>
+/opc-check ship-check <project-name>
+```
+
+Update an installed copy:
+
+```bash
+cd "/path/to/Dev_Agent_OPC"
+git pull --ff-only
+
+bin/dev-flow install codex --scope user
+bin/dev-flow install claude-code --scope user
+```
+
+Restart the target agent app after installing or updating so it reloads skills
+and commands.
+
+Use `--mode full` only when you intentionally want every internal workflow skill
+installed as a top-level skill. In most setups, native mode is cleaner.
+
+Uninstall:
+
+```bash
+bin/dev-flow uninstall codex --scope user
+bin/dev-flow uninstall claude-code --scope user
+```
+
+#### Option 2: Reference From GitHub Without Installing
 
 Give the repository URL to your AI coding agent and ask it to follow Dev Agent OPC for the current task:
 
@@ -203,25 +303,21 @@ This is a UI project. Complete design boards, visual rules, screen acceptance, a
 QA must include functional testing, monkey testing, and visual comparison. Screenshots are required only for exceptions or blocked flows.
 ```
 
-#### Option 2: Install It Globally
+#### Option 3: Reference A Local Path Without Installing
 
-To reuse the workflow across Codex, Claude Code, or other hosts, ask your agent to install it from this repository:
+If the repository already exists on the machine, point the agent at the local
+path:
 
 ```text
-Install Dev Agent OPC into my global workspace. The target host is codex and the scope is user.
-If the platform supports runtime or executable gates, keep them available. Do not copy work/ or dist/ outputs.
+Use local Dev Agent OPC as the automatic development workflow for this task:
+/path/to/Dev_Agent_OPC
+
+Read AGENTS.md and DEV_FLOW.md from that directory first, then load only the
+relevant skills, agents, and references under agent-skills/. Project artifacts
+must stay under the active project's work/<project-name>/ folder.
 ```
 
-Manual install:
-
-```bash
-bin/dev-flow install codex --scope user
-bin/dev-flow install claude-code --scope user
-```
-
-Supported hosts: `codex`, `claude-code`, `gemini`, `openclaw`, `opencode`.
-
-#### Option 3: Run A Specific Flow
+#### Option 4: Run A Specific Flow
 
 You can run one phase only, or set the project type:
 
@@ -231,79 +327,45 @@ Produce visual direction, design rules, screen acceptance, approved design asset
 Do not start build yet.
 ```
 
-Common flows: `idea`, `pm`, `agent`, `spec`, `design`, `figma-design`, `plan`, `build`, `test`, `review`, `ship`.
+Common flows: `idea`, `pm`, `agent`, `spec`, `design`, `figma-design`, `figma-library`, `plan`, `build`, `test`, `review`, `ship`.
 
 Project types: `ui`, `agent`, `api`, `library`, `docs`.
 
-### Core Flow And Responsibilities
+### High-Value Features
 
-| Stage | Responsibility | Primary Output |
-|---|---|---|
-| Idea | Clarify goal, user, constraints, and success criteria | idea brief |
-| Spec | Convert the idea into a buildable product/technical spec | product/technical spec |
-| Design | Produce visual direction, formal boards, and screen acceptance | design boards, visual system, screen acceptance |
-| Plan | Break work into verifiable tasks and trace implementation targets | implementation plan, trace |
-| Build | Implement planned slices with evidence | working code, implementation notes |
-| Test | Validate behavior, edge cases, and regression risk | functional test, monkey test, QA evidence |
-| Review | Review quality, architecture, security, and UX | review report |
-| Ship | Prepare launch, rollback, next cycle, and PDCA | launch notes, PDCA |
+Dev Agent OPC is not just more prompting. It gives agents an operating process
+for delivery:
 
-Optional extension stages include `pm`, `agent`, `figma-design`, and `figma-library` for deeper product definition, agent workflow design, or Figma design-system work.
+- **Native workflow entrypoints**: call flows, roles, next steps, and gates directly through `/opc-flow`, `/opc-role`, `/opc-next`, and `/opc-check`.
+- **End-to-end delivery control**: keep `idea → spec → design → plan → build → test → review → ship` moving in order, reducing skipped planning, random coding, and weak handoffs.
+- **Traceable phase artifacts**: each step has concrete outputs such as PRDs, specs, design packages, task plans, test evidence, review findings, and launch notes.
+- **Executable quality gates**: `bin/dev-flow` checks phase outputs, design assets, QA evidence, PDCA records, release readiness, and project-local checks.
+- **Role-based collaboration**: invoke product, design, engineering, test, security, review, and ship perspectives when they are useful.
+- **Built for small teams and OPCs**: product, design, QA, review, and release discipline become agent-operable instead of relying on memory.
 
-### UI And Design Gates
+### UI And Design Automation
 
-Dev Agent OPC is stricter for UI work by default. Runtime screenshots, browser captures, low-fidelity sketches, and local HTML mocks cannot replace formal design assets. Development targets under `design/approved/` should come from imagegen/GPT Image, Figma/Figma MCP, designer uploads, approved design-tool exports, or another formal source with provenance.
+For websites, apps, dashboards, and customer-facing tools, Dev Agent OPC moves
+visual quality before implementation:
 
-The design phase records:
-
-- References and visual direction: `design/REFERENCE_BOARD.md`
-- Visual rules: `design/VISUAL_SYSTEM.md`
-- Screen acceptance: `design/SCREEN_ACCEPTANCE.md`
-- Approved asset mapping: `design/DESIGN_ARTIFACTS.md`
-- Cut assets, transparent PNGs, icon matrices, spritesheets, or animation frames: `design/cut-assets/ASSET_MANIFEST.md`
-- Implementation mapping: `tasks/IMPLEMENTATION_TRACE.md`
-
-Normal QA relies on functional tests, monkey tests, and visual comparison. Screenshots are required only when an exception or blocked flow needs evidence.
-
-### Repository Layout
-
-```text
-agent-skills/   Skills, agents, commands, references, templates
-bin/dev-flow    Local runtime and executable gates
-docs/           Maintainer docs
-assets/         README media assets
-work/           Runtime project output, ignored by git
-```
-
-`work/` is runtime state. It does not need to exist in a clean checkout and is not published as part of the reusable workflow.
-
-### Release Status
-
-`v0.2` adds structured gates, project templates, runtime packaging, doctor/migrate checks, Figma/design asset contracts, and stricter UI delivery. `main` is used for releases and `dev` is the default iteration branch.
+- **Design before code**: require references, visual direction, screen acceptance, and approved design assets before the agent starts UI implementation.
+- **Traceable formal sources**: approved UI assets should come from imagegen/GPT Image, Figma/Figma MCP, designer uploads, or explicitly sourced design exports. Runtime screenshots and local HTML mocks stay as drafts or QA evidence.
+- **Acceptance per screen**: key screens cover default, empty, loading, error, success, disabled, long-content, and narrow-screen states when relevant.
+- **Implementation trace**: `tasks/IMPLEMENTATION_TRACE.md` links screen acceptance, approved assets, implementation targets, and test evidence.
+- **QA beyond functionality**: delivery needs functional tests, monkey tests, and visual comparison scoring; high-fidelity delivery expects at least 90/100 visual comparison.
+- **Screenshots only for exceptions**: normal QA uses structured records and scores; screenshots are required when a flow is blocked or exceptional.
 
 ### Relationship To agent-skills
 
-Dev Agent OPC builds on Addy Osmani's [`agent-skills`](https://github.com/addyosmani/agent-skills). `agent-skills` provides a strong foundation of engineering skills, commands, personas, and references. Dev Agent OPC does not replace that work; it adds an operating layer for OPCs and small business teams that need an agent to move work from idea to shipped output.
+Dev Agent OPC builds on Addy Osmani's [`agent-skills`](https://github.com/addyosmani/agent-skills). It keeps that engineering skill foundation and adds native installation, `opc-*` commands, project state, executable gates, and an end-to-end delivery operating process.
 
-In short, `agent-skills` is a high-quality engineering skill foundation. Dev Agent OPC focuses on turning those capabilities into an agent operating process for continuous delivery.
+### Release Notes
 
-| Area | Foundation From agent-skills | Dev Agent OPC Extension |
-|---|---|---|
-| Working layer | Reusable engineering skills and commands | End-to-end idea → spec → design → plan → build → test → review → ship flow |
-| Target use case | Better engineering quality for AI coding agents | Shippable product delivery for OPCs, independent builders, and small teams |
-| Role ownership | Specialist personas and engineering checklists | Product, agent workflow, design, engineering, QA, review, and release responsibility chain |
-| UI delivery | Frontend engineering and quality guidance | Hard gates for approved design assets, visual rules, screen acceptance, and implementation trace |
-| Execution control | Markdown workflow guidance | Runtime checks, doctor/migrate, asset/design/QA/PDCA/ship gates |
-| Project management | Skills repository structure | `work/<project>` runtime workspace, phase state, delivery evidence, and rollback notes |
-| Platform distribution | Multi-host adapter direction | Adapter + runtime distribution, separating prompt guidance from executable gates |
-
-The extension keeps the upstream engineering spirit while shaping it into a practical software delivery process for smaller teams.
+- `v0.4`: Adds native installation with one `dev-agent-opc` top-level skill and `/opc-*` commands, so model agents can call flows, roles, next steps, and gates directly. Internal workflow skills stay inside the runtime to keep the global skill list clean.
+- `v0.3`: Adds the host environment contract, `env-check`, schema v3, and clear boundaries between host SDKs, project dependencies, and runtime artifacts.
+- `v0.2`: Adds structured gates, project templates, runtime packaging, doctor/migrate checks, Figma/design asset contracts, and stricter UI delivery.
 
 ---
-
-## Based On
-
-Dev Agent OPC is based on [Addy Osmani's `agent-skills`](https://github.com/addyosmani/agent-skills). We keep that attribution explicit because the upstream project provides the engineering skill foundation this workflow builds on.
 
 ## License
 

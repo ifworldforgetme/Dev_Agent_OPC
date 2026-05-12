@@ -34,7 +34,7 @@ Once all three reports are back, the main agent (not a sub-persona) synthesizes 
 2. **Security** — Promote any Critical/High `security-auditor` findings to launch blockers. Cross-reference with `code-reviewer`'s security axis.
 3. **Performance** — Pull from `code-reviewer`'s performance axis; cross-check Core Web Vitals if applicable.
 4. **Accessibility** — Verify keyboard nav, screen reader support, contrast (not covered by the three personas — handle directly here, or invoke the accessibility checklist).
-5. **Infrastructure** — Env vars, migrations, monitoring, feature flags. Verify directly.
+5. **Infrastructure** — Env vars, migrations, host SDKs/permissions via `bin/dev-flow env-check <project-name>`, monitoring, feature flags. Verify directly.
 6. **Documentation** — README, ADRs, changelog. Verify directly.
 
 ## Phase C — Decision and rollback
@@ -42,6 +42,7 @@ Once all three reports are back, the main agent (not a sub-persona) synthesizes 
 Before producing the final decision, update the Act section of
 `work/<project-name>/tasks/PDCA.md` with the decision, standardization,
 follow-up iteration, rollback, or recovery notes. Then run
+`bin/dev-flow env-check <project-name>`,
 `bin/dev-flow pdca-check <project-name>` and
 `bin/dev-flow ship-check <project-name>`.
 

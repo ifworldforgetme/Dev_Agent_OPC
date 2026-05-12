@@ -19,18 +19,21 @@ usage() {
   cat <<'EOF'
 Usage:
   bin/dev-flow list
+  bin/dev-flow manifest
   bin/dev-flow show <alias-or-skill>
   bin/dev-flow path <alias-or-skill>
-  bin/dev-flow command <idea|pm|agent|spec|design|figma-design|figma-library|plan|build|test|review|ship|debug|ui|api|security|code-simplify>
-  bin/dev-flow agent <code-reviewer|product-designer|test-engineer|security-auditor|ui-quality-reviewer>
+  bin/dev-flow command <opc-flow|opc-role|opc-next|opc-check|idea|pm|agent|spec|design|figma-design|figma-library|plan|build|test|review|ship|debug|ui|api|security|code-simplify>
+  bin/dev-flow agent <opc-code-reviewer|opc-product-designer|opc-test-engineer|opc-security-auditor|opc-ui-quality-reviewer>
   bin/dev-flow refs
-  bin/dev-flow install <codex|claude-code|gemini|openclaw|opencode> [--scope project|user] [--dest path]
+  bin/dev-flow install <codex|claude-code|gemini|openclaw|opencode> [--scope project|user] [--dest path] [--mode native|full]
+  bin/dev-flow uninstall <codex|claude-code|gemini|openclaw|opencode> [--scope project|user] [--dest path]
   bin/dev-flow init <project-name> [--type ui|agent|api|library|docs]
   bin/dev-flow status <project-name>
   bin/dev-flow phase <project-name> <idea|pm|agent|spec|design|plan|build|test|review|ship> [task] [--force]
   bin/dev-flow next <project-name>
   bin/dev-flow verify-phase <project-name> <idea|pm|agent|spec|design|plan|build|test|review|ship>
   bin/dev-flow pdca-check <project-name>
+  bin/dev-flow env-check <project-name>
   bin/dev-flow ship-check <project-name>
   bin/dev-flow doctor <project-name>
   bin/dev-flow migrate <project-name> [--type ui|agent|api|library|docs]
@@ -231,6 +234,7 @@ write_project_templates() {
   write_project_template "$dir" ".dev-flow/state.env" "state.env" "$project" "$project_type"
   write_project_template "$dir" ".dev-flow/applicability.env" "$app_template" "$project" "$project_type"
   write_project_template "$dir" ".dev-flow/context.md" "context.md" "$project" "$project_type"
+  write_project_template "$dir" ".dev-flow/HOST_REQUIREMENTS.md" "host-requirements.md" "$project" "$project_type"
   write_project_template "$dir" "design/reference-intake.md" "reference-intake.md" "$project" "$project_type"
   write_project_template "$dir" "design/reference-links.md" "reference-links.md" "$project" "$project_type"
   write_project_template "$dir" "design/REFERENCE_BOARD.md" "reference-board.md" "$project" "$project_type"
@@ -2064,6 +2068,109 @@ pdca_check_impl() {
   echo "PDCA check passed for $project."
 }
 
+env_status_is_positive() {
+  case "$(printf '%s' "${1:-}" | tr '[:upper:]' '[:lower:]')" in
+    satisfied|installed|available|approved|ok|pass|passed|not-required|not\ required|not-needed|not\ needed|n/a|none) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+env_status_is_blocked() {
+  case "$(printf '%s' "${1:-}" | tr '[:upper:]' '[:lower:]')" in
+    ""|todo|tbd|unknown|missing|blocked|failed|fail|pending|needs-approval|needs\ approval|requires-approval|requires\ approval) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+env_required_is_yes() {
+  case "$(printf '%s' "${1:-}" | tr '[:upper:]' '[:lower:]')" in
+    yes|true|required|y) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+env_check_impl() {
+  local project="$1"
+  local dir path failures rows line capability scope required_by verify_cmd required permission status notes in_requirements
+  require_project "$project"
+  dir="$(project_path "$project")"
+  path="$dir/.dev-flow/HOST_REQUIREMENTS.md"
+  failures=0
+  rows=0
+
+  if [[ ! -f "$path" ]]; then
+    echo "Missing host environment contract: .dev-flow/HOST_REQUIREMENTS.md" >&2
+    echo "Run: bin/dev-flow migrate $project" >&2
+    return 1
+  fi
+
+  if ! grep -Eq '^##[[:space:]]+Requirements' "$path"; then
+    echo "Missing Requirements section in .dev-flow/HOST_REQUIREMENTS.md" >&2
+    failures=$((failures + 1))
+  fi
+
+  in_requirements="false"
+  while IFS= read -r line; do
+    if [[ "$line" =~ ^##[[:space:]]+Requirements ]]; then
+      in_requirements="true"
+      continue
+    fi
+    if [[ "$line" =~ ^##[[:space:]]+ && "$in_requirements" == "true" ]]; then
+      in_requirements="false"
+    fi
+    [[ "$in_requirements" == "true" ]] || continue
+    [[ "$line" == \|* ]] || continue
+    [[ "$line" =~ ^\|[[:space:]]*- ]] && continue
+    IFS='|' read -r _ capability scope required_by verify_cmd required permission status notes _ <<< "$line"
+    capability="$(trim_md_cell "$capability")"
+    scope="$(trim_md_cell "$scope")"
+    required_by="$(trim_md_cell "$required_by")"
+    verify_cmd="$(trim_md_cell "$verify_cmd")"
+    required="$(trim_md_cell "$required")"
+    permission="$(trim_md_cell "$permission")"
+    status="$(trim_md_cell "$status")"
+    notes="$(trim_md_cell "$notes")"
+
+    [[ -n "$capability" ]] || continue
+    [[ "$(printf '%s' "$capability" | tr '[:upper:]' '[:lower:]')" == "capability" ]] && continue
+    rows=$((rows + 1))
+
+    if [[ "$(printf '%s' "$scope" | tr '[:upper:]' '[:lower:]')" == *work* || "$(printf '%s' "$scope" | tr '[:upper:]' '[:lower:]')" == project-runtime ]]; then
+      echo "Invalid host requirement scope for $capability: host SDKs/CLIs must not be scoped to work/<project> runtime output." >&2
+      failures=$((failures + 1))
+    fi
+
+    if env_status_is_blocked "$status"; then
+      echo "Blocked host requirement: $capability (status: ${status:-missing}; required by: ${required_by:-unspecified})." >&2
+      failures=$((failures + 1))
+      continue
+    fi
+
+    if env_required_is_yes "$required"; then
+      if [[ -z "$verify_cmd" || "$(printf '%s' "$verify_cmd" | tr '[:upper:]' '[:lower:]')" == "todo" || "$(printf '%s' "$verify_cmd" | tr '[:upper:]' '[:lower:]')" == "tbd" ]]; then
+        echo "Missing verify command for required host capability: $capability" >&2
+        failures=$((failures + 1))
+      fi
+      if ! env_status_is_positive "$status"; then
+        echo "Required host capability is not satisfied: $capability (status: ${status:-missing})." >&2
+        failures=$((failures + 1))
+      fi
+    fi
+  done < "$path"
+
+  if [[ "$rows" -eq 0 ]]; then
+    echo "No host requirements table rows found in .dev-flow/HOST_REQUIREMENTS.md" >&2
+    failures=$((failures + 1))
+  fi
+
+  if [[ "$failures" -gt 0 ]]; then
+    echo "Host environment check failed for $project with $failures issue(s)." >&2
+    return 1
+  fi
+
+  echo "Host environment check passed for $project. No host SDKs were installed by this command."
+}
+
 ship_check_impl() {
   local project="$1"
   local phase failures
@@ -2083,6 +2190,10 @@ ship_check_impl() {
   fi
   if ! (cd "$(project_path "$project")" && ./bin/check); then
     echo "Project default check failed for $project." >&2
+    return 1
+  fi
+  if ! env_check_impl "$project"; then
+    echo "Project host environment check failed for $project." >&2
     return 1
   fi
   if phase_is_applicable "$project" design; then
@@ -2127,7 +2238,7 @@ doctor_check_impl() {
     fi
   done
   local file_name
-  for file_name in .dev-flow/state.env .dev-flow/applicability.env .dev-flow/context.md design/reference-intake.md design/reference-links.md design/REFERENCE_BOARD.md design/FIGMA_HANDOFF.md design/DESIGN_ARTIFACTS.md design/DESIGN_IMAGE_DESCRIPTIONS.md design/cut-assets/ASSET_MANIFEST.md tasks/status.md tasks/quality-gates.md tasks/PDCA.md tasks/IMPLEMENTATION_TRACE.md reviews/FUNCTIONAL_TEST.md reviews/MONKEY_TEST.md reviews/VISUAL_COMPARISON.md bin/check; do
+  for file_name in .dev-flow/state.env .dev-flow/applicability.env .dev-flow/context.md .dev-flow/HOST_REQUIREMENTS.md design/reference-intake.md design/reference-links.md design/REFERENCE_BOARD.md design/FIGMA_HANDOFF.md design/DESIGN_ARTIFACTS.md design/DESIGN_IMAGE_DESCRIPTIONS.md design/cut-assets/ASSET_MANIFEST.md tasks/status.md tasks/quality-gates.md tasks/PDCA.md tasks/IMPLEMENTATION_TRACE.md reviews/FUNCTIONAL_TEST.md reviews/MONKEY_TEST.md reviews/VISUAL_COMPARISON.md bin/check; do
     if [[ ! -f "$dir/$file_name" ]]; then
       echo "Missing template file: $file_name" >&2
       failures=$((failures + 1))
@@ -2169,6 +2280,7 @@ copy_runtime_package() {
   cp "$ROOT/DEV_FLOW.md" "$target/DEV_FLOW.md"
   cp "$ROOT/README.md" "$target/README.md"
   cp "$ROOT/LICENSE" "$target/LICENSE"
+  cp "$PACK/dev-agent-opc.manifest.json" "$target/agent-skills/dev-agent-opc.manifest.json"
   cp "$ROOT/bin/dev-flow" "$target/bin/dev-flow"
   chmod +x "$target/bin/dev-flow"
   cp "$ROOT/tests/dev-flow-smoke.sh" "$target/tests/dev-flow-smoke.sh"
@@ -2212,6 +2324,9 @@ copy_reference_dirs() {
     mkdir -p "$target/references"
     cp -R "$PACK/references/." "$target/references/"
   fi
+  if [[ -f "$PACK/dev-agent-opc.manifest.json" ]]; then
+    cp "$PACK/dev-agent-opc.manifest.json" "$target/dev-agent-opc.manifest.json"
+  fi
 }
 
 copy_command_dirs() {
@@ -2219,6 +2334,23 @@ copy_command_dirs() {
   mkdir -p "$target"
   if [[ -d "$PACK/commands" ]]; then
     cp -R "$PACK/commands/." "$target/"
+  fi
+}
+
+copy_native_command_dirs() {
+  local target="$1"
+  mkdir -p "$target"
+  if [[ -d "$PACK/commands" ]]; then
+    find "$PACK/commands" -maxdepth 1 -type f -name 'opc-*.md' -exec cp {} "$target" \;
+  fi
+}
+
+copy_native_skill_dirs() {
+  local target="$1"
+  mkdir -p "$target"
+  if [[ -d "$PACK/native/skills/dev-agent-opc" ]]; then
+    mkdir -p "$target/dev-agent-opc"
+    cp -R "$PACK/native/skills/dev-agent-opc/." "$target/dev-agent-opc/"
   fi
 }
 
@@ -2236,11 +2368,27 @@ copy_claude_commands() {
   fi
 }
 
+copy_native_claude_commands() {
+  local target="$1"
+  mkdir -p "$target"
+  if [[ -d "$PACK/.claude/commands" ]]; then
+    find "$PACK/.claude/commands" -maxdepth 1 -type f -name 'opc-*.md' -exec cp {} "$target" \;
+  fi
+}
+
 copy_gemini_commands() {
   local target="$1"
   mkdir -p "$target"
   if [[ -d "$PACK/.gemini/commands" ]]; then
     cp -R "$PACK/.gemini/commands/." "$target/"
+  fi
+}
+
+copy_native_gemini_commands() {
+  local target="$1"
+  mkdir -p "$target"
+  if [[ -d "$PACK/.gemini/commands" ]]; then
+    find "$PACK/.gemini/commands" -maxdepth 1 -type f -name 'opc-*.toml' -exec cp {} "$target" \;
   fi
 }
 
@@ -2333,6 +2481,218 @@ install_adapter() {
 
   local scope="project"
   local dest=""
+  local mode="native"
+  shift || true
+  while [[ "$#" -gt 0 ]]; do
+    case "$1" in
+      --scope)
+        scope="${2:-}"
+        shift 2
+        ;;
+      --scope=*)
+        scope="${1#--scope=}"
+        shift
+        ;;
+      --dest)
+        dest="${2:-}"
+        shift 2
+        ;;
+      --dest=*)
+        dest="${1#--dest=}"
+        shift
+        ;;
+      --mode)
+        mode="${2:-}"
+        shift 2
+        ;;
+      --mode=*)
+        mode="${1#--mode=}"
+        shift
+        ;;
+      *)
+        echo "Unknown install option: $1" >&2
+        usage >&2
+        exit 1
+        ;;
+    esac
+  done
+
+  if [[ "$scope" != "project" && "$scope" != "user" ]]; then
+    echo "Invalid scope: $scope" >&2
+    echo "Use --scope project or --scope user." >&2
+    exit 1
+  fi
+  if [[ "$mode" != "native" && "$mode" != "full" ]]; then
+    echo "Invalid install mode: $mode" >&2
+    echo "Use --mode native or --mode full." >&2
+    exit 1
+  fi
+  if [[ -z "$dest" ]]; then
+    dest="$(default_install_dest "$target" "$scope")"
+  fi
+
+  case "$target" in
+    codex)
+      if [[ "$mode" == "full" ]]; then
+        copy_skill_dirs "$dest/skills"
+        copy_agent_dirs "$dest/agents"
+        copy_reference_dirs "$dest"
+        copy_command_dirs "$dest/commands"
+        embed_shared_references "$dest/skills"
+      else
+        copy_native_skill_dirs "$dest/skills"
+        copy_native_command_dirs "$dest/commands"
+      fi
+      ;;
+    claude-code)
+      if [[ "$mode" == "full" ]]; then
+        copy_skill_dirs "$dest/skills"
+        copy_agent_dirs "$dest/agents"
+        copy_reference_dirs "$dest"
+        copy_claude_commands "$dest/commands"
+        embed_shared_references "$dest/skills"
+      else
+        copy_native_skill_dirs "$dest/skills"
+        copy_native_claude_commands "$dest/commands"
+      fi
+      ;;
+    gemini)
+      mkdir -p "$dest"
+      if [[ "$mode" == "full" ]]; then
+        copy_skill_dirs "$dest/skills"
+        copy_agent_dirs "$dest/agents"
+        copy_reference_dirs "$dest"
+        copy_gemini_commands "$dest/commands"
+        embed_shared_references "$dest/skills"
+      else
+        copy_native_skill_dirs "$dest/skills"
+        copy_native_gemini_commands "$dest/commands"
+      fi
+      write_gemini_extension_manifest "$dest"
+      ;;
+    openclaw)
+      if [[ "$mode" == "full" ]]; then
+        copy_skill_dirs "$dest/skills"
+        copy_agent_dirs "$dest/agents"
+        copy_reference_dirs "$dest"
+        copy_command_dirs "$dest/commands"
+        embed_shared_references "$dest/skills"
+      else
+        copy_native_skill_dirs "$dest/skills"
+        copy_native_command_dirs "$dest/commands"
+      fi
+      ;;
+    opencode)
+      if [[ "$mode" == "full" ]]; then
+        copy_skill_dirs "$dest/skills"
+        copy_agent_dirs "$dest/agents"
+        copy_reference_dirs "$dest"
+        copy_command_dirs "$dest/commands"
+        embed_shared_references "$dest/skills"
+      else
+        copy_native_skill_dirs "$dest/skills"
+        copy_native_command_dirs "$dest/commands"
+      fi
+      ;;
+  esac
+
+  copy_runtime_package "$dest/dev-agent-opc-runtime"
+  clean_metadata "$dest"
+  echo "Installed $target adapter under $dest"
+  echo "Scope: $scope"
+  echo "Mode: $mode"
+  echo "Runtime: $dest/dev-agent-opc-runtime"
+}
+
+remove_installed_path() {
+  local path="$1"
+  if [[ -e "$path" ]]; then
+    rm -rf "$path"
+    echo "Removed $path"
+  fi
+}
+
+remove_matching_file() {
+  local source="$1"
+  local target="$2"
+  if [[ ! -e "$target" ]]; then
+    return 0
+  fi
+  if [[ -f "$source" && -f "$target" ]] && cmp -s "$source" "$target"; then
+    rm -f "$target"
+    echo "Removed $target"
+  else
+    echo "Skipped modified or unknown file: $target" >&2
+  fi
+}
+
+remove_matching_dir_by_skill() {
+  local source_dir="$1"
+  local target_dir="$2"
+  if [[ ! -d "$target_dir" ]]; then
+    return 0
+  fi
+  if [[ -f "$source_dir/SKILL.md" && -f "$target_dir/SKILL.md" ]] && cmp -s "$source_dir/SKILL.md" "$target_dir/SKILL.md"; then
+    rm -rf "$target_dir"
+    echo "Removed $target_dir"
+  else
+    echo "Skipped modified or unknown skill dir: $target_dir" >&2
+  fi
+}
+
+remove_dev_flow_files() {
+  local target="$1"
+  local command_source="$2"
+  local command_ext="$3"
+  local file
+  local name
+
+  if [[ -d "$PACK/skills" ]]; then
+    for file in "$PACK/skills"/*; do
+      [[ -d "$file" ]] || continue
+      name="$(basename "$file")"
+      remove_matching_dir_by_skill "$file" "$target/skills/$name"
+    done
+  fi
+  remove_matching_dir_by_skill "$PACK/native/skills/dev-agent-opc" "$target/skills/dev-agent-opc"
+
+  if [[ -d "$command_source" ]]; then
+    for file in "$command_source"/*."$command_ext"; do
+      [[ -f "$file" ]] || continue
+      remove_matching_file "$file" "$target/commands/$(basename "$file")"
+    done
+  fi
+
+  if [[ -d "$PACK/agents" ]]; then
+    for file in "$PACK/agents"/*.md; do
+      [[ -f "$file" ]] || continue
+      remove_matching_file "$file" "$target/agents/$(basename "$file")"
+    done
+  fi
+
+  if [[ -d "$PACK/references" ]]; then
+    for file in "$PACK/references"/*.md; do
+      [[ -f "$file" ]] || continue
+      remove_matching_file "$file" "$target/references/$(basename "$file")"
+    done
+  fi
+  remove_matching_file "$PACK/dev-agent-opc.manifest.json" "$target/dev-agent-opc.manifest.json"
+  remove_installed_path "$target/dev-agent-opc-runtime"
+  rmdir "$target/skills" "$target/commands" "$target/agents" "$target/references" 2>/dev/null || true
+}
+
+uninstall_adapter() {
+  local target_raw="${1:-}"
+  local target
+  target="$(normalize_target "$target_raw")"
+  if [[ -z "$target" ]]; then
+    echo "Unknown uninstall target: ${target_raw:-<missing>}" >&2
+    echo "Targets: codex, claude-code, gemini, openclaw, opencode" >&2
+    exit 1
+  fi
+
+  local scope="project"
+  local dest=""
   shift || true
   while [[ "$#" -gt 0 ]]; do
     case "$1" in
@@ -2353,7 +2713,7 @@ install_adapter() {
         shift
         ;;
       *)
-        echo "Unknown install option: $1" >&2
+        echo "Unknown uninstall option: $1" >&2
         usage >&2
         exit 1
         ;;
@@ -2370,55 +2730,42 @@ install_adapter() {
   fi
 
   case "$target" in
-    codex)
-      copy_skill_dirs "$dest/skills"
-      copy_agent_dirs "$dest/agents"
-      copy_reference_dirs "$dest"
-      copy_command_dirs "$dest/commands"
-      embed_shared_references "$dest/skills"
-      ;;
     claude-code)
-      copy_skill_dirs "$dest/skills"
-      copy_agent_dirs "$dest/agents"
-      copy_reference_dirs "$dest"
-      copy_claude_commands "$dest/commands"
-      embed_shared_references "$dest/skills"
+      remove_dev_flow_files "$dest" "$PACK/.claude/commands" "md"
       ;;
     gemini)
-      mkdir -p "$dest"
-      copy_skill_dirs "$dest/skills"
-      copy_agent_dirs "$dest/agents"
-      copy_reference_dirs "$dest"
-      copy_gemini_commands "$dest/commands"
-      embed_shared_references "$dest/skills"
-      write_gemini_extension_manifest "$dest"
+      remove_dev_flow_files "$dest" "$PACK/.gemini/commands" "toml"
+      remove_matching_file <(printf '%s\n' '{"name":"dev-flow-quality"}') "$dest/gemini-extension.json"
       ;;
-    openclaw)
-      copy_skill_dirs "$dest/skills"
-      copy_agent_dirs "$dest/agents"
-      copy_reference_dirs "$dest"
-      copy_command_dirs "$dest/commands"
-      embed_shared_references "$dest/skills"
-      ;;
-    opencode)
-      copy_skill_dirs "$dest/skills"
-      copy_agent_dirs "$dest/agents"
-      copy_reference_dirs "$dest"
-      copy_command_dirs "$dest/commands"
-      embed_shared_references "$dest/skills"
+    codex|openclaw|opencode)
+      remove_dev_flow_files "$dest" "$PACK/commands" "md"
       ;;
   esac
 
-  clean_metadata "$dest"
-  echo "Installed $target adapter under $dest"
-  echo "Scope: $scope"
-  echo "Note: this installs the rules prompt layer. For executable gates, package or copy the runtime layer with: bin/dev-flow package-adapters <output-dir>"
+  echo "Uninstalled $target adapter from $dest"
 }
 
 skill_path() {
   local name
   name="$(skill_name "${1:-}")"
   echo "$PACK/skills/$name/SKILL.md"
+}
+
+persona_name() {
+  case "${1:-}" in
+    opc-code-reviewer) echo "code-reviewer" ;;
+    opc-product-designer) echo "product-designer" ;;
+    opc-security-auditor) echo "security-auditor" ;;
+    opc-test-engineer) echo "test-engineer" ;;
+    opc-ui-quality-reviewer) echo "ui-quality-reviewer" ;;
+    *) echo "${1:-}" ;;
+  esac
+}
+
+persona_path() {
+  local name
+  name="$(persona_name "${1:-}")"
+  echo "$PACK/agents/$name.md"
 }
 
 require_pack() {
@@ -2444,6 +2791,14 @@ case "$cmd" in
     find "$PACK/skills" -mindepth 2 -maxdepth 2 -name SKILL.md \
       | sed "s#^$PACK/skills/##; s#/SKILL.md\$##" \
       | sort -u
+    ;;
+  manifest)
+    path="$PACK/dev-agent-opc.manifest.json"
+    if [[ ! -f "$path" ]]; then
+      echo "Missing manifest: $path" >&2
+      exit 1
+    fi
+    cat "$path"
     ;;
   show)
     path="$(skill_path "${2:-}")"
@@ -2475,7 +2830,7 @@ case "$cmd" in
     ;;
   agent)
     name="${2:-}"
-    path="$PACK/agents/$name.md"
+    path="$(persona_path "$name")"
     if [[ -z "$name" || ! -f "$path" ]]; then
       echo "Unknown agent persona: ${name:-<missing>}" >&2
       usage >&2
@@ -2485,6 +2840,9 @@ case "$cmd" in
     ;;
   install)
     install_adapter "${2:-}" "${@:3}"
+    ;;
+  uninstall)
+    uninstall_adapter "${2:-}" "${@:3}"
     ;;
   refs)
     find "$PACK/references" -maxdepth 1 -type f -name '*.md' | sort
@@ -2836,7 +3194,7 @@ for d in \"\${required_dirs[@]}\"; do
   [[ -d \"\$ROOT/\$d\" ]] || { echo \"Missing directory: \$d\" >&2; exit 1; }
 done
 
-required_files=(.dev-flow/state.env .dev-flow/schema.env .dev-flow/context.md design/reference-intake.md design/reference-links.md design/REFERENCE_BOARD.md design/FIGMA_HANDOFF.md design/DESIGN_ARTIFACTS.md design/DESIGN_IMAGE_DESCRIPTIONS.md design/cut-assets/ASSET_MANIFEST.md tasks/status.md tasks/quality-gates.md tasks/PDCA.md tasks/IMPLEMENTATION_TRACE.md reviews/FUNCTIONAL_TEST.md reviews/MONKEY_TEST.md reviews/VISUAL_COMPARISON.md)
+required_files=(.dev-flow/state.env .dev-flow/schema.env .dev-flow/context.md .dev-flow/HOST_REQUIREMENTS.md design/reference-intake.md design/reference-links.md design/REFERENCE_BOARD.md design/FIGMA_HANDOFF.md design/DESIGN_ARTIFACTS.md design/DESIGN_IMAGE_DESCRIPTIONS.md design/cut-assets/ASSET_MANIFEST.md tasks/status.md tasks/quality-gates.md tasks/PDCA.md tasks/IMPLEMENTATION_TRACE.md reviews/FUNCTIONAL_TEST.md reviews/MONKEY_TEST.md reviews/VISUAL_COMPARISON.md)
 for f in \"\${required_files[@]}\"; do
   [[ -f \"\$ROOT/\$f\" ]] || { echo \"Missing file: \$f\" >&2; exit 1; }
 done
@@ -2932,6 +3290,11 @@ echo \"Default workflow gate passed for \$(basename \"\$ROOT\").\""
     project="${2:-}"
     pdca_check_impl "$project"
     record_verification "$project" "pdca-check passed at $(date -u '+%Y-%m-%dT%H:%M:%SZ')"
+    ;;
+  env-check)
+    project="${2:-}"
+    env_check_impl "$project"
+    record_verification "$project" "env-check passed at $(date -u '+%Y-%m-%dT%H:%M:%SZ')"
     ;;
   doctor)
     project="${2:-}"
@@ -3095,7 +3458,7 @@ echo \"Default workflow gate passed for \$(basename \"\$ROOT\").\""
 Install the generated folders into the target agent surface. There are two layers:
 
 - Rules prompt layer: install `skills/`, `commands/`, `agents/`, and `references/` into the target agent host.
-- Runtime gate layer: use `runtime/` when you also need executable `bin/dev-flow` gates, project templates, `doctor`, `migrate`, `asset-check`, smoke tests, and adapter packaging.
+- Runtime gate layer: use `runtime/` when you also need executable `bin/dev-flow` gates, project templates, `doctor`, `migrate`, `env-check`, `asset-check`, smoke tests, and adapter packaging.
 
 - Codex App/CLI: copy `codex/skills/*` to `~/.codex/skills/`. `codex/commands/` contains reusable prompt shortcuts for hosts that support custom commands or snippets.
 - Claude Code: copy `claude-code/skills/*` to `~/.claude/skills/` or project `.claude/skills/`; copy `.claude/commands/` into a project when slash commands are desired.
@@ -3106,7 +3469,7 @@ Install the generated folders into the target agent surface. There are two layer
 
 Agent personas are included under each adapter's `agents/` directory when the platform supports persona/sub-agent files. Shared references are embedded into each packaged skill so standalone skill installation keeps reference files available.
 
-The `runtime/` folder is a self-contained workflow-pack checkout surface. Copy or clone it when a platform user needs the same machine-checkable gates used by this repository. It intentionally excludes `work/`, checked-in `dist/`, and local host adapter installs.
+The `runtime/` folder is a self-contained workflow-pack checkout surface. Copy or clone it when a platform user needs the same machine-checkable gates used by this repository. It intentionally excludes `work/`, checked-in `dist/`, local host adapter installs, and host-level SDKs. Host SDKs and permissions belong in each project's `.dev-flow/HOST_REQUIREMENTS.md` contract, not inside `work/<project>/`.
 
 The helper can also install directly:
 
@@ -3117,6 +3480,11 @@ bin/dev-flow install gemini --scope project
 bin/dev-flow install openclaw --scope user
 bin/dev-flow install opencode --scope project
 ```
+
+Direct installs default to native mode: one `dev-agent-opc` top-level skill,
+`opc-*` commands, and a `dev-agent-opc-runtime/` folder under the destination.
+Use `--mode full` to install every internal workflow skill as a top-level skill.
+Uninstall with `bin/dev-flow uninstall <target> --scope <project|user>`.
 EOF
     clean_metadata "$out"
     echo "Packaged adapters under $out"

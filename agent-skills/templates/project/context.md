@@ -6,6 +6,7 @@ Load only the files needed for the current phase.
 - Product: read `product/` only when PM_FLOW is required or product artifacts exist.
 - Agent: read `agent/` only when AGENT_FLOW is required or agent artifacts exist.
 - Spec: read approved idea/product/agent artifacts that apply, and existing app files if present.
+- Host environment: read `.dev-flow/HOST_REQUIREMENTS.md` before installing or relying on machine-level SDKs, CLIs, services, credentials, simulators, or MCP connections.
 - Design: read `specs/SPEC.md`, `design/reference-intake.md`, `design/DESIGN_ARTIFACTS.md`, `design/DESIGN_IMAGE_DESCRIPTIONS.md`, `design/FIGMA_HANDOFF.md`, `design/REFERENCE_BOARD.md` when delegated, user-provided references, existing screens, and platform constraints.
 - Plan: read approved spec/design, `tasks/IMPLEMENTATION_TRACE.md`, and inspect likely source boundaries.
 - Build: read the assigned task, approved design docs, `design/approved/` layout/state assets, `design/approved/html/` semantic companions when AI-generated images are used, `design/FIGMA_HANDOFF.md` when Figma is used, cut-asset manifest, implementation trace, nearby source files, and tests.
