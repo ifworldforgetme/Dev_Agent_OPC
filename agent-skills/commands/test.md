@@ -22,5 +22,5 @@ For bugs:
 For browser-visible behavior, also invoke `browser-testing-with-devtools` or an available browser automation workflow.
 
 After tests run, update the Check section of `work/<project-name>/tasks/PDCA.md`
-with verification, functional, monkey, visual comparison, and blocker evidence
-as applicable.
+with verification, functional, monkey, batch-complete visual comparison, and
+blocker evidence as applicable.

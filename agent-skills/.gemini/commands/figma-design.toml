@@ -1,0 +1,17 @@
+description = "Formalize approved visual direction into Figma screen frames and exported design assets"
+
+prompt = """
+Use local flow: figma-design.
+
+Read the approved design package under `work/<project-name>/design/`, including
+`DESIGN_IMAGE_DESCRIPTIONS.md` and `design/approved/html/` when AI-generated
+images are used. When Figma tools are available, invoke `figma-use` and `figma-generate-design` to create or
+update Figma frames for required screens and states. Export final frames as
+PNG/PDF under `design/approved/screens/`, then update `DESIGN_ARTIFACTS.md` and
+`FIGMA_HANDOFF.md` with the Figma source, approved export path, export detail,
+approved/final status, and implementation notes.
+
+Run `bin/dev-flow design-check <project-name>` before planning or
+implementation. Use `figma-check` or `asset-check` separately only for focused
+handoff diagnostics or evidence.
+"""

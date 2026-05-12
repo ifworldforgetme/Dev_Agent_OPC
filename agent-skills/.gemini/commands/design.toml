@@ -1,21 +1,16 @@
-description = "Create reference-driven UX, interaction, visual system, and screen acceptance requirements before implementation planning"
+description = "Create reference-driven UX, visual system, screen acceptance, and formal design handoff"
 
 prompt = """
 Invoke the design-flow skill.
 
-Read the approved spec under `work/<project-name>/specs/`, inspect references under `work/<project-name>/design/`, and inspect existing app screens/components if they exist. For customer-facing UI, run `bin/dev-flow reference-check <project-name> --required` when available. If the user explicitly delegates visual direction, run `bin/dev-flow reference-check <project-name> --delegated` instead. Then:
+Before implementation planning:
 
-1. Define the UX problem and success criteria
-2. Extract concrete patterns from provided references or ask for references if visual direction is not delegated; if visual direction is delegated, create `design/REFERENCE_BOARD.md`
-3. Compare interaction approaches and choose a recommendation
-4. Apply iOS, Android, accessibility, privacy, and HCI principles
-5. Define information architecture, navigation, screen hierarchy, states, and interaction model
-6. Define visual direction: icon, palette, typography, spacing, cards, buttons, motion, and gestures
-7. Derive the required screen list from the PRD, spec, design, and interaction model, then define each as a `##` section in `SCREEN_ACCEPTANCE.md` with key states and breakpoints
-8. If helpful, create deterministic SVG/Mermaid/Markdown layout drafts for structure, then save them under `design/drafts/` or `design/mocks/`; drafts are not implementation targets
-9. Produce or collect 1-N high-fidelity approved raster/PDF layout and state assets for every `SCREEN_ACCEPTANCE.md` screen before implementation planning. Valid sources include imagegen/GPT Image, Figma MCP or Figma exports, designer uploads, manual design-system comps, or another explicitly approved source
-10. Save coverage in `DESIGN_ARTIFACTS.md`, with at least one row for each exact `SCREEN_ACCEPTANCE.md` screen heading. Each row must record source type, source reference, approved asset path under `design/approved/`, resolution/export detail, approved/final status, and implementation notes
-11. Save approved assets in `design/approved/`, and any bitmap cut assets, transparent PNGs, icon matrices, spritesheets, or animation frames in `design/cut-assets/`. If no bitmap cut assets are needed, record `CUT_ASSETS_REQUIRED: no` in `design/cut-assets/ASSET_MANIFEST.md`. Do not treat SVG drafts, Chrome/Playwright screenshots, simulator screenshots, local browser screenshots, HTML/CSS mock screenshots, or runtime captures as approved design assets
+1. Read the approved spec, references, existing UI, and project context.
+2. State assumptions, plausible interpretations, tradeoffs, and any blocker that needs user input.
+3. Run `bin/dev-flow reference-check <project-name> --required`, or `--delegated` only when the user delegated visual direction.
+4. Produce `DESIGN.md`, `VISUAL_SYSTEM.md`, and `SCREEN_ACCEPTANCE.md`.
+5. Satisfy `agent-skills/references/design-artifacts.md`: formal approved raster/PDF/Figma exports, AI-image HTML companions when applicable, Figma handoff when used, and a cut-asset manifest. SVG files under `design/cut-assets/` are allowed only as manifested element/runtime assets, not screen layout references.
+6. Run `bin/dev-flow design-check <project-name>` and fix failures before plan or build.
 
-Save `DESIGN.md`, `VISUAL_SYSTEM.md`, `SCREEN_ACCEPTANCE.md`, and `DESIGN_ARTIFACTS.md` under `work/<project-name>/design/`. Run `bin/dev-flow asset-check <project-name>` and `bin/dev-flow design-check <project-name>` when available, then update spec, `tasks/IMPLEMENTATION_TRACE.md`, and task plan references before implementation planning.
+Use `asset-check` or `figma-check` separately only for focused diagnostics or evidence.
 """

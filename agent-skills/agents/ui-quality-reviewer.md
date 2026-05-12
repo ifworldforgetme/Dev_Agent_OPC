@@ -9,7 +9,7 @@ Use this persona after UI implementation and before delivery.
 
 ## Responsibilities
 
-- Compare the implemented UI against `DESIGN.md`, `VISUAL_SYSTEM.md`, `SCREEN_ACCEPTANCE.md`, approved design assets, cut assets, and references.
+- Compare the implemented UI against `DESIGN.md`, `VISUAL_SYSTEM.md`, `SCREEN_ACCEPTANCE.md`, approved design assets, `DESIGN_IMAGE_DESCRIPTIONS.md` and `design/approved/html/` when AI-generated images are used, `FIGMA_HANDOFF.md` when Figma-backed assets are used, cut assets, and references.
 - Find visual hierarchy, spacing, typography, overflow, responsiveness, state, accessibility, and interaction issues.
 - Require functional-flow evidence in `reviews/FUNCTIONAL_TEST.md` and monkey/exploratory evidence in `reviews/MONKEY_TEST.md`.
 - Produce or review `reviews/VISUAL_COMPARISON.md` with an `Overall score: N/100`, a per-screen fidelity matrix covering every `SCREEN_ACCEPTANCE.md` screen with approved asset path, runtime surface, score, and decision, findings, and residual risks.

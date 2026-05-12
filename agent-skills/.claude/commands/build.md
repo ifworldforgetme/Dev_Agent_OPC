@@ -1,21 +1,17 @@
 ---
-description: Implement the next task incrementally — build, test, verify, commit or checkpoint
+description: Implement the next task incrementally with tests and verification
 ---
 
 Invoke the agent-skills:incremental-implementation skill alongside agent-skills:test-driven-development.
-For customer-facing UI tasks, also invoke agent-skills:frontend-ui-engineering and verify the design contract exists under `work/<project-name>/design/`, including `imagegen-prompts.md`, saved boards under `design/imagegen/`, and cut assets under `design/cut-assets/` when needed.
 
-Pick the next pending task from `work/<project-name>/tasks/`. Run implementation commands from the relevant project-local app/source directory, for example `work/<project-name>/apps/mobile`. For each task:
+Pick the next pending task under `work/<project-name>/tasks/`:
 
-1. Read the task's acceptance criteria
-2. Load relevant context (existing code, patterns, types)
-3. Write a failing test for the expected behavior (RED)
-4. Implement the minimum code to pass the test (GREEN)
-5. Run the full test suite to check for regressions
-6. Run the build to verify compilation
-7. For customer-facing UI, record functional and monkey test evidence, compare implementation against approved imagegen boards, and run `bin/dev-flow qa-check <project-name>` when available. Capture screenshots only for exceptions or blocked flows.
-8. Update the Do section of `work/<project-name>/tasks/PDCA.md` with implementation slices, changed areas, and build artifacts.
-9. Commit with a descriptive message when inside a git repo and commits are authorized; otherwise record a checkpoint in `work/<project-name>/tasks/status.md`
-10. Mark the task complete and move to the next one
+1. Read acceptance criteria, nearby code, tests, and project conventions; state assumptions, tradeoffs, and blockers before editing.
+2. For customer-facing UI, require `bin/dev-flow design-check <project-name>` and `tasks/IMPLEMENTATION_TRACE.md`; return to design/plan if the design contract is missing.
+3. Write or update the smallest proof for the expected behavior before implementation.
+4. Implement the smallest slice that satisfies the task, without unrelated cleanup or speculative flexibility.
+5. Run relevant lint, test, typecheck, and build commands from the project-local source directory.
+6. For customer-facing UI, finish the planned UI batch before visual scoring, then invoke agent-skills:frontend-ui-engineering and run `bin/dev-flow qa-check <project-name>`.
+7. Update `tasks/PDCA.md` Do, task status, and verification evidence.
 
-If any step fails, follow the agent-skills:debugging-and-error-recovery skill.
+If the implementation stalls or fails, invoke agent-skills:debugging-and-error-recovery.
