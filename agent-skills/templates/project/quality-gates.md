@@ -6,6 +6,9 @@ Project-specific verification belongs here. Keep commands runnable from this pro
 - [ ] Required workflow folders exist
 - [ ] Schema and status ledgers exist
 - [ ] Context loading guidance exists
+- [ ] Host SDKs, CLIs, services, credentials, and permissions are recorded in `.dev-flow/HOST_REQUIREMENTS.md`
+- [ ] Shared host SDKs are not downloaded into `work/{{PROJECT}}/`
+- [ ] `bin/dev-flow env-check {{PROJECT}}` passes before host-dependent build/test/ship work
 - [ ] Reference intake exists for customer-facing UI work
 - [ ] Approved design assets exist under `design/approved/` before UI implementation, when UI applies
 - [ ] `bin/dev-flow design-check {{PROJECT}}` passes before UI implementation, when UI applies

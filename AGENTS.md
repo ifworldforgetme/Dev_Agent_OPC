@@ -58,6 +58,7 @@ bin/dev-flow next <project-name>
 bin/dev-flow phase <project-name> <phase> [task] [--force]
 bin/dev-flow verify-phase <project-name> <phase>
 bin/dev-flow pdca-check <project-name>
+bin/dev-flow env-check <project-name>
 bin/dev-flow ship-check <project-name>
 bin/dev-flow doctor <project-name>
 bin/dev-flow migrate <project-name> [--type ui|agent|api|library|docs]
@@ -84,7 +85,8 @@ phase is approved, update `.dev-flow/state.env` through `bin/dev-flow phase`.
 Before claiming a slice is done, run the relevant `bin/dev-flow verify-phase
 <project-name> <phase>`, `bin/dev-flow check <project-name>`, and any
 project-specific checks listed in `work/<project-name>/tasks/quality-gates.md`.
-Before delivery, run `bin/dev-flow pdca-check <project-name>` and
+Before host-dependent build/test/ship work, run `bin/dev-flow env-check
+<project-name>`. Before delivery, run `bin/dev-flow pdca-check <project-name>` and
 `bin/dev-flow ship-check <project-name>`.
 
 Important: `bin/dev-flow phase` records state only; it does not execute the
@@ -96,6 +98,14 @@ forward. `pm`, `agent`, `design`, references, approved design assets, and design
 `required`, `delegated`, `disabled`, or `auto`.
 Use `--force` only when intentionally recording an early state and then complete
 the missing artifacts before delivery.
+
+Host SDKs, CLIs, simulators, MCP servers, credentials, and system services are
+host-machine capabilities, not project runtime files. Record them in
+`work/<project-name>/.dev-flow/HOST_REQUIREMENTS.md` and do not install shared
+SDKs such as Xcode, Android SDK, Java/JDK, Docker, Playwright browsers, or Figma
+MCP under `work/<project-name>/`. Project-local dependency manifests and
+lockfiles may live with the project source; host-level tools and caches should
+be installed once in approved machine/user locations.
 
 For customer-facing apps, run `bin/dev-flow reference-check <project-name>
 --required` before design or visual implementation. Use user-provided reference
@@ -212,6 +222,7 @@ at the workspace root.
 - Project state: `work/<project-name>/.dev-flow/state.env`
 - Project schema and type: `work/<project-name>/.dev-flow/schema.env`
 - Context loading rules: `work/<project-name>/.dev-flow/context.md`
+- Host SDKs, CLIs, permissions, credentials, simulators, services, and MCP connections: `work/<project-name>/.dev-flow/HOST_REQUIREMENTS.md`
 - Apps and source roots: `work/<project-name>/apps/`, `work/<project-name>/packages/`, or another project-local directory.
 - Ideas: `work/<project-name>/ideas/`
 - Product artifacts: `work/<project-name>/product/`

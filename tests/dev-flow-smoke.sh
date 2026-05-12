@@ -20,9 +20,12 @@ FIGMA_SECTION_BOUNDARY="$ROOT/work/__${RUN_ID}_figma_section_boundary"
 FIGMA_MISSING_SOURCE="$ROOT/work/__${RUN_ID}_figma_missing_source"
 FIGMA_BAD_EXPORT="$ROOT/work/__${RUN_ID}_figma_bad_export"
 API_PROJECT="$ROOT/work/__${RUN_ID}_api"
+ENV_PROJECT="$ROOT/work/__${RUN_ID}_env"
+BAD_ENV="$ROOT/work/__${RUN_ID}_bad_env"
 LEGACY_PROJECT="$ROOT/work/__${RUN_ID}_legacy"
 BAD_VISUAL="$ROOT/work/__${RUN_ID}_bad_visual"
 ADAPTER_OUT="/private/tmp/dev-agent-opc-${RUN_ID}-adapters"
+INSTALL_DEST="/private/tmp/dev-agent-opc-${RUN_ID}-install"
 UI_BLOCK_OUT="/private/tmp/dev-flow-${RUN_ID}-ui-block.out"
 INVALID_OUT="/private/tmp/dev-flow-${RUN_ID}-invalid.out"
 EXCEPTION_OUT="/private/tmp/dev-flow-${RUN_ID}-exception.out"
@@ -38,13 +41,15 @@ FIGMA_MISSING_SOURCE_OUT="/private/tmp/dev-flow-${RUN_ID}-figma-missing-source.o
 FIGMA_BAD_EXPORT_OUT="/private/tmp/dev-flow-${RUN_ID}-figma-bad-export.out"
 PDCA_OUT="/private/tmp/dev-flow-${RUN_ID}-pdca.out"
 API_OUT="/private/tmp/dev-flow-${RUN_ID}-api.out"
+ENV_OUT="/private/tmp/dev-flow-${RUN_ID}-env.out"
+BAD_ENV_OUT="/private/tmp/dev-flow-${RUN_ID}-bad-env.out"
 DOCTOR_OUT="/private/tmp/dev-flow-${RUN_ID}-doctor.out"
 BAD_VISUAL_OUT="/private/tmp/dev-flow-${RUN_ID}-bad-visual.out"
 TRACE_MISSING_HTML_OUT="/private/tmp/dev-flow-${RUN_ID}-trace-missing-html.out"
 NEXT_UI_OUT="/private/tmp/dev-flow-${RUN_ID}-next-ui.out"
 
 cleanup() {
-  rm -rf "$UI_BLOCK" "$DELEGATED" "$INVALID" "$SVG_ONLY" "$SVG_LEAK" "$SVG_CUT_ALLOWED" "$SELF_RENDERED_PNG" "$MISSING_COVERAGE" "$SCREENSHOT_SWAP" "$DRAFT_PATH" "$NO_CUTS" "$AI_MISSING_HTML" "$FIGMA_GOOD" "$FIGMA_SECTION_BOUNDARY" "$FIGMA_MISSING_SOURCE" "$FIGMA_BAD_EXPORT" "$API_PROJECT" "$LEGACY_PROJECT" "$BAD_VISUAL" "$ADAPTER_OUT" "$UI_BLOCK_OUT" "$INVALID_OUT" "$EXCEPTION_OUT" "$SVG_ONLY_OUT" "$SVG_LEAK_OUT" "$SVG_CUT_ALLOWED_OUT" "$SELF_RENDERED_PNG_OUT" "$MISSING_COVERAGE_OUT" "$SCREENSHOT_SWAP_OUT" "$DRAFT_PATH_OUT" "$AI_MISSING_HTML_OUT" "$FIGMA_MISSING_SOURCE_OUT" "$FIGMA_BAD_EXPORT_OUT" "$PDCA_OUT" "$API_OUT" "$DOCTOR_OUT" "$BAD_VISUAL_OUT" "$TRACE_MISSING_HTML_OUT" "$NEXT_UI_OUT"
+  rm -rf "$UI_BLOCK" "$DELEGATED" "$INVALID" "$SVG_ONLY" "$SVG_LEAK" "$SVG_CUT_ALLOWED" "$SELF_RENDERED_PNG" "$MISSING_COVERAGE" "$SCREENSHOT_SWAP" "$DRAFT_PATH" "$NO_CUTS" "$AI_MISSING_HTML" "$FIGMA_GOOD" "$FIGMA_SECTION_BOUNDARY" "$FIGMA_MISSING_SOURCE" "$FIGMA_BAD_EXPORT" "$API_PROJECT" "$ENV_PROJECT" "$BAD_ENV" "$LEGACY_PROJECT" "$BAD_VISUAL" "$ADAPTER_OUT" "$INSTALL_DEST" "$UI_BLOCK_OUT" "$INVALID_OUT" "$EXCEPTION_OUT" "$SVG_ONLY_OUT" "$SVG_LEAK_OUT" "$SVG_CUT_ALLOWED_OUT" "$SELF_RENDERED_PNG_OUT" "$MISSING_COVERAGE_OUT" "$SCREENSHOT_SWAP_OUT" "$DRAFT_PATH_OUT" "$AI_MISSING_HTML_OUT" "$FIGMA_MISSING_SOURCE_OUT" "$FIGMA_BAD_EXPORT_OUT" "$PDCA_OUT" "$API_OUT" "$ENV_OUT" "$BAD_ENV_OUT" "$DOCTOR_OUT" "$BAD_VISUAL_OUT" "$TRACE_MISSING_HTML_OUT" "$NEXT_UI_OUT"
 }
 trap cleanup EXIT
 
@@ -102,8 +107,18 @@ cd "$ROOT"
 
 bash -n bin/dev-flow
 bin/dev-flow list >/dev/null
+bin/dev-flow manifest >/dev/null
+bin/dev-flow command opc-flow >/dev/null
+bin/dev-flow command opc-role >/dev/null
+bin/dev-flow command opc-next >/dev/null
+bin/dev-flow command opc-check >/dev/null
+bin/dev-flow agent opc-code-reviewer >/dev/null
 bin/dev-flow command figma-design >/dev/null
 bin/dev-flow command figma-library >/dev/null
+grep -q '"namespace": "opc"' agent-skills/dev-agent-opc.manifest.json
+grep -q '"opc-flow"' agent-skills/dev-agent-opc.manifest.json
+grep -q '"roles"' agent-skills/dev-agent-opc.manifest.json
+grep -q '"gates"' agent-skills/dev-agent-opc.manifest.json
 
 if rg -n 'manual design-system comps|another explicitly approved source|manual-design|local-approved|approved design assets or cut assets|no bitmap cut assets|bitmap cut assets are needed|as approved design assets or cut assets' agent-skills/.claude/commands agent-skills/.gemini/commands >/dev/null; then
   rg -n 'manual design-system comps|another explicitly approved source|manual-design|local-approved|approved design assets or cut assets|no bitmap cut assets|bitmap cut assets are needed|as approved design assets or cut assets' agent-skills/.claude/commands agent-skills/.gemini/commands >&2
@@ -126,7 +141,7 @@ assert_max_lines agent-skills/commands/plan.md 20
 assert_max_lines agent-skills/agents/product-designer.md 30
 
 bin/dev-flow init "$(basename "$API_PROJECT")" --type api >/dev/null
-grep -q 'PROJECT_SCHEMA_VERSION="2"' "$API_PROJECT/.dev-flow/schema.env"
+grep -q 'PROJECT_SCHEMA_VERSION="3"' "$API_PROJECT/.dev-flow/schema.env"
 grep -q 'PROJECT_TYPE="api"' "$API_PROJECT/.dev-flow/schema.env"
 grep -q 'UI_FLOW="disabled"' "$API_PROJECT/.dev-flow/applicability.env"
 grep -q 'UI_DESIGN_ASSETS="disabled"' "$API_PROJECT/.dev-flow/applicability.env"
@@ -137,22 +152,44 @@ write_file "$API_PROJECT/specs/SPEC.md" \
 bin/dev-flow phase "$(basename "$API_PROJECT")" plan "Plan API implementation without UI design" >"$API_OUT" 2>&1
 grep -q "Updated $(basename "$API_PROJECT") to phase: plan" "$API_OUT"
 
+bin/dev-flow init "$(basename "$ENV_PROJECT")" --type api >/dev/null
+test -f "$ENV_PROJECT/.dev-flow/HOST_REQUIREMENTS.md"
+bin/dev-flow env-check "$(basename "$ENV_PROJECT")" >"$ENV_OUT" 2>&1
+grep -q "Host environment check passed" "$ENV_OUT"
+
+bin/dev-flow init "$(basename "$BAD_ENV")" --type api >/dev/null
+write_file "$BAD_ENV/.dev-flow/HOST_REQUIREMENTS.md" \
+  "# Host Requirements: $(basename "$BAD_ENV")" "" \
+  "## Requirements" "" \
+  "| Capability | Scope | Required by | Verify command | Required | Permission | Status | Notes |" \
+  "|---|---|---|---|---|---|---|---|" \
+  "| Android SDK | work/project | Android release build | adb version | yes | user install | missing | Must be installed on host, not under work. |"
+if bin/dev-flow env-check "$(basename "$BAD_ENV")" >"$BAD_ENV_OUT" 2>&1; then
+  cat "$BAD_ENV_OUT" >&2
+  echo "Expected missing host SDK requirement to fail env-check." >&2
+  exit 1
+fi
+grep -q "Invalid host requirement scope" "$BAD_ENV_OUT"
+grep -q "Blocked host requirement: Android SDK" "$BAD_ENV_OUT"
+
 bin/dev-flow init "$(basename "$LEGACY_PROJECT")" --type api >/dev/null
-rm -f "$LEGACY_PROJECT/.dev-flow/schema.env" "$LEGACY_PROJECT/tasks/IMPLEMENTATION_TRACE.md"
+rm -f "$LEGACY_PROJECT/.dev-flow/schema.env" "$LEGACY_PROJECT/.dev-flow/HOST_REQUIREMENTS.md" "$LEGACY_PROJECT/tasks/IMPLEMENTATION_TRACE.md"
 if bin/dev-flow doctor "$(basename "$LEGACY_PROJECT")" >"$DOCTOR_OUT" 2>&1; then
   cat "$DOCTOR_OUT" >&2
   echo "Expected doctor to fail on missing schema and implementation trace." >&2
   exit 1
 fi
 grep -q "Missing schema" "$DOCTOR_OUT"
+grep -q "Missing template file: .dev-flow/HOST_REQUIREMENTS.md" "$DOCTOR_OUT"
 grep -q "Missing template file: tasks/IMPLEMENTATION_TRACE.md" "$DOCTOR_OUT"
 bin/dev-flow migrate "$(basename "$LEGACY_PROJECT")" --type api >/dev/null
 bin/dev-flow doctor "$(basename "$LEGACY_PROJECT")" >/dev/null
-grep -q 'PROJECT_SCHEMA_VERSION="2"' "$LEGACY_PROJECT/.dev-flow/schema.env"
+grep -q 'PROJECT_SCHEMA_VERSION="3"' "$LEGACY_PROJECT/.dev-flow/schema.env"
 grep -q 'PROJECT_TYPE="api"' "$LEGACY_PROJECT/.dev-flow/schema.env"
+test -f "$LEGACY_PROJECT/.dev-flow/HOST_REQUIREMENTS.md"
 
 bin/dev-flow init "$(basename "$UI_BLOCK")" >/dev/null
-grep -q 'PROJECT_SCHEMA_VERSION="2"' "$UI_BLOCK/.dev-flow/schema.env"
+grep -q 'PROJECT_SCHEMA_VERSION="3"' "$UI_BLOCK/.dev-flow/schema.env"
 grep -q 'PROJECT_TYPE="ui"' "$UI_BLOCK/.dev-flow/schema.env"
 grep -q 'UI_FLOW="required"' "$UI_BLOCK/.dev-flow/applicability.env"
 bin/dev-flow phase "$(basename "$UI_BLOCK")" design "Prepare design execution brief" --force >/dev/null
@@ -569,11 +606,34 @@ bin/dev-flow pdca-check "$(basename "$DELEGATED")" >/dev/null
 bin/dev-flow ship-check "$(basename "$DELEGATED")" >/dev/null
 
 bin/dev-flow package-adapters "$ADAPTER_OUT" >/dev/null
+test -f "$ADAPTER_OUT/codex/commands/opc-flow.md"
+test -f "$ADAPTER_OUT/codex/commands/opc-role.md"
+test -f "$ADAPTER_OUT/claude-code/.claude/commands/opc-flow.md"
+test -f "$ADAPTER_OUT/gemini/dev-flow-quality/commands/opc-flow.toml"
+! test -e "$ADAPTER_OUT/codex/commands/flow.md"
+! test -e "$ADAPTER_OUT/claude-code/.claude/commands/flow.md"
+! test -e "$ADAPTER_OUT/gemini/dev-flow-quality/commands/flow.toml"
 test -x "$ADAPTER_OUT/runtime/bin/dev-flow"
 test -f "$ADAPTER_OUT/runtime/AGENTS.md"
 test -f "$ADAPTER_OUT/runtime/DEV_FLOW.md"
+test -f "$ADAPTER_OUT/runtime/agent-skills/dev-agent-opc.manifest.json"
 test -f "$ADAPTER_OUT/runtime/tests/dev-flow-smoke.sh"
 test -d "$ADAPTER_OUT/runtime/agent-skills/templates/project"
+test -f "$ADAPTER_OUT/runtime/agent-skills/templates/project/host-requirements.md"
 ! find "$ADAPTER_OUT" -path '*/work/*' -o -path '*/dist/*' | grep -q .
+
+bin/dev-flow install codex --scope user --dest "$INSTALL_DEST" >/dev/null
+test -f "$INSTALL_DEST/commands/opc-flow.md"
+test -f "$INSTALL_DEST/commands/opc-role.md"
+test -f "$INSTALL_DEST/skills/dev-agent-opc/SKILL.md"
+! test -e "$INSTALL_DEST/skills/design-flow/SKILL.md"
+! test -e "$INSTALL_DEST/commands/design.md"
+test -x "$INSTALL_DEST/dev-agent-opc-runtime/bin/dev-flow"
+test -f "$INSTALL_DEST/dev-agent-opc-runtime/agent-skills/dev-agent-opc.manifest.json"
+"$INSTALL_DEST/dev-agent-opc-runtime/bin/dev-flow" list >/dev/null
+bin/dev-flow uninstall codex --scope user --dest "$INSTALL_DEST" >/dev/null
+! test -e "$INSTALL_DEST/commands/opc-flow.md"
+! test -e "$INSTALL_DEST/skills/dev-agent-opc/SKILL.md"
+! test -e "$INSTALL_DEST/dev-agent-opc-runtime"
 
 echo "dev-flow smoke passed"

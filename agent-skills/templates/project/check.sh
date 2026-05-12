@@ -8,7 +8,7 @@ for d in "${required_dirs[@]}"; do
   [[ -d "$ROOT/$d" ]] || { echo "Missing directory: $d" >&2; exit 1; }
 done
 
-required_files=(.dev-flow/state.env .dev-flow/schema.env .dev-flow/applicability.env .dev-flow/context.md design/reference-intake.md design/reference-links.md design/REFERENCE_BOARD.md design/FIGMA_HANDOFF.md design/DESIGN_ARTIFACTS.md design/DESIGN_IMAGE_DESCRIPTIONS.md design/cut-assets/ASSET_MANIFEST.md tasks/status.md tasks/quality-gates.md tasks/PDCA.md tasks/IMPLEMENTATION_TRACE.md reviews/FUNCTIONAL_TEST.md reviews/MONKEY_TEST.md reviews/VISUAL_COMPARISON.md)
+required_files=(.dev-flow/state.env .dev-flow/schema.env .dev-flow/applicability.env .dev-flow/context.md .dev-flow/HOST_REQUIREMENTS.md design/reference-intake.md design/reference-links.md design/REFERENCE_BOARD.md design/FIGMA_HANDOFF.md design/DESIGN_ARTIFACTS.md design/DESIGN_IMAGE_DESCRIPTIONS.md design/cut-assets/ASSET_MANIFEST.md tasks/status.md tasks/quality-gates.md tasks/PDCA.md tasks/IMPLEMENTATION_TRACE.md reviews/FUNCTIONAL_TEST.md reviews/MONKEY_TEST.md reviews/VISUAL_COMPARISON.md)
 for f in "${required_files[@]}"; do
   [[ -f "$ROOT/$f" ]] || { echo "Missing file: $f" >&2; exit 1; }
 done

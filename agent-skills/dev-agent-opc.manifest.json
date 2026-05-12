@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "name": "dev-agent-opc",
+  "namespace": "opc",
+  "displayName": "Dev Agent OPC",
+  "description": "Native workflow entrypoints for lifecycle-driven software delivery on top of the existing agent-skills pack.",
+  "entrypoints": {
+    "opc-flow": "agent-skills/commands/opc-flow.md",
+    "opc-role": "agent-skills/commands/opc-role.md",
+    "opc-next": "agent-skills/commands/opc-next.md",
+    "opc-check": "agent-skills/commands/opc-check.md"
+  },
+  "flows": [
+    { "name": "idea", "skill": "idea-refine", "command": "agent-skills/commands/idea.md", "phase": "idea", "defaultGate": "bin/dev-flow verify-phase <project> idea" },
+    { "name": "pm", "skill": "pm-flow", "command": "agent-skills/commands/pm.md", "phase": "pm", "defaultGate": "bin/dev-flow verify-phase <project> pm" },
+    { "name": "agent", "skill": "agent-flow", "command": "agent-skills/commands/agent.md", "phase": "agent", "defaultGate": "bin/dev-flow verify-phase <project> agent" },
+    { "name": "spec", "skill": "spec-driven-development", "command": "agent-skills/commands/spec.md", "phase": "spec", "defaultGate": "bin/dev-flow verify-phase <project> spec" },
+    { "name": "design", "skill": "design-flow", "command": "agent-skills/commands/design.md", "phase": "design", "defaultGate": "bin/dev-flow design-check <project>" },
+    { "name": "figma-design", "skill": "figma-use + figma-generate-design", "command": "agent-skills/commands/figma-design.md", "phase": "design", "defaultGate": "bin/dev-flow figma-check <project>" },
+    { "name": "figma-library", "skill": "figma-use + figma-generate-library", "command": "agent-skills/commands/figma-library.md", "phase": "design", "defaultGate": "bin/dev-flow figma-check <project>" },
+    { "name": "plan", "skill": "planning-and-task-breakdown", "command": "agent-skills/commands/plan.md", "phase": "plan", "defaultGate": "bin/dev-flow verify-phase <project> plan" },
+    { "name": "build", "skill": "incremental-implementation + test-driven-development", "command": "agent-skills/commands/build.md", "phase": "build", "defaultGate": "bin/dev-flow check <project>" },
+    { "name": "test", "skill": "test-driven-development", "command": "agent-skills/commands/test.md", "phase": "test", "defaultGate": "bin/dev-flow verify-phase <project> test" },
+    { "name": "review", "skill": "code-review-and-quality", "command": "agent-skills/commands/review.md", "phase": "review", "defaultGate": "bin/dev-flow verify-phase <project> review" },
+    { "name": "ship", "skill": "shipping-and-launch", "command": "agent-skills/commands/ship.md", "phase": "ship", "defaultGate": "bin/dev-flow ship-check <project>" },
+    { "name": "debug", "skill": "debugging-and-error-recovery", "command": "agent-skills/commands/debug.md", "phase": null, "defaultGate": null },
+    { "name": "ui", "skill": "frontend-ui-engineering", "command": "agent-skills/commands/ui.md", "phase": "build", "defaultGate": "bin/dev-flow qa-check <project>" },
+    { "name": "api", "skill": "api-and-interface-design", "command": "agent-skills/commands/api.md", "phase": "spec", "defaultGate": "bin/dev-flow verify-phase <project> spec" },
+    { "name": "security", "skill": "security-and-hardening", "command": "agent-skills/commands/security.md", "phase": "review", "defaultGate": "bin/dev-flow verify-phase <project> review" },
+    { "name": "code-simplify", "skill": "code-simplification", "command": "agent-skills/commands/code-simplify.md", "phase": "build", "defaultGate": "bin/dev-flow check <project>" }
+  ],
+  "roles": [
+    { "name": "opc-code-reviewer", "persona": "code-reviewer", "path": "agent-skills/agents/code-reviewer.md", "bestFor": "Five-axis code review before merge or ship." },
+    { "name": "opc-product-designer", "persona": "product-designer", "path": "agent-skills/agents/product-designer.md", "bestFor": "UX, visual system, references, and screen acceptance." },
+    { "name": "opc-security-auditor", "persona": "security-auditor", "path": "agent-skills/agents/security-auditor.md", "bestFor": "Threat analysis and security-sensitive changes." },
+    { "name": "opc-test-engineer", "persona": "test-engineer", "path": "agent-skills/agents/test-engineer.md", "bestFor": "Test strategy, gaps, coverage, and verification evidence." },
+    { "name": "opc-ui-quality-reviewer", "persona": "ui-quality-reviewer", "path": "agent-skills/agents/ui-quality-reviewer.md", "bestFor": "Functional QA, monkey testing, and visual comparison review." }
+  ],
+  "gates": [
+    { "name": "verify-phase", "command": "bin/dev-flow verify-phase <project> <phase>" },
+    { "name": "reference-check", "command": "bin/dev-flow reference-check <project> [--required|--delegated]" },
+    { "name": "asset-check", "command": "bin/dev-flow asset-check <project>" },
+    { "name": "figma-check", "command": "bin/dev-flow figma-check <project>" },
+    { "name": "design-check", "command": "bin/dev-flow design-check <project> [--allow-no-reference]" },
+    { "name": "qa-check", "command": "bin/dev-flow qa-check <project>" },
+    { "name": "env-check", "command": "bin/dev-flow env-check <project>" },
+    { "name": "pdca-check", "command": "bin/dev-flow pdca-check <project>" },
+    { "name": "ship-check", "command": "bin/dev-flow ship-check <project>" },
+    { "name": "doctor", "command": "bin/dev-flow doctor <project>" },
+    { "name": "check", "command": "bin/dev-flow check <project>" }
+  ]
+}

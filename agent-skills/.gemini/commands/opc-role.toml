@@ -1,0 +1,11 @@
+description = "Invoke a Dev Agent OPC specialist role/persona"
+
+prompt = """
+Use this as `/opc-role <role-name> [task]`.
+
+Resolve the role from `agent-skills/dev-agent-opc.manifest.json`, then read the persona with `bin/dev-flow agent <role-name>` when available.
+
+Supported roles: `opc-code-reviewer`, `opc-product-designer`, `opc-security-auditor`, `opc-test-engineer`, `opc-ui-quality-reviewer`.
+
+Use one role for one perspective and one output. Personas do not call other personas; use `/ship` for release fan-out and merge.
+"""
