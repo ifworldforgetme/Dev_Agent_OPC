@@ -1,16 +1,16 @@
 # Dev Flow Native Adapter Workflow
 
-This workspace packages `agent-skills` as the canonical workflow source and adds
+This workspace packages `dev-agent` as the canonical workflow source and adds
 a thin helper layer for project state, quality gates, adapter packaging, and
 direct adapter installation.
 
 ## What Is Here
 
-- `agent-skills/`: canonical workflow pack with skills, agents, commands, references, and platform docs.
-- `agent-skills/commands/`: platform-neutral stage prompts used by Codex, OpenClaw, OpenCode, and other hosts when native slash commands are unavailable.
-- `agent-skills/dev-agent-opc.manifest.json`: native flow, role, and gate index used by `/opc-flow`, `/opc-role`, `/opc-next`, and `/opc-check`.
-- `agent-skills/.claude/commands/`: Claude Code slash command files.
-- `agent-skills/.gemini/commands/`: Gemini CLI command files.
+- `dev-agent/`: canonical workflow pack with skills, agents, commands, references, and platform docs.
+- `dev-agent/commands/`: platform-neutral stage prompts used by Codex, OpenClaw, OpenCode, and other hosts when native slash commands are unavailable.
+- `dev-agent/dev-agent.manifest.json`: native flow, role, and gate index used by `/dev agent` and `/dev-agent`.
+- `dev-agent/.claude/commands/`: Claude Code slash command files.
+- `dev-agent/.gemini/commands/`: Gemini CLI command files.
 - `AGENTS.md`: local instruction layer telling agents how to use the pack here.
 - `bin/dev-flow`: helper script for listing workflows, managing project state, checking host requirements, enforcing gates, packaging adapters, and installing adapters.
 - `docs/WORKFLOW_EXECUTION_LOGIC.md`: maintainer map for task execution, AGENTS routing, command-to-skill calls, personas, and gates.
@@ -18,37 +18,39 @@ direct adapter installation.
 
 ## Lifecycle Commands
 
-Use natural-language aliases in any agent, or install native command files where
-the host supports them:
+Use natural-language aliases in any agent, or use the installed native entry:
 
-| Intent | Prompt alias | Native command where supported | Loads |
+| Intent | Prompt alias | Native action | Loads |
 |---|---|---|---|
-| Refine a rough product idea | `Use local flow: idea` | `/idea` | `idea-refine` |
-| Product requirements | `Use local flow: pm` | `/pm` | `pm-flow` |
-| AI agent workflow design | `Use local flow: agent` | `/agent` | `agent-flow` |
-| Turn an idea into a buildable spec | `Use local flow: spec` | `/spec` | `spec-driven-development` |
-| Design the experience | `Use local flow: design` | `/design` | `design-flow` |
-| Formalize screens in Figma | `Use local flow: figma-design` | `/figma-design` | Figma plugin `figma-use` + `figma-generate-design` |
-| Build Figma library when needed | `Use local flow: figma-library` | `/figma-library` | Figma plugin `figma-use` + `figma-generate-library` |
-| Break a spec into tasks | `Use local flow: plan` | `/plan` | `planning-and-task-breakdown` |
-| Implement a slice | `Use local flow: build` | `/build` | `incremental-implementation` + `test-driven-development` |
-| Prove behavior works | `Use local flow: test` | `/test` | `test-driven-development` |
-| Review before merge | `Use local flow: review` | `/review` | `code-review-and-quality` |
-| Prepare to launch | `Use local flow: ship` | `/ship` | `shipping-and-launch` |
+| Refine a rough product idea | `Use local flow: idea` | `/dev agent flow idea` | `idea-refine` |
+| Product requirements | `Use local flow: pm` | `/dev agent flow pm` | `pm-flow` |
+| AI agent workflow design | `Use local flow: agent` | `/dev agent flow agent` | `agent-flow` |
+| Turn an idea into a buildable spec | `Use local flow: spec` | `/dev agent flow spec` | `spec-driven-development` |
+| Design the experience | `Use local flow: design` | `/dev agent flow design` | `design-flow` |
+| Formalize screens in Figma | `Use local flow: figma-design` | `/dev agent flow figma-design` | Figma plugin `figma-use` + `figma-generate-design` |
+| Build Figma library when needed | `Use local flow: figma-library` | `/dev agent flow figma-library` | Figma plugin `figma-use` + `figma-generate-library` |
+| Break a spec into tasks | `Use local flow: plan` | `/dev agent flow plan` | `planning-and-task-breakdown` |
+| Implement a slice | `Use local flow: build` | `/dev agent flow build` | `incremental-implementation` + `test-driven-development` |
+| Prove behavior works | `Use local flow: test` | `/dev agent flow test` | `test-driven-development` |
+| Review before merge | `Use local flow: review` | `/dev agent flow review` | `code-review-and-quality` |
+| Prepare to launch | `Use local flow: ship` | `/dev agent flow ship` | `shipping-and-launch` |
 
-Slash command support is host-specific. If a host does not support custom slash
-commands, use the prompt alias or the installed command snippet content.
+Default native installation exposes `/dev agent` and `/dev-agent`. Full adapter
+packages may include host-specific direct command files for advanced use, but
+the stable public entry remains `/dev agent`.
 
-Installed native adapters also expose four generic entrypoints:
+Installed native adapters expose one visible entrypoint and one compatibility
+alias:
 
 ```text
-/opc-flow <flow-name> [project-name]
-/opc-role <role-name> [task]
-/opc-next <project-name>
-/opc-check <gate-name> <project-name> [phase-or-options]
+/dev agent flow <flow-name> [project-name]
+/dev agent role <role-name> [task]
+/dev agent next <project-name>
+/dev agent check <gate-name> <project-name> [phase-or-options]
+/dev-agent <action> ...
 ```
 
-These route through `agent-skills/dev-agent-opc.manifest.json` and the existing
+These route through `dev-agent/dev-agent.manifest.json` and the existing
 command, skill, persona, and `bin/dev-flow` gate contracts. They are an entry
 surface over the current workflow pack, not a second workflow.
 
@@ -168,7 +170,7 @@ Use `tasks/PDCA.md` as the persistent operating loop for every delivery cycle:
 Update this file as work moves across phases. Run `bin/dev-flow pdca-check
 <project-name>` before delivery; `ship-check` invokes the same gate so a project
 cannot ship with only an empty PDCA template. The reusable handoff contract is
-documented in `agent-skills/references/pdca-delivery-loop.md`.
+documented in `dev-agent/references/pdca-delivery-loop.md`.
 
 ## UI Quality Gates
 
@@ -337,9 +339,9 @@ The package contains installable folders for Codex, Claude Code, Gemini CLI,
 OpenClaw, and OpenCode plus a `runtime/` folder. The adapter folders are the
 rules prompt layer. The `runtime/` folder carries executable gates:
 `bin/dev-flow`, project templates, `AGENTS.md`, `DEV_FLOW.md`, and smoke tests.
-It is generated from `agent-skills/skills`,
-`agent-skills/agents`, `agent-skills/commands`, and
-`agent-skills/references`; do not hand-edit checked-in adapter output.
+It is generated from `dev-agent/skills`,
+`dev-agent/agents`, `dev-agent/commands`, and
+`dev-agent/references`; do not hand-edit checked-in adapter output.
 
 ## Direct Installation
 
@@ -363,9 +365,10 @@ bin/dev-flow install openclaw --scope user
 bin/dev-flow install opencode --scope user
 ```
 
-The default install mode is `native`: install only the `dev-agent-opc` top-level
-skill, `opc-*` commands, and the runtime package. Use `--mode full` to also copy
-every internal `agent-skills/skills/*` folder as a top-level skill.
+The default install mode is `native`: install only the `dev-agent` top-level
+skill, `/dev agent` plus `/dev-agent` commands, and the runtime package. Use
+`--mode full` to also copy
+every internal `dev-agent/skills/*` folder as a top-level skill.
 
 Use `--dest <path>` for staging, CI checks, or custom agent homes:
 
@@ -385,7 +388,7 @@ Default destinations:
 
 Installer behavior is additive: it creates or updates matching files, but it
 does not delete old custom files in the destination. Direct installs also copy a
-self-contained runtime to `dev-agent-opc-runtime/` under the target directory so
+self-contained runtime to `dev-agent-runtime/` under the target directory so
 installed commands can still reach `bin/dev-flow` gates when a project does not
 vendor this repository.
 

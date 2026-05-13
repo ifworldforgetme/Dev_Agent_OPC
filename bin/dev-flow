@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-PACK="$ROOT/agent-skills"
+PACK="$ROOT/dev-agent"
 LIB="$PACK/lib/dev-flow"
 TEMPLATES="$PACK/templates/project"
 
@@ -22,8 +22,8 @@ Usage:
   bin/dev-flow manifest
   bin/dev-flow show <alias-or-skill>
   bin/dev-flow path <alias-or-skill>
-  bin/dev-flow command <opc-flow|opc-role|opc-next|opc-check|idea|pm|agent|spec|design|figma-design|figma-library|plan|build|test|review|ship|debug|ui|api|security|code-simplify>
-  bin/dev-flow agent <opc-code-reviewer|opc-product-designer|opc-test-engineer|opc-security-auditor|opc-ui-quality-reviewer>
+  bin/dev-flow command <dev|dev-agent|idea|pm|agent|spec|design|figma-design|figma-library|plan|build|test|review|ship|debug|ui|api|security|code-simplify>
+  bin/dev-flow agent <code-reviewer|product-designer|test-engineer|security-auditor|ui-quality-reviewer>
   bin/dev-flow refs
   bin/dev-flow install <codex|claude-code|gemini|openclaw|opencode> [--scope project|user] [--dest path] [--mode native|full]
   bin/dev-flow uninstall <codex|claude-code|gemini|openclaw|opencode> [--scope project|user] [--dest path]
@@ -296,14 +296,14 @@ phase_skill_files() {
   local phase="$2"
   case "$phase" in
     build)
-      echo "- agent-skills/skills/incremental-implementation/SKILL.md"
-      echo "- agent-skills/skills/test-driven-development/SKILL.md"
+      echo "- dev-agent/skills/incremental-implementation/SKILL.md"
+      echo "- dev-agent/skills/test-driven-development/SKILL.md"
       if phase_is_applicable "$project" design; then
-        echo "- agent-skills/skills/frontend-ui-engineering/SKILL.md"
+        echo "- dev-agent/skills/frontend-ui-engineering/SKILL.md"
       fi
       ;;
     *)
-      echo "- agent-skills/skills/$(skill_name "$phase")/SKILL.md"
+      echo "- dev-agent/skills/$(skill_name "$phase")/SKILL.md"
       ;;
   esac
 }
@@ -312,7 +312,7 @@ phase_load_list() {
   local project="$1"
   local phase="$2"
   echo "- work/$project/.dev-flow/context.md"
-  echo "- agent-skills/commands/$phase.md"
+  echo "- dev-agent/commands/$phase.md"
   phase_skill_files "$project" "$phase"
   case "$phase" in
     idea)
@@ -338,8 +338,8 @@ phase_load_list() {
       echo "- work/$project/design/reference-intake.md"
       echo "- work/$project/design/reference-links.md"
       echo "- work/$project/design/references/ and design/screenshots/"
-      echo "- agent-skills/references/design-artifacts.md"
-      echo "- agent-skills/references/figma-handoff.md when Figma is used"
+      echo "- dev-agent/references/design-artifacts.md"
+      echo "- dev-agent/references/figma-handoff.md when Figma is used"
       ;;
     plan)
       echo "- work/$project/specs/SPEC.md"
@@ -521,7 +521,7 @@ next_prompt_for_phase() {
   fi
   next_phase="$(next_applicable_phase_after "$project" "$phase")"
   echo "Next command: Use local flow: $phase"
-  echo "Command file: agent-skills/commands/$phase.md"
+  echo "Command file: dev-agent/commands/$phase.md"
   echo "Primary skill files:"
   phase_skill_files "$project" "$phase"
   echo
@@ -2275,23 +2275,24 @@ migrate_project_impl() {
 
 copy_runtime_package() {
   local target="$1"
-  mkdir -p "$target/bin" "$target/tests" "$target/agent-skills"
+  rm -rf "$target"
+  mkdir -p "$target/bin" "$target/tests" "$target/dev-agent"
   cp "$ROOT/AGENTS.md" "$target/AGENTS.md"
   cp "$ROOT/DEV_FLOW.md" "$target/DEV_FLOW.md"
   cp "$ROOT/README.md" "$target/README.md"
   cp "$ROOT/LICENSE" "$target/LICENSE"
-  cp "$PACK/dev-agent-opc.manifest.json" "$target/agent-skills/dev-agent-opc.manifest.json"
+  cp "$PACK/dev-agent.manifest.json" "$target/dev-agent/dev-agent.manifest.json"
   cp "$ROOT/bin/dev-flow" "$target/bin/dev-flow"
   chmod +x "$target/bin/dev-flow"
   cp "$ROOT/tests/dev-flow-smoke.sh" "$target/tests/dev-flow-smoke.sh"
   chmod +x "$target/tests/dev-flow-smoke.sh"
-  mkdir -p "$target/agent-skills/templates" "$target/agent-skills/lib"
-  cp -R "$PACK/templates/." "$target/agent-skills/templates/"
-  cp -R "$PACK/lib/." "$target/agent-skills/lib/"
-  copy_skill_dirs "$target/agent-skills/skills"
-  copy_agent_dirs "$target/agent-skills/agents"
-  copy_command_dirs "$target/agent-skills/commands"
-  copy_reference_dirs "$target/agent-skills"
+  mkdir -p "$target/dev-agent/templates" "$target/dev-agent/lib"
+  cp -R "$PACK/templates/." "$target/dev-agent/templates/"
+  cp -R "$PACK/lib/." "$target/dev-agent/lib/"
+  copy_skill_dirs "$target/dev-agent/skills"
+  copy_agent_dirs "$target/dev-agent/agents"
+  copy_command_dirs "$target/dev-agent/commands"
+  copy_reference_dirs "$target/dev-agent"
   clean_metadata "$target"
 }
 
@@ -2324,8 +2325,8 @@ copy_reference_dirs() {
     mkdir -p "$target/references"
     cp -R "$PACK/references/." "$target/references/"
   fi
-  if [[ -f "$PACK/dev-agent-opc.manifest.json" ]]; then
-    cp "$PACK/dev-agent-opc.manifest.json" "$target/dev-agent-opc.manifest.json"
+  if [[ -f "$PACK/dev-agent.manifest.json" ]]; then
+    cp "$PACK/dev-agent.manifest.json" "$target/dev-agent.manifest.json"
   fi
 }
 
@@ -2340,17 +2341,16 @@ copy_command_dirs() {
 copy_native_command_dirs() {
   local target="$1"
   mkdir -p "$target"
-  if [[ -d "$PACK/commands" ]]; then
-    find "$PACK/commands" -maxdepth 1 -type f -name 'opc-*.md' -exec cp {} "$target" \;
-  fi
+  [[ -f "$PACK/commands/dev.md" ]] && cp "$PACK/commands/dev.md" "$target/dev.md"
+  [[ -f "$PACK/commands/dev-agent.md" ]] && cp "$PACK/commands/dev-agent.md" "$target/dev-agent.md"
 }
 
 copy_native_skill_dirs() {
   local target="$1"
   mkdir -p "$target"
-  if [[ -d "$PACK/native/skills/dev-agent-opc" ]]; then
-    mkdir -p "$target/dev-agent-opc"
-    cp -R "$PACK/native/skills/dev-agent-opc/." "$target/dev-agent-opc/"
+  if [[ -d "$PACK/native/skills/dev-agent" ]]; then
+    mkdir -p "$target/dev-agent"
+    cp -R "$PACK/native/skills/dev-agent/." "$target/dev-agent/"
   fi
 }
 
@@ -2371,9 +2371,8 @@ copy_claude_commands() {
 copy_native_claude_commands() {
   local target="$1"
   mkdir -p "$target"
-  if [[ -d "$PACK/.claude/commands" ]]; then
-    find "$PACK/.claude/commands" -maxdepth 1 -type f -name 'opc-*.md' -exec cp {} "$target" \;
-  fi
+  [[ -f "$PACK/.claude/commands/dev.md" ]] && cp "$PACK/.claude/commands/dev.md" "$target/dev.md"
+  [[ -f "$PACK/.claude/commands/dev-agent.md" ]] && cp "$PACK/.claude/commands/dev-agent.md" "$target/dev-agent.md"
 }
 
 copy_gemini_commands() {
@@ -2387,9 +2386,8 @@ copy_gemini_commands() {
 copy_native_gemini_commands() {
   local target="$1"
   mkdir -p "$target"
-  if [[ -d "$PACK/.gemini/commands" ]]; then
-    find "$PACK/.gemini/commands" -maxdepth 1 -type f -name 'opc-*.toml' -exec cp {} "$target" \;
-  fi
+  [[ -f "$PACK/.gemini/commands/dev.toml" ]] && cp "$PACK/.gemini/commands/dev.toml" "$target/dev.toml"
+  [[ -f "$PACK/.gemini/commands/dev-agent.toml" ]] && cp "$PACK/.gemini/commands/dev-agent.toml" "$target/dev-agent.toml"
 }
 
 embed_shared_references() {
@@ -2596,12 +2594,13 @@ install_adapter() {
       ;;
   esac
 
-  copy_runtime_package "$dest/dev-agent-opc-runtime"
+  remove_legacy_native_files "$dest"
+  copy_runtime_package "$dest/dev-agent-runtime"
   clean_metadata "$dest"
   echo "Installed $target adapter under $dest"
   echo "Scope: $scope"
   echo "Mode: $mode"
-  echo "Runtime: $dest/dev-agent-opc-runtime"
+  echo "Runtime: $dest/dev-agent-runtime"
 }
 
 remove_installed_path() {
@@ -2610,6 +2609,18 @@ remove_installed_path() {
     rm -rf "$path"
     echo "Removed $path"
   fi
+}
+
+remove_legacy_native_files() {
+  local target="$1"
+  local name
+  for name in opc-flow opc-role opc-next opc-check dev-flow dev-role dev-next dev-check; do
+    remove_installed_path "$target/commands/$name.md"
+    remove_installed_path "$target/commands/$name.toml"
+  done
+  remove_installed_path "$target/skills/dev-agent-opc"
+  remove_installed_path "$target/dev-agent-opc.manifest.json"
+  remove_installed_path "$target/dev-agent-opc-runtime"
 }
 
 remove_matching_file() {
@@ -2654,7 +2665,8 @@ remove_dev_flow_files() {
       remove_matching_dir_by_skill "$file" "$target/skills/$name"
     done
   fi
-  remove_matching_dir_by_skill "$PACK/native/skills/dev-agent-opc" "$target/skills/dev-agent-opc"
+  remove_matching_dir_by_skill "$PACK/native/skills/dev-agent" "$target/skills/dev-agent"
+  remove_legacy_native_files "$target"
 
   if [[ -d "$command_source" ]]; then
     for file in "$command_source"/*."$command_ext"; do
@@ -2676,7 +2688,8 @@ remove_dev_flow_files() {
       remove_matching_file "$file" "$target/references/$(basename "$file")"
     done
   fi
-  remove_matching_file "$PACK/dev-agent-opc.manifest.json" "$target/dev-agent-opc.manifest.json"
+  remove_matching_file "$PACK/dev-agent.manifest.json" "$target/dev-agent.manifest.json"
+  remove_installed_path "$target/dev-agent-runtime"
   remove_installed_path "$target/dev-agent-opc-runtime"
   rmdir "$target/skills" "$target/commands" "$target/agents" "$target/references" 2>/dev/null || true
 }
@@ -2770,11 +2783,11 @@ persona_path() {
 
 require_pack() {
   if [[ ! -d "$PACK" ]]; then
-    echo "Missing $PACK. Restore the canonical agent-skills/ directory before running dev-flow." >&2
+    echo "Missing $PACK. Restore the canonical dev-agent/ directory before running dev-flow." >&2
     exit 1
   fi
   if [[ ! -d "$TEMPLATES" ]]; then
-    echo "Missing $TEMPLATES. Restore agent-skills/templates/project before running dev-flow." >&2
+    echo "Missing $TEMPLATES. Restore dev-agent/templates/project before running dev-flow." >&2
     exit 1
   fi
   if [[ ! -d "$LIB" ]] || ! command -v dev_flow_valid_project_type >/dev/null 2>&1 || ! command -v dev_flow_write_template_if_missing >/dev/null 2>&1; then
@@ -2793,7 +2806,7 @@ case "$cmd" in
       | sort -u
     ;;
   manifest)
-    path="$PACK/dev-agent-opc.manifest.json"
+    path="$PACK/dev-agent.manifest.json"
     if [[ ! -f "$path" ]]; then
       echo "Missing manifest: $path" >&2
       exit 1
@@ -2890,7 +2903,7 @@ Load only the files needed for the current phase.
 - QA: after the current planned UI implementation batch is complete or explicitly blocked, read verification evidence, functional and monkey test logs, visual comparison score, and exception screenshots only when a flow is blocked.
 - Ship: read review results, QA evidence, verification evidence, and launch notes.
 
-Do not bulk-load \`agent-skills/\` or unrelated project folders."
+Do not bulk-load \`dev-agent/\` or unrelated project folders."
     write_if_missing "$dir/design/reference-intake.md" "# Reference Intake: $project
 
 Use this before customer-facing UI design or visual polish.
@@ -2908,7 +2921,7 @@ Use this before customer-facing UI design or visual polish.
 ## Approved Design Assets
 - Put implementation-ready design boards and exports only under:
   - \`design/approved/\`
-- Follow the formal source contract in \`agent-skills/references/design-artifacts.md\`.
+- Follow the formal source contract in \`dev-agent/references/design-artifacts.md\`.
 - Keep browser/simulator/runtime screenshots, HTML/CSS mock captures, and SVG layout sketches out of \`design/approved/\`.
 
 ## Figma Handoff
@@ -2979,7 +2992,7 @@ Use formal design assets before implementation planning for every customer-facin
 - Derive the canonical screen list from the PRD/spec/design/interaction model and record every required screen as a \`##\` section in \`SCREEN_ACCEPTANCE.md\`.
 - Produce or collect 1-N approved layout/state assets for each \`SCREEN_ACCEPTANCE.md\` screen.
 - Add at least one Screen Coverage row for each exact \`SCREEN_ACCEPTANCE.md\` screen heading.
-- Follow \`agent-skills/references/design-artifacts.md\` for allowed source types, SVG/cut-asset rules, AI-image HTML companions, and Figma handoff.
+- Follow \`dev-agent/references/design-artifacts.md\` for allowed source types, SVG/cut-asset rules, AI-image HTML companions, and Figma handoff.
 - Run \`bin/dev-flow design-check $project\` before planning or build.
 
 ## Screen Coverage
@@ -3453,7 +3466,7 @@ echo \"Default workflow gate passed for \$(basename \"\$ROOT\").\""
     copy_runtime_package "$out/runtime"
 
     cat > "$out/INSTALL.md" <<'EOF'
-# Agent Skills Native Adapter Package
+# Dev Agent Native Adapter Package
 
 Install the generated folders into the target agent surface. There are two layers:
 
@@ -3481,8 +3494,8 @@ bin/dev-flow install openclaw --scope user
 bin/dev-flow install opencode --scope project
 ```
 
-Direct installs default to native mode: one `dev-agent-opc` top-level skill,
-`opc-*` commands, and a `dev-agent-opc-runtime/` folder under the destination.
+Direct installs default to native mode: one `dev-agent` top-level skill, `/dev agent`
+plus `/dev-agent` commands, and a `dev-agent-runtime/` folder under the destination.
 Use `--mode full` to install every internal workflow skill as a top-level skill.
 Uninstall with `bin/dev-flow uninstall <target> --scope <project|user>`.
 EOF

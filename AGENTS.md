@@ -1,35 +1,35 @@
 # Local Development Flow
 
-This workspace packages `agent-skills/` as the canonical skill and agent source.
+This workspace packages `dev-agent/` as the canonical skill and agent source.
 Root-level files provide local helper commands and publishing glue only. Load only
-the relevant Markdown files from `agent-skills/skills/`,
-`agent-skills/agents/`, and `agent-skills/references/` when the current task
+the relevant Markdown files from `dev-agent/skills/`,
+`dev-agent/agents/`, and `dev-agent/references/` when the current task
 calls for them.
 
 ## Primary Workflow
 
 Use this lifecycle for non-trivial product or engineering work:
 
-1. Idea: `agent-skills/skills/idea-refine/SKILL.md`
-2. Product: `agent-skills/skills/pm-flow/SKILL.md` when PRDs, user stories, scope, or metrics are needed
-3. Agent workflow: `agent-skills/skills/agent-flow/SKILL.md` when AI agents or automations are involved
-4. Spec: `agent-skills/skills/spec-driven-development/SKILL.md`
-5. Design: `agent-skills/skills/design-flow/SKILL.md`
-6. Plan: `agent-skills/skills/planning-and-task-breakdown/SKILL.md`
-7. Build: `agent-skills/skills/incremental-implementation/SKILL.md`
-8. Test: `agent-skills/skills/test-driven-development/SKILL.md`
-9. Review: `agent-skills/skills/code-review-and-quality/SKILL.md`
-10. Ship: `agent-skills/skills/shipping-and-launch/SKILL.md`
+1. Idea: `dev-agent/skills/idea-refine/SKILL.md`
+2. Product: `dev-agent/skills/pm-flow/SKILL.md` when PRDs, user stories, scope, or metrics are needed
+3. Agent workflow: `dev-agent/skills/agent-flow/SKILL.md` when AI agents or automations are involved
+4. Spec: `dev-agent/skills/spec-driven-development/SKILL.md`
+5. Design: `dev-agent/skills/design-flow/SKILL.md`
+6. Plan: `dev-agent/skills/planning-and-task-breakdown/SKILL.md`
+7. Build: `dev-agent/skills/incremental-implementation/SKILL.md`
+8. Test: `dev-agent/skills/test-driven-development/SKILL.md`
+9. Review: `dev-agent/skills/code-review-and-quality/SKILL.md`
+10. Ship: `dev-agent/skills/shipping-and-launch/SKILL.md`
 
-For debugging, load `agent-skills/skills/debugging-and-error-recovery/SKILL.md`.
-For UI work, also load `agent-skills/skills/frontend-ui-engineering/SKILL.md`.
+For debugging, load `dev-agent/skills/debugging-and-error-recovery/SKILL.md`.
+For UI work, also load `dev-agent/skills/frontend-ui-engineering/SKILL.md`.
 For customer-facing UI, `design-flow` owns reference intake and design gates, and
 `frontend-ui-engineering` owns implementation plus functional QA, monkey
 testing, visual comparison, and exception-only screenshot evidence.
 For APIs or public module boundaries, also load
-`agent-skills/skills/api-and-interface-design/SKILL.md`.
+`dev-agent/skills/api-and-interface-design/SKILL.md`.
 For security-sensitive work, also load
-`agent-skills/skills/security-and-hardening/SKILL.md`.
+`dev-agent/skills/security-and-hardening/SKILL.md`.
 
 ## Local Commands
 
@@ -118,12 +118,12 @@ under `work/<project-name>/design/` first and record the decision with
 `bin/dev-flow design-check <project-name> --allow-no-reference`.
 
 For customer-facing UI, use the canonical skills and personas inside
-`agent-skills/`:
+`dev-agent/`:
 
-- `agent-skills/skills/design-flow/SKILL.md` before implementation planning
-- `agent-skills/skills/frontend-ui-engineering/SKILL.md` during implementation and QA
-- `agent-skills/agents/product-designer.md` for UX and visual-system design
-- `agent-skills/agents/ui-quality-reviewer.md` for visual comparison review and exception screenshot review
+- `dev-agent/skills/design-flow/SKILL.md` before implementation planning
+- `dev-agent/skills/frontend-ui-engineering/SKILL.md` during implementation and QA
+- `dev-agent/agents/product-designer.md` for UX and visual-system design
+- `dev-agent/agents/ui-quality-reviewer.md` for visual comparison review and exception screenshot review
 
 For every customer-facing screen, the design phase must produce or collect 1-N
 formal layout/state assets before implementation planning. Valid formal sources
@@ -272,7 +272,7 @@ across multiple projects. When running commands, use the project-local path, for
 example `cd work/<project-name>/apps/mobile`.
 
 Do not create root-level `skills/`, `agents/`, or checked-in `dist/` directories.
-Skills and personas belong under `agent-skills/`; generated adapter packages
+Skills and personas belong under `dev-agent/`; generated adapter packages
 belong in `dist/` only as temporary output from `bin/dev-flow package-adapters`
 and should be regenerated rather than hand-edited.
 

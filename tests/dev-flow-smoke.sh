@@ -24,8 +24,8 @@ ENV_PROJECT="$ROOT/work/__${RUN_ID}_env"
 BAD_ENV="$ROOT/work/__${RUN_ID}_bad_env"
 LEGACY_PROJECT="$ROOT/work/__${RUN_ID}_legacy"
 BAD_VISUAL="$ROOT/work/__${RUN_ID}_bad_visual"
-ADAPTER_OUT="/private/tmp/dev-agent-opc-${RUN_ID}-adapters"
-INSTALL_DEST="/private/tmp/dev-agent-opc-${RUN_ID}-install"
+ADAPTER_OUT="/private/tmp/dev-agent-${RUN_ID}-adapters"
+INSTALL_DEST="/private/tmp/dev-agent-${RUN_ID}-install"
 UI_BLOCK_OUT="/private/tmp/dev-flow-${RUN_ID}-ui-block.out"
 INVALID_OUT="/private/tmp/dev-flow-${RUN_ID}-invalid.out"
 EXCEPTION_OUT="/private/tmp/dev-flow-${RUN_ID}-exception.out"
@@ -108,37 +108,65 @@ cd "$ROOT"
 bash -n bin/dev-flow
 bin/dev-flow list >/dev/null
 bin/dev-flow manifest >/dev/null
-bin/dev-flow command opc-flow >/dev/null
-bin/dev-flow command opc-role >/dev/null
-bin/dev-flow command opc-next >/dev/null
-bin/dev-flow command opc-check >/dev/null
+bin/dev-flow command dev >/dev/null
+bin/dev-flow command dev-agent >/dev/null
+bin/dev-flow agent code-reviewer >/dev/null
 bin/dev-flow agent opc-code-reviewer >/dev/null
 bin/dev-flow command figma-design >/dev/null
 bin/dev-flow command figma-library >/dev/null
-grep -q '"namespace": "opc"' agent-skills/dev-agent-opc.manifest.json
-grep -q '"opc-flow"' agent-skills/dev-agent-opc.manifest.json
-grep -q '"roles"' agent-skills/dev-agent-opc.manifest.json
-grep -q '"gates"' agent-skills/dev-agent-opc.manifest.json
+grep -q '"stableId": "dev-agent"' dev-agent/dev-agent.manifest.json
+grep -q '"userVisibleEntry": "/dev agent"' dev-agent/dev-agent.manifest.json
+grep -q '"/dev-agent"' dev-agent/dev-agent.manifest.json
+grep -q '"roles"' dev-agent/dev-agent.manifest.json
+grep -q '"gates"' dev-agent/dev-agent.manifest.json
 
-if rg -n 'manual design-system comps|another explicitly approved source|manual-design|local-approved|approved design assets or cut assets|no bitmap cut assets|bitmap cut assets are needed|as approved design assets or cut assets' agent-skills/.claude/commands agent-skills/.gemini/commands >/dev/null; then
-  rg -n 'manual design-system comps|another explicitly approved source|manual-design|local-approved|approved design assets or cut assets|no bitmap cut assets|bitmap cut assets are needed|as approved design assets or cut assets' agent-skills/.claude/commands agent-skills/.gemini/commands >&2
+node -e '
+const fs = require("fs");
+const names = (dir, ext) => fs.readdirSync(dir)
+  .filter((file) => file.endsWith(ext))
+  .map((file) => file.slice(0, -ext.length))
+  .sort();
+const canonical = names("dev-agent/commands", ".md");
+const claude = names("dev-agent/.claude/commands", ".md");
+const gemini = names("dev-agent/.gemini/commands", ".toml");
+const missing = (expected, actual) => expected.filter((name) => !actual.includes(name));
+const extra = (actual, expected) => actual.filter((name) => !expected.includes(name));
+const problems = [];
+const claudeMissing = missing(canonical, claude);
+const geminiMissing = missing(canonical, gemini);
+const claudeExtra = extra(claude, canonical);
+const geminiExtra = extra(gemini, canonical);
+if (claudeMissing.length) problems.push(`Claude missing: ${claudeMissing.join(", ")}`);
+if (geminiMissing.length) problems.push(`Gemini missing: ${geminiMissing.join(", ")}`);
+if (claudeExtra.length) problems.push(`Claude extra: ${claudeExtra.join(", ")}`);
+if (geminiExtra.length) problems.push(`Gemini extra: ${geminiExtra.join(", ")}`);
+if (gemini.includes("planning")) problems.push("Gemini command planning.toml is stale; use plan.toml");
+if (problems.length) {
+  console.error("Adapter command parity failed:");
+  for (const problem of problems) console.error(`- ${problem}`);
+  process.exit(1);
+}
+'
+
+if rg -n 'manual design-system comps|another explicitly approved source|manual-design|local-approved|approved design assets or cut assets|no bitmap cut assets|bitmap cut assets are needed|as approved design assets or cut assets' dev-agent/.claude/commands dev-agent/.gemini/commands >/dev/null; then
+  rg -n 'manual design-system comps|another explicitly approved source|manual-design|local-approved|approved design assets or cut assets|no bitmap cut assets|bitmap cut assets are needed|as approved design assets or cut assets' dev-agent/.claude/commands dev-agent/.gemini/commands >&2
   echo "Adapter command drift: stale design-source or cut-asset rules found." >&2
   exit 1
 fi
-if rg -n 'No bitmap cut assets required' bin/dev-flow agent-skills/templates >/dev/null; then
-  rg -n 'No bitmap cut assets required' bin/dev-flow agent-skills/templates >&2
+if rg -n 'No bitmap cut assets required' bin/dev-flow dev-agent/templates >/dev/null; then
+  rg -n 'No bitmap cut assets required' bin/dev-flow dev-agent/templates >&2
   echo "Stale cut-asset opt-out wording found." >&2
   exit 1
 fi
-grep -q 'SVG files under.*design/cut-assets.*element/runtime assets' agent-skills/.claude/commands/design.md
-grep -q 'SVG files under.*design/cut-assets.*element/runtime assets' agent-skills/.gemini/commands/design.toml
-assert_max_lines agent-skills/skills/design-flow/SKILL.md 180
-assert_max_lines agent-skills/skills/frontend-ui-engineering/SKILL.md 280
-assert_max_lines agent-skills/commands/design.md 20
-assert_max_lines agent-skills/commands/build.md 20
-assert_max_lines agent-skills/commands/ui.md 20
-assert_max_lines agent-skills/commands/plan.md 20
-assert_max_lines agent-skills/agents/product-designer.md 30
+grep -q 'SVG files under.*design/cut-assets.*element/runtime assets' dev-agent/.claude/commands/design.md
+grep -q 'SVG files under.*design/cut-assets.*element/runtime assets' dev-agent/.gemini/commands/design.toml
+assert_max_lines dev-agent/skills/design-flow/SKILL.md 180
+assert_max_lines dev-agent/skills/frontend-ui-engineering/SKILL.md 280
+assert_max_lines dev-agent/commands/design.md 20
+assert_max_lines dev-agent/commands/build.md 20
+assert_max_lines dev-agent/commands/ui.md 20
+assert_max_lines dev-agent/commands/plan.md 20
+assert_max_lines dev-agent/agents/product-designer.md 30
 
 bin/dev-flow init "$(basename "$API_PROJECT")" --type api >/dev/null
 grep -q 'PROJECT_SCHEMA_VERSION="3"' "$API_PROJECT/.dev-flow/schema.env"
@@ -197,8 +225,8 @@ bin/dev-flow next "$(basename "$UI_BLOCK")" >"$NEXT_UI_OUT"
 grep -q "Type: ui" "$NEXT_UI_OUT"
 grep -q "Next command: Use local flow: design" "$NEXT_UI_OUT"
 grep -q "Load:" "$NEXT_UI_OUT"
-grep -q "agent-skills/commands/design.md" "$NEXT_UI_OUT"
-grep -q "agent-skills/skills/design-flow/SKILL.md" "$NEXT_UI_OUT"
+grep -q "dev-agent/commands/design.md" "$NEXT_UI_OUT"
+grep -q "dev-agent/skills/design-flow/SKILL.md" "$NEXT_UI_OUT"
 grep -q "Required outputs:" "$NEXT_UI_OUT"
 grep -q "design/DESIGN.md" "$NEXT_UI_OUT"
 grep -q "Gate before next phase:" "$NEXT_UI_OUT"
@@ -606,34 +634,69 @@ bin/dev-flow pdca-check "$(basename "$DELEGATED")" >/dev/null
 bin/dev-flow ship-check "$(basename "$DELEGATED")" >/dev/null
 
 bin/dev-flow package-adapters "$ADAPTER_OUT" >/dev/null
-test -f "$ADAPTER_OUT/codex/commands/opc-flow.md"
-test -f "$ADAPTER_OUT/codex/commands/opc-role.md"
-test -f "$ADAPTER_OUT/claude-code/.claude/commands/opc-flow.md"
-test -f "$ADAPTER_OUT/gemini/dev-flow-quality/commands/opc-flow.toml"
-! test -e "$ADAPTER_OUT/codex/commands/flow.md"
-! test -e "$ADAPTER_OUT/claude-code/.claude/commands/flow.md"
-! test -e "$ADAPTER_OUT/gemini/dev-flow-quality/commands/flow.toml"
+test -f "$ADAPTER_OUT/codex/commands/dev.md"
+test -f "$ADAPTER_OUT/codex/commands/dev-agent.md"
+! test -e "$ADAPTER_OUT/codex/commands/dev-flow.md"
+! test -e "$ADAPTER_OUT/codex/commands/dev-role.md"
+! test -e "$ADAPTER_OUT/codex/commands/dev-next.md"
+! test -e "$ADAPTER_OUT/codex/commands/dev-check.md"
+test -f "$ADAPTER_OUT/claude-code/.claude/commands/dev.md"
+test -f "$ADAPTER_OUT/claude-code/.claude/commands/dev-agent.md"
+test -f "$ADAPTER_OUT/claude-code/.claude/commands/api.md"
+test -f "$ADAPTER_OUT/claude-code/.claude/commands/debug.md"
+test -f "$ADAPTER_OUT/claude-code/.claude/commands/security.md"
+test -f "$ADAPTER_OUT/claude-code/.claude/commands/ui.md"
+! test -e "$ADAPTER_OUT/claude-code/.claude/commands/dev-flow.md"
+! test -e "$ADAPTER_OUT/claude-code/.claude/commands/dev-role.md"
+! test -e "$ADAPTER_OUT/claude-code/.claude/commands/dev-next.md"
+! test -e "$ADAPTER_OUT/claude-code/.claude/commands/dev-check.md"
+test -f "$ADAPTER_OUT/gemini/dev-flow-quality/commands/dev.toml"
+test -f "$ADAPTER_OUT/gemini/dev-flow-quality/commands/dev-agent.toml"
+test -f "$ADAPTER_OUT/gemini/dev-flow-quality/commands/api.toml"
+test -f "$ADAPTER_OUT/gemini/dev-flow-quality/commands/debug.toml"
+test -f "$ADAPTER_OUT/gemini/dev-flow-quality/commands/plan.toml"
+test -f "$ADAPTER_OUT/gemini/dev-flow-quality/commands/security.toml"
+test -f "$ADAPTER_OUT/gemini/dev-flow-quality/commands/ui.toml"
+! test -e "$ADAPTER_OUT/gemini/dev-flow-quality/commands/planning.toml"
+! test -e "$ADAPTER_OUT/gemini/dev-flow-quality/commands/dev-flow.toml"
+! test -e "$ADAPTER_OUT/gemini/dev-flow-quality/commands/dev-role.toml"
+! test -e "$ADAPTER_OUT/gemini/dev-flow-quality/commands/dev-next.toml"
+! test -e "$ADAPTER_OUT/gemini/dev-flow-quality/commands/dev-check.toml"
+! test -e "$ADAPTER_OUT/codex/commands/opc-flow.md"
+! test -e "$ADAPTER_OUT/claude-code/.claude/commands/opc-flow.md"
+! test -e "$ADAPTER_OUT/gemini/dev-flow-quality/commands/opc-flow.toml"
 test -x "$ADAPTER_OUT/runtime/bin/dev-flow"
 test -f "$ADAPTER_OUT/runtime/AGENTS.md"
 test -f "$ADAPTER_OUT/runtime/DEV_FLOW.md"
-test -f "$ADAPTER_OUT/runtime/agent-skills/dev-agent-opc.manifest.json"
+test -f "$ADAPTER_OUT/runtime/dev-agent/dev-agent.manifest.json"
 test -f "$ADAPTER_OUT/runtime/tests/dev-flow-smoke.sh"
-test -d "$ADAPTER_OUT/runtime/agent-skills/templates/project"
-test -f "$ADAPTER_OUT/runtime/agent-skills/templates/project/host-requirements.md"
+test -d "$ADAPTER_OUT/runtime/dev-agent/templates/project"
+test -f "$ADAPTER_OUT/runtime/dev-agent/templates/project/host-requirements.md"
 ! find "$ADAPTER_OUT" -path '*/work/*' -o -path '*/dist/*' | grep -q .
 
+mkdir -p "$INSTALL_DEST/commands" "$INSTALL_DEST/skills/dev-agent-opc" "$INSTALL_DEST/dev-agent-opc-runtime/bin"
+touch "$INSTALL_DEST/commands/opc-flow.md" "$INSTALL_DEST/commands/opc-role.md" "$INSTALL_DEST/commands/dev-flow.md" "$INSTALL_DEST/commands/dev-role.md" "$INSTALL_DEST/commands/dev-next.md" "$INSTALL_DEST/commands/dev-check.md" "$INSTALL_DEST/skills/dev-agent-opc/SKILL.md" "$INSTALL_DEST/dev-agent-opc-runtime/bin/dev-flow"
 bin/dev-flow install codex --scope user --dest "$INSTALL_DEST" >/dev/null
-test -f "$INSTALL_DEST/commands/opc-flow.md"
-test -f "$INSTALL_DEST/commands/opc-role.md"
-test -f "$INSTALL_DEST/skills/dev-agent-opc/SKILL.md"
+test -f "$INSTALL_DEST/commands/dev.md"
+test -f "$INSTALL_DEST/commands/dev-agent.md"
+! test -e "$INSTALL_DEST/commands/dev-flow.md"
+! test -e "$INSTALL_DEST/commands/dev-role.md"
+! test -e "$INSTALL_DEST/commands/dev-next.md"
+! test -e "$INSTALL_DEST/commands/dev-check.md"
+test -f "$INSTALL_DEST/skills/dev-agent/SKILL.md"
 ! test -e "$INSTALL_DEST/skills/design-flow/SKILL.md"
 ! test -e "$INSTALL_DEST/commands/design.md"
-test -x "$INSTALL_DEST/dev-agent-opc-runtime/bin/dev-flow"
-test -f "$INSTALL_DEST/dev-agent-opc-runtime/agent-skills/dev-agent-opc.manifest.json"
-"$INSTALL_DEST/dev-agent-opc-runtime/bin/dev-flow" list >/dev/null
-bin/dev-flow uninstall codex --scope user --dest "$INSTALL_DEST" >/dev/null
 ! test -e "$INSTALL_DEST/commands/opc-flow.md"
+! test -e "$INSTALL_DEST/commands/opc-role.md"
 ! test -e "$INSTALL_DEST/skills/dev-agent-opc/SKILL.md"
 ! test -e "$INSTALL_DEST/dev-agent-opc-runtime"
+test -x "$INSTALL_DEST/dev-agent-runtime/bin/dev-flow"
+test -f "$INSTALL_DEST/dev-agent-runtime/dev-agent/dev-agent.manifest.json"
+"$INSTALL_DEST/dev-agent-runtime/bin/dev-flow" list >/dev/null
+bin/dev-flow uninstall codex --scope user --dest "$INSTALL_DEST" >/dev/null
+! test -e "$INSTALL_DEST/commands/dev.md"
+! test -e "$INSTALL_DEST/commands/dev-agent.md"
+! test -e "$INSTALL_DEST/skills/dev-agent/SKILL.md"
+! test -e "$INSTALL_DEST/dev-agent-runtime"
 
 echo "dev-flow smoke passed"
