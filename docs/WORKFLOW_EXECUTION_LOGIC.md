@@ -8,11 +8,11 @@ command 到 skill 的调用关系、persona 使用方式，以及 `bin/dev-flow`
 
 Dev_Agent_OPC 分成两层：
 
-- Prompt / rules 层：`AGENTS.md`、`agent-skills/commands/`、
-  `agent-skills/skills/`、`agent-skills/agents/`、
-  `agent-skills/references/`。
-- Runtime / gate 层：`bin/dev-flow`、`agent-skills/templates/project/`、
-  `agent-skills/lib/dev-flow/`、项目运行目录 `work/<project>/`、测试脚本。
+- Prompt / rules 层：`AGENTS.md`、`dev-agent/commands/`、
+  `dev-agent/skills/`、`dev-agent/agents/`、
+  `dev-agent/references/`。
+- Runtime / gate 层：`bin/dev-flow`、`dev-agent/templates/project/`、
+  `dev-agent/lib/dev-flow/`、项目运行目录 `work/<project>/`、测试脚本。
 
 Prompt / rules 层负责告诉 agent “该怎么做”。Runtime / gate 层不替 agent 执行
 skill 工作，只负责创建项目状态、报告下一步 prompt、记录阶段状态、校验产物是否
@@ -40,13 +40,13 @@ flowchart TD
 |---|---|---|
 | `AGENTS.md` | 当前 workspace 的 agent 指令层，定义生命周期、技能加载、角色、门禁和产物规则。 | 否 |
 | `DEV_FLOW.md` | 面向用户和维护者的 workflow 使用说明。 | 否 |
-| `agent-skills/dev-agent.manifest.json` | native flow、role、gate 索引，供 `/dev agent` 和 `/dev-agent` 使用。 | 否 |
-| `agent-skills/commands/` | 平台中立的 command prompt，例如 `design`、`build`、`figma-design`、`ship`。 | 否 |
-| `agent-skills/skills/` | Canonical `SKILL.md` 工作流，定义步骤、输出和退出条件。 | 否 |
-| `agent-skills/agents/` | 专家 persona prompt，例如 designer、reviewer、security auditor、test engineer。 | 否 |
-| `agent-skills/references/` | 通用 rubric、checklist、编排原则、设计产物规则、Figma handoff 规则。 | 否 |
-| `agent-skills/templates/project/` | `init` / `migrate` 渲染到 `work/<project>/` 的项目模板。 | 否 |
-| `agent-skills/lib/dev-flow/` | `bin/dev-flow` 使用的 shell helper，例如 project type 和模板渲染。 | 通过 `bin/dev-flow` 执行 |
+| `dev-agent/dev-agent.manifest.json` | native flow、role、gate 索引，供 `/dev agent` 和 `/dev-agent` 使用。 | 否 |
+| `dev-agent/commands/` | 平台中立的 command prompt，例如 `design`、`build`、`figma-design`、`ship`。 | 否 |
+| `dev-agent/skills/` | Canonical `SKILL.md` 工作流，定义步骤、输出和退出条件。 | 否 |
+| `dev-agent/agents/` | 专家 persona prompt，例如 designer、reviewer、security auditor、test engineer。 | 否 |
+| `dev-agent/references/` | 通用 rubric、checklist、编排原则、设计产物规则、Figma handoff 规则。 | 否 |
+| `dev-agent/templates/project/` | `init` / `migrate` 渲染到 `work/<project>/` 的项目模板。 | 否 |
+| `dev-agent/lib/dev-flow/` | `bin/dev-flow` 使用的 shell helper，例如 project type 和模板渲染。 | 通过 `bin/dev-flow` 执行 |
 | `bin/dev-flow` | 本地 CLI：检查 pack、初始化项目、维护状态、检查宿主机环境合同、执行门禁、打包/安装 adapter。 | 是 |
 | `tests/dev-flow-smoke.sh` | CLI、模板、门禁和 adapter 假设的回归 smoke test。 | 是 |
 | `work/<project>/` | 项目运行状态、产物、源码、review 和 launch 证据。默认被 git 忽略。 | 取决于具体项目 |
@@ -63,7 +63,7 @@ flowchart TD
    skill files、最小上下文、必需产物、blockers、gate 和通过后的 `phase`
    命令。
 4. 按 brief 和 `work/<project>/.dev-flow/context.md` 只加载当前阶段需要的上下文。
-5. 读取对应 command：`agent-skills/commands/<name>.md`。
+5. 读取对应 command：`dev-agent/commands/<name>.md`。
 6. 按 command 中的说明调用对应 skill 或组合 skill。
 7. 将产物写入 `work/<project>/` 下对应目录。
 8. 运行对应 gate，例如 `verify-phase`、`design-check`、`figma-check`、
@@ -88,18 +88,18 @@ idea -> pm -> agent -> spec -> design -> plan -> build -> test -> review -> ship
 
 | 阶段 | 主 command | 主 skill | 主要输出 |
 |---|---|---|---|
-| `idea` | `agent-skills/commands/idea.md` | `idea-refine` | `ideas/idea-brief.md` |
-| `pm` | `agent-skills/commands/pm.md` | `pm-flow` | `product/PRD.md`、`USER_STORIES.md`、`ACCEPTANCE.md`、`METRICS.md` |
-| `agent` | `agent-skills/commands/agent.md` | `agent-flow` | `agent/AGENT_SPEC.md`、`WORKFLOW.md`、tools、prompts、evals、ops |
-| `spec` | `agent-skills/commands/spec.md` | `spec-driven-development` | `specs/SPEC.md` |
-| `design` | `agent-skills/commands/design.md` | `design-flow` | `DESIGN.md`、`VISUAL_SYSTEM.md`、`SCREEN_ACCEPTANCE.md`、`DESIGN_ARTIFACTS.md`、AI image HTML companions、approved assets |
-| `figma-design` | `agent-skills/commands/figma-design.md` | Figma plugin skills when available | Figma screen frames、`design/approved/screens/` 导出、`FIGMA_HANDOFF.md` |
-| `figma-library` | `agent-skills/commands/figma-library.md` | Figma plugin skills when available | Figma tokens/components、`design/approved/components/` 导出、`FIGMA_HANDOFF.md` |
-| `plan` | `agent-skills/commands/plan.md` | `planning-and-task-breakdown` | `tasks/PLAN.md`、`tasks/IMPLEMENTATION_TRACE.md`、PDCA Plan |
-| `build` | `agent-skills/commands/build.md` | `incremental-implementation`、`test-driven-development` | `apps/` 或 `packages/` 下源码、PDCA Do |
-| `test` | `agent-skills/commands/test.md` | `test-driven-development` | 验证证据、PDCA Check |
-| `review` | `agent-skills/commands/review.md` | `code-review-and-quality` | `reviews/REVIEW.md` |
-| `ship` | `agent-skills/commands/ship.md` | `shipping-and-launch` | `ship/LAUNCH.md`、PDCA Act、go/no-go 决策 |
+| `idea` | `dev-agent/commands/idea.md` | `idea-refine` | `ideas/idea-brief.md` |
+| `pm` | `dev-agent/commands/pm.md` | `pm-flow` | `product/PRD.md`、`USER_STORIES.md`、`ACCEPTANCE.md`、`METRICS.md` |
+| `agent` | `dev-agent/commands/agent.md` | `agent-flow` | `agent/AGENT_SPEC.md`、`WORKFLOW.md`、tools、prompts、evals、ops |
+| `spec` | `dev-agent/commands/spec.md` | `spec-driven-development` | `specs/SPEC.md` |
+| `design` | `dev-agent/commands/design.md` | `design-flow` | `DESIGN.md`、`VISUAL_SYSTEM.md`、`SCREEN_ACCEPTANCE.md`、`DESIGN_ARTIFACTS.md`、AI image HTML companions、approved assets |
+| `figma-design` | `dev-agent/commands/figma-design.md` | Figma plugin skills when available | Figma screen frames、`design/approved/screens/` 导出、`FIGMA_HANDOFF.md` |
+| `figma-library` | `dev-agent/commands/figma-library.md` | Figma plugin skills when available | Figma tokens/components、`design/approved/components/` 导出、`FIGMA_HANDOFF.md` |
+| `plan` | `dev-agent/commands/plan.md` | `planning-and-task-breakdown` | `tasks/PLAN.md`、`tasks/IMPLEMENTATION_TRACE.md`、PDCA Plan |
+| `build` | `dev-agent/commands/build.md` | `incremental-implementation`、`test-driven-development` | `apps/` 或 `packages/` 下源码、PDCA Do |
+| `test` | `dev-agent/commands/test.md` | `test-driven-development` | 验证证据、PDCA Check |
+| `review` | `dev-agent/commands/review.md` | `code-review-and-quality` | `reviews/REVIEW.md` |
+| `ship` | `dev-agent/commands/ship.md` | `shipping-and-launch` | `ship/LAUNCH.md`、PDCA Act、go/no-go 决策 |
 
 `figma-design` 和 `figma-library` 是 design 阶段内的子流程，不是
 `bin/dev-flow phase` 的状态机阶段。
@@ -107,8 +107,8 @@ idea -> pm -> agent -> spec -> design -> plan -> build -> test -> review -> ship
 Native 入口是现有 command 的统一路由层：
 
 - `/dev agent flow <flow-name> [project-name]` 读取 manifest，再进入对应
-  `agent-skills/commands/<flow-name>.md`。
-- `/dev agent role <role-name>` 读取 manifest，再进入对应 `agent-skills/agents/*.md`。
+  `dev-agent/commands/<flow-name>.md`。
+- `/dev agent role <role-name>` 读取 manifest，再进入对应 `dev-agent/agents/*.md`。
 - `/dev agent next <project-name>` 包装 `bin/dev-flow status` 和 `bin/dev-flow next`。
 - `/dev agent check <gate-name> <project-name>` 包装现有 executable gates。
 - `/dev-agent <action> ...` 是 `/dev agent <action> ...` 的兼容别名。
@@ -161,9 +161,9 @@ sequenceDiagram
   participant User as 用户
   participant Agent as Agent
   participant AGENTS as AGENTS.md
-  participant Command as "agent-skills/commands/*.md"
-  participant Skill as "agent-skills/skills/*/SKILL.md"
-  participant Persona as "agent-skills/agents/*.md"
+  participant Command as "dev-agent/commands/*.md"
+  participant Skill as "dev-agent/skills/*/SKILL.md"
+  participant Persona as "dev-agent/agents/*.md"
   participant DevFlow as bin/dev-flow
   participant Work as "work/<project>/"
 
@@ -210,15 +210,15 @@ incremental-implementation`。
 
 ## Persona 使用规则
 
-Persona 位于 `agent-skills/agents/`。
+Persona 位于 `dev-agent/agents/`。
 
 | Persona | 职责 | 典型入口 |
 |---|---|---|
 | `product-designer` | UX、视觉系统、screen acceptance、参考输入、approved design assets、Figma handoff | 直接调用或 design 阶段 |
 | `ui-quality-reviewer` | 视觉对比、functional QA、monkey testing、exception screenshot 规则 | UI 实现后的 QA |
-| `code-reviewer` | correctness、readability、architecture、security、performance review | `/review` 或 `/ship` |
-| `security-auditor` | 安全审计和 threat analysis | 安全敏感变更或 `/ship` |
-| `test-engineer` | 测试策略、coverage、Prove-It 测试 | `/test` 或 `/ship` |
+| `code-reviewer` | correctness、readability、architecture、security、performance review | `/dev agent role code-reviewer`、review 或 ship 阶段 |
+| `security-auditor` | 安全审计和 threat analysis | `/dev agent role security-auditor`、安全敏感变更或 ship 阶段 |
+| `test-engineer` | 测试策略、coverage、Prove-It 测试 | `/dev agent role test-engineer`、test 或 ship 阶段 |
 
 Persona 不调用其他 persona。组合由用户、slash command 或主 agent 完成。当前推荐的
 fan-out 模式只用于互相独立的 review pass，例如 ship 阶段并行使用
@@ -328,11 +328,11 @@ Python project file 或项目专用 virtual environment。构建输出、截图�
 
 ## Adapter 关系
 
-Adapter 源文件位于 `agent-skills/` 内：
+Adapter 源文件位于 `dev-agent/` 内：
 
-- `agent-skills/commands/`：host-neutral command prompt。
-- `agent-skills/.claude/commands/`：Claude Code command 文件。
-- `agent-skills/.gemini/commands/`：Gemini CLI command 文件。
+- `dev-agent/commands/`：host-neutral command prompt。
+- `dev-agent/.claude/commands/`：Claude Code command 文件。
+- `dev-agent/.gemini/commands/`：Gemini CLI command 文件。
 
 仓库根目录生成的 `.codex/`、`.claude/`、`.gemini/`、`.openclaw/`、
 `.opencode/` 是 install output，默认被忽略。需要时用
@@ -363,11 +363,11 @@ Adapter 源文件位于 `agent-skills/` 内：
 
 新增一个 lifecycle 能力时，按这个顺序做：
 
-1. 在 `agent-skills/skills/<name>/SKILL.md` 新增或更新 skill。
-2. 在 `agent-skills/commands/<command>.md` 新增 command prompt。
-3. 如需原生命令，先更新 canonical `agent-skills/commands/<command>.md`，再同步
-   或生成 `agent-skills/.claude/commands/` 和
-   `agent-skills/.gemini/commands/`，不要只改 adapter 副本。
+1. 在 `dev-agent/skills/<name>/SKILL.md` 新增或更新 skill。
+2. 在 `dev-agent/commands/<command>.md` 新增 command prompt。
+3. 如需原生命令，先更新 canonical `dev-agent/commands/<command>.md`，再同步
+   或生成 `dev-agent/.claude/commands/` 和
+   `dev-agent/.gemini/commands/`，不要只改 adapter 副本。
 4. 如果希望 `bin/dev-flow show <alias>` 能解析新 alias，更新 `bin/dev-flow`
    中的 `skill_name()`。
 5. 只有当新能力需要机器可验证产物时，才在 `bin/dev-flow` 中增加模板或 gate。

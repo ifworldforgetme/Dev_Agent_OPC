@@ -11,11 +11,11 @@
 
 ```mermaid
 flowchart TD
-  A["AGENTS.md\nworkspace router"] --> C["agent-skills/commands/*.md\nphase entry prompts"]
-  C --> S["agent-skills/skills/*/SKILL.md\ncanonical workflows"]
-  C --> P["agent-skills/agents/*.md\nspecialist personas"]
-  S --> R["agent-skills/references/*.md\nrubrics and contracts"]
-  S --> T["agent-skills/templates/project/*.md\nwork project templates"]
+  A["AGENTS.md\nworkspace router"] --> C["dev-agent/commands/*.md\nphase entry prompts"]
+  C --> S["dev-agent/skills/*/SKILL.md\ncanonical workflows"]
+  C --> P["dev-agent/agents/*.md\nspecialist personas"]
+  S --> R["dev-agent/references/*.md\nrubrics and contracts"]
+  S --> T["dev-agent/templates/project/*.md\nwork project templates"]
   T --> W["work/<project>/ artifacts"]
   W --> G["bin/dev-flow gates"]
   G --> C
@@ -24,12 +24,12 @@ flowchart TD
 | Layer | Current role | Keep as source of truth? | Simplification stance |
 |---|---|---:|---|
 | `AGENTS.md` | Workspace routing, lifecycle, hard local rules | Yes, but concise | Keep only non-negotiable local rules and command map. |
-| `agent-skills/commands/*.md` | Short phase entry prompts | Yes | Keep as thin wrappers. Avoid repeating long contracts. |
-| `agent-skills/skills/*/SKILL.md` | Canonical workflow behavior | Yes | Keep detailed workflow, but move reusable contracts into references. |
-| `agent-skills/agents/*.md` | Single-perspective personas | Yes | Keep role, scope, output. Avoid full artifact schemas. |
-| `agent-skills/references/*.md` | Shared contracts/checklists | Yes | Best place for formal design/QA/PDCA contracts. |
-| `agent-skills/templates/project/*.md` | Initial project artifact shape | Yes | Keep minimal schema and notes only. |
-| `agent-skills/.claude/commands/*`, `.gemini/commands/*` | Host adapter copies | No | Treat as generated or adapter-specific wrappers only. Current copies drift. |
+| `dev-agent/commands/*.md` | Short phase entry prompts | Yes | Keep as thin wrappers. Avoid repeating long contracts. |
+| `dev-agent/skills/*/SKILL.md` | Canonical workflow behavior | Yes | Keep detailed workflow, but move reusable contracts into references. |
+| `dev-agent/agents/*.md` | Single-perspective personas | Yes | Keep role, scope, output. Avoid full artifact schemas. |
+| `dev-agent/references/*.md` | Shared contracts/checklists | Yes | Best place for formal design/QA/PDCA contracts. |
+| `dev-agent/templates/project/*.md` | Initial project artifact shape | Yes | Keep minimal schema and notes only. |
+| `dev-agent/.claude/commands/*`, `.gemini/commands/*` | Host adapter copies | No | Treat as generated or adapter-specific wrappers only. Current copies drift. |
 | `DEV_FLOW.md`, `README.md`, `docs/*` | Human docs and maintainer maps | No for runtime behavior | Describe, do not duplicate enforcement wording. |
 
 ## Current Personas
@@ -52,43 +52,48 @@ The same design contract appears in:
 
 - `AGENTS.md`
 - `DEV_FLOW.md`
-- `agent-skills/commands/design.md`
-- `agent-skills/commands/build.md`
-- `agent-skills/commands/ui.md`
-- `agent-skills/skills/design-flow/SKILL.md`
-- `agent-skills/skills/frontend-ui-engineering/SKILL.md`
-- `agent-skills/agents/product-designer.md`
-- `agent-skills/templates/project/reference-intake.md`
-- `agent-skills/templates/project/design-artifacts.md`
-- `agent-skills/templates/project/quality-gates.md`
-- `agent-skills/references/design-artifacts.md`
+- `dev-agent/commands/design.md`
+- `dev-agent/commands/build.md`
+- `dev-agent/commands/ui.md`
+- `dev-agent/skills/design-flow/SKILL.md`
+- `dev-agent/skills/frontend-ui-engineering/SKILL.md`
+- `dev-agent/agents/product-designer.md`
+- `dev-agent/templates/project/reference-intake.md`
+- `dev-agent/templates/project/design-artifacts.md`
+- `dev-agent/templates/project/quality-gates.md`
+- `dev-agent/references/design-artifacts.md`
 
 This was useful while hardening the design workflow, but it now creates drift risk. The SVG distinction fix already showed the problem: every new nuance must be propagated across many files.
 
 Recommended target:
 
-- Put the full formal design source contract only in `agent-skills/references/design-artifacts.md`.
+- Put the full formal design source contract only in `dev-agent/references/design-artifacts.md`.
 - Let `design-flow` say: load that reference and satisfy its contract.
 - Let `commands/design.md`, `commands/build.md`, and `commands/ui.md` use short gate language only.
 - Let templates show expected tables without restating every prohibition.
 
-### 2. Host Adapter Commands Have Drifted
+### 2. Host Adapter Commands Need Parity Guards
 
-`agent-skills/.claude/commands/*.md` and `agent-skills/.gemini/commands/*.toml` are not aligned with `agent-skills/commands/*.md`.
+`dev-agent/commands/*.md` is the canonical command surface. Host adapter files
+under `dev-agent/.claude/commands/*.md` and
+`dev-agent/.gemini/commands/*.toml` should expose the same command names and
+behavior unless a host-specific format requires small syntax changes.
 
-Examples:
+Previously observed drift included:
 
 - Some adapter design commands still mention broader source wording such as manual design-system comps.
 - Some adapter design commands still describe cut assets as bitmap-only and forbid SVG cut assets.
 - `ship` adapter commands contain long host-specific orchestration text that is not mirrored in the neutral command.
 
-This is the clearest logic risk. An agent using the adapter command can follow stale rules even when the canonical command has been fixed.
+The critical logic risk is a host adapter following stale rules even when the
+canonical command has been fixed.
 
 Recommended target:
 
-- Treat `agent-skills/commands/*.md` as canonical.
-- Generate adapter commands from canonical content plus a small host-specific preface.
-- If generation is not implemented yet, manually sync only the stale adapter files as a short-term repair.
+- Treat `dev-agent/commands/*.md` as canonical.
+- Keep adapter command names in parity with canonical command names.
+- Keep `tests/dev-flow-smoke.sh` parity checks active so missing or extra
+  adapter commands fail before publishing.
 
 ### 3. Commands Should Be Thin
 
@@ -160,12 +165,12 @@ Use this hierarchy to reduce conflict:
 | Rule type | Authoritative location | Other files should do |
 |---|---|---|
 | Lifecycle order | `AGENTS.md`, `DEV_FLOW.md`, `bin/dev-flow next` | Link or summarize. |
-| Phase workflow | `agent-skills/skills/*/SKILL.md` | Commands invoke it. |
-| Artifact schema | `agent-skills/templates/project/*.md` | Skills reference it. |
-| Formal design source contract | `agent-skills/references/design-artifacts.md` + `bin/dev-flow asset-check` | Mention gate, avoid restating full list. |
-| Figma contract | `agent-skills/references/figma-handoff.md` + `bin/dev-flow figma-check` | Mention when to use. |
-| QA scoring | `agent-skills/references/visual-qa-rubric.md` + `bin/dev-flow qa-check` | Mention score threshold. |
-| PDCA contract | `agent-skills/references/pdca-delivery-loop.md` + `bin/dev-flow pdca-check` | Mention required update. |
+| Phase workflow | `dev-agent/skills/*/SKILL.md` | Commands invoke it. |
+| Artifact schema | `dev-agent/templates/project/*.md` | Skills reference it. |
+| Formal design source contract | `dev-agent/references/design-artifacts.md` + `bin/dev-flow asset-check` | Mention gate, avoid restating full list. |
+| Figma contract | `dev-agent/references/figma-handoff.md` + `bin/dev-flow figma-check` | Mention when to use. |
+| QA scoring | `dev-agent/references/visual-qa-rubric.md` + `bin/dev-flow qa-check` | Mention score threshold. |
+| PDCA contract | `dev-agent/references/pdca-delivery-loop.md` + `bin/dev-flow pdca-check` | Mention required update. |
 | Host adapter syntax | generated adapter files | Never diverge in workflow logic. |
 
 ## Four-Principle Fit
@@ -233,7 +238,7 @@ Recommended improvement:
 
 Create or update a short maintainer note that says:
 
-- `agent-skills/commands` are canonical command prompts.
+- `dev-agent/commands` are canonical command prompts.
 - `.claude` and `.gemini` command files are adapters.
 - Design source contract lives in `references/design-artifacts.md`.
 - Figma contract lives in `references/figma-handoff.md`.
@@ -243,13 +248,15 @@ Success standard:
 
 - A future change to SVG/Figma/imagegen rules has one obvious source file to edit.
 
-### Task 2: Sync or Generate Adapter Commands
+### Task 2: Keep Adapter Commands In Sync
 
-Fix stale `.claude` and `.gemini` command files, or add a generator that renders them from `agent-skills/commands`.
+Keep `.claude` and `.gemini` command files aligned with `dev-agent/commands`,
+or add a generator that renders them from the canonical command set.
 
 Success standard:
 
 - No adapter command contains stale design source wording.
+- Adapter command filenames match the canonical command set.
 - SVG element assets under `design/cut-assets/` are allowed consistently.
 - `manual-design` / `local-approved` are not reintroduced.
 
@@ -338,12 +345,12 @@ their gates:
 - `frontend-ui-engineering` is now an implementation contract: it owns
   preflight checks, implementation trace usage, approved asset handling,
   accessibility, batch completion, and QA evidence.
-- Detailed schemas stay in `agent-skills/templates/project/`.
-- Formal source rules stay in `agent-skills/references/design-artifacts.md` and
+- Detailed schemas stay in `dev-agent/templates/project/`.
+- Formal source rules stay in `dev-agent/references/design-artifacts.md` and
   `bin/dev-flow asset-check/design-check`.
-- Figma handoff rules stay in `agent-skills/references/figma-handoff.md` and
+- Figma handoff rules stay in `dev-agent/references/figma-handoff.md` and
   `bin/dev-flow figma-check`.
-- Visual scoring detail stays in `agent-skills/references/visual-qa-rubric.md`
+- Visual scoring detail stays in `dev-agent/references/visual-qa-rubric.md`
   and `bin/dev-flow qa-check`.
 
 To keep the reduction durable, `tests/dev-flow-smoke.sh` now includes line

@@ -1,0 +1,18 @@
+{
+  "name": "dev-agent-opc-runtime",
+  "description": "Dev Agent OPC runtime for idea, spec, design, plan, build, test, review, and ship workflows.",
+  "version": "0.5.0",
+  "author": {
+    "name": "Kevin KE / laoke.ai"
+  },
+  "license": "MIT",
+  "commands": "./.claude/commands",
+  "skills": "./skills",
+  "agents": [
+    "./agents/code-reviewer.md",
+    "./agents/product-designer.md",
+    "./agents/security-auditor.md",
+    "./agents/test-engineer.md",
+    "./agents/ui-quality-reviewer.md"
+  ]
+}
