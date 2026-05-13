@@ -22,8 +22,8 @@ Usage:
   bin/dev-flow manifest
   bin/dev-flow show <alias-or-skill>
   bin/dev-flow path <alias-or-skill>
-  bin/dev-flow command <opc-flow|opc-role|opc-next|opc-check|idea|pm|agent|spec|design|figma-design|figma-library|plan|build|test|review|ship|debug|ui|api|security|code-simplify>
-  bin/dev-flow agent <opc-code-reviewer|opc-product-designer|opc-test-engineer|opc-security-auditor|opc-ui-quality-reviewer>
+  bin/dev-flow command <dev|dev-agent|idea|pm|agent|spec|design|figma-design|figma-library|plan|build|test|review|ship|debug|ui|api|security|code-simplify>
+  bin/dev-flow agent <code-reviewer|product-designer|test-engineer|security-auditor|ui-quality-reviewer>
   bin/dev-flow refs
   bin/dev-flow install <codex|claude-code|gemini|openclaw|opencode> [--scope project|user] [--dest path] [--mode native|full]
   bin/dev-flow uninstall <codex|claude-code|gemini|openclaw|opencode> [--scope project|user] [--dest path]
@@ -2280,7 +2280,7 @@ copy_runtime_package() {
   cp "$ROOT/DEV_FLOW.md" "$target/DEV_FLOW.md"
   cp "$ROOT/README.md" "$target/README.md"
   cp "$ROOT/LICENSE" "$target/LICENSE"
-  cp "$PACK/dev-agent-opc.manifest.json" "$target/agent-skills/dev-agent-opc.manifest.json"
+  cp "$PACK/dev-agent.manifest.json" "$target/agent-skills/dev-agent.manifest.json"
   cp "$ROOT/bin/dev-flow" "$target/bin/dev-flow"
   chmod +x "$target/bin/dev-flow"
   cp "$ROOT/tests/dev-flow-smoke.sh" "$target/tests/dev-flow-smoke.sh"
@@ -2324,8 +2324,8 @@ copy_reference_dirs() {
     mkdir -p "$target/references"
     cp -R "$PACK/references/." "$target/references/"
   fi
-  if [[ -f "$PACK/dev-agent-opc.manifest.json" ]]; then
-    cp "$PACK/dev-agent-opc.manifest.json" "$target/dev-agent-opc.manifest.json"
+  if [[ -f "$PACK/dev-agent.manifest.json" ]]; then
+    cp "$PACK/dev-agent.manifest.json" "$target/dev-agent.manifest.json"
   fi
 }
 
@@ -2340,17 +2340,16 @@ copy_command_dirs() {
 copy_native_command_dirs() {
   local target="$1"
   mkdir -p "$target"
-  if [[ -d "$PACK/commands" ]]; then
-    find "$PACK/commands" -maxdepth 1 -type f -name 'opc-*.md' -exec cp {} "$target" \;
-  fi
+  [[ -f "$PACK/commands/dev.md" ]] && cp "$PACK/commands/dev.md" "$target/dev.md"
+  [[ -f "$PACK/commands/dev-agent.md" ]] && cp "$PACK/commands/dev-agent.md" "$target/dev-agent.md"
 }
 
 copy_native_skill_dirs() {
   local target="$1"
   mkdir -p "$target"
-  if [[ -d "$PACK/native/skills/dev-agent-opc" ]]; then
-    mkdir -p "$target/dev-agent-opc"
-    cp -R "$PACK/native/skills/dev-agent-opc/." "$target/dev-agent-opc/"
+  if [[ -d "$PACK/native/skills/dev-agent" ]]; then
+    mkdir -p "$target/dev-agent"
+    cp -R "$PACK/native/skills/dev-agent/." "$target/dev-agent/"
   fi
 }
 
@@ -2371,9 +2370,8 @@ copy_claude_commands() {
 copy_native_claude_commands() {
   local target="$1"
   mkdir -p "$target"
-  if [[ -d "$PACK/.claude/commands" ]]; then
-    find "$PACK/.claude/commands" -maxdepth 1 -type f -name 'opc-*.md' -exec cp {} "$target" \;
-  fi
+  [[ -f "$PACK/.claude/commands/dev.md" ]] && cp "$PACK/.claude/commands/dev.md" "$target/dev.md"
+  [[ -f "$PACK/.claude/commands/dev-agent.md" ]] && cp "$PACK/.claude/commands/dev-agent.md" "$target/dev-agent.md"
 }
 
 copy_gemini_commands() {
@@ -2387,9 +2385,8 @@ copy_gemini_commands() {
 copy_native_gemini_commands() {
   local target="$1"
   mkdir -p "$target"
-  if [[ -d "$PACK/.gemini/commands" ]]; then
-    find "$PACK/.gemini/commands" -maxdepth 1 -type f -name 'opc-*.toml' -exec cp {} "$target" \;
-  fi
+  [[ -f "$PACK/.gemini/commands/dev.toml" ]] && cp "$PACK/.gemini/commands/dev.toml" "$target/dev.toml"
+  [[ -f "$PACK/.gemini/commands/dev-agent.toml" ]] && cp "$PACK/.gemini/commands/dev-agent.toml" "$target/dev-agent.toml"
 }
 
 embed_shared_references() {
@@ -2596,12 +2593,13 @@ install_adapter() {
       ;;
   esac
 
-  copy_runtime_package "$dest/dev-agent-opc-runtime"
+  remove_legacy_native_files "$dest"
+  copy_runtime_package "$dest/dev-agent-runtime"
   clean_metadata "$dest"
   echo "Installed $target adapter under $dest"
   echo "Scope: $scope"
   echo "Mode: $mode"
-  echo "Runtime: $dest/dev-agent-opc-runtime"
+  echo "Runtime: $dest/dev-agent-runtime"
 }
 
 remove_installed_path() {
@@ -2610,6 +2608,18 @@ remove_installed_path() {
     rm -rf "$path"
     echo "Removed $path"
   fi
+}
+
+remove_legacy_native_files() {
+  local target="$1"
+  local name
+  for name in opc-flow opc-role opc-next opc-check; do
+    remove_installed_path "$target/commands/$name.md"
+    remove_installed_path "$target/commands/$name.toml"
+  done
+  remove_installed_path "$target/skills/dev-agent-opc"
+  remove_installed_path "$target/dev-agent-opc.manifest.json"
+  remove_installed_path "$target/dev-agent-opc-runtime"
 }
 
 remove_matching_file() {
@@ -2654,7 +2664,8 @@ remove_dev_flow_files() {
       remove_matching_dir_by_skill "$file" "$target/skills/$name"
     done
   fi
-  remove_matching_dir_by_skill "$PACK/native/skills/dev-agent-opc" "$target/skills/dev-agent-opc"
+  remove_matching_dir_by_skill "$PACK/native/skills/dev-agent" "$target/skills/dev-agent"
+  remove_legacy_native_files "$target"
 
   if [[ -d "$command_source" ]]; then
     for file in "$command_source"/*."$command_ext"; do
@@ -2676,7 +2687,8 @@ remove_dev_flow_files() {
       remove_matching_file "$file" "$target/references/$(basename "$file")"
     done
   fi
-  remove_matching_file "$PACK/dev-agent-opc.manifest.json" "$target/dev-agent-opc.manifest.json"
+  remove_matching_file "$PACK/dev-agent.manifest.json" "$target/dev-agent.manifest.json"
+  remove_installed_path "$target/dev-agent-runtime"
   remove_installed_path "$target/dev-agent-opc-runtime"
   rmdir "$target/skills" "$target/commands" "$target/agents" "$target/references" 2>/dev/null || true
 }
@@ -2793,7 +2805,7 @@ case "$cmd" in
       | sort -u
     ;;
   manifest)
-    path="$PACK/dev-agent-opc.manifest.json"
+    path="$PACK/dev-agent.manifest.json"
     if [[ ! -f "$path" ]]; then
       echo "Missing manifest: $path" >&2
       exit 1
@@ -3481,8 +3493,8 @@ bin/dev-flow install openclaw --scope user
 bin/dev-flow install opencode --scope project
 ```
 
-Direct installs default to native mode: one `dev-agent-opc` top-level skill,
-`opc-*` commands, and a `dev-agent-opc-runtime/` folder under the destination.
+Direct installs default to native mode: one `dev-agent` top-level skill, `/dev agent`
+plus `/dev-agent` commands, and a `dev-agent-runtime/` folder under the destination.
 Use `--mode full` to install every internal workflow skill as a top-level skill.
 Uninstall with `bin/dev-flow uninstall <target> --scope <project|user>`.
 EOF

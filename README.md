@@ -18,7 +18,7 @@
 </p>
 
 <p align="center">
-  <a href="#发布日志"><img alt="Version" src="https://img.shields.io/badge/version-v0.4-blue.svg"></a>
+  <a href="#发布日志"><img alt="Version" src="https://img.shields.io/badge/version-v0.5-blue.svg"></a>
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-green.svg"></a>
   <a href="agent-skills/"><img alt="Agent Workflow" src="https://img.shields.io/badge/agent-workflow-111827.svg"></a>
   <img alt="Design Gated" src="https://img.shields.io/badge/design-gated-f97316.svg">
@@ -61,9 +61,10 @@ Dev Agent OPC 是一套给 AI Coding Agent 使用的自动化开发流程。它�
 #### 方式一：安装 Native Skill & Agent（推荐）
 
 如果你希望 Codex、Claude Code 等工具在不同项目里都能复用这套流程，推荐安装
-native 入口。默认 `native` 模式只暴露一个顶层技能 `dev-agent-opc` 和四个
-命名空间命令，内部的 `design-flow`、`pm-flow`、`code-review-and-quality` 等
-workflow skills 会保留在 `dev-agent-opc-runtime/` 中，不会污染全局技能列表。
+native 入口。默认 `native` 模式只暴露一个顶层技能 `dev-agent`、一个主入口
+`/dev agent` 和兼容别名 `/dev-agent`，内部的 `design-flow`、`pm-flow`、
+`code-review-and-quality` 等 workflow skills 会保留在 `dev-agent-runtime/`
+中，不会污染全局技能列表。
 
 首次安装：
 
@@ -88,11 +89,12 @@ bin/dev-flow install claude-code --scope user
 常用 native 入口：
 
 ```text
-/opc-flow design <project-name>
-/opc-flow pm <project-name>
-/opc-role opc-product-designer
-/opc-next <project-name>
-/opc-check ship-check <project-name>
+/dev agent flow design <project-name>
+/dev agent flow pm <project-name>
+/dev agent role product-designer
+/dev agent next <project-name>
+/dev agent check ship-check <project-name>
+/dev-agent flow design <project-name>
 ```
 
 更新已安装版本：
@@ -167,7 +169,7 @@ skills、agents 和 references。项目产物必须放在当前项目的 work/<p
 
 Dev Agent OPC 的价值不是“多几个提示词”，而是让 Agent 按交付链路自动推进：
 
-- **一键进入流程**：通过 `/opc-flow`、`/opc-next`、`/opc-check`、`/opc-role` 直接在模型 Agent 中调用工作流、角色和检查门禁。
+- **一键进入流程**：通过 `/dev agent` 直接在模型 Agent 中调用工作流、角色、下一步恢复和检查门禁；`/dev-agent` 保留为兼容别名。
 - **从想法到发布的连续管控**：把 `idea → spec → design → plan → build → test → review → ship` 串成清晰路径，减少 Agent 跳步、乱写代码或忘记验收。
 - **阶段产物可追踪**：每一步都有对应交付物，例如 PRD、SPEC、设计包、任务计划、测试记录、review 结论和 launch notes。
 - **自动化质量门禁**：`bin/dev-flow` 会检查阶段产物、设计资产、QA 记录、PDCA、发布准备和本地项目检查，避免只靠一句“完成了”。
@@ -187,11 +189,12 @@ Dev Agent OPC 的价值不是“多几个提示词”，而是让 Agent 按交�
 
 ### 与 agent-skills 的关系
 
-Dev Agent OPC 基于 Addy Osmani 的 [`agent-skills`](https://github.com/addyosmani/agent-skills)，保留其工程 skills、personas 和 references 作为底座，并在其上增加 native 安装、`opc-*` 命令入口、项目状态、质量门禁和面向交付的端到端流程。
+Dev Agent OPC 基于 Addy Osmani 的 [`agent-skills`](https://github.com/addyosmani/agent-skills)，保留其工程 skills、personas 和 references 作为底座，并在其上增加 native 安装、`dev-agent` 入口、项目状态、质量门禁和面向交付的端到端流程。
 
 ### 发布日志
 
-- `v0.4`：新增 native 安装方式，默认只暴露 `dev-agent-opc` 总技能和 `/opc-*` 命令，可直接在模型 Agent 中调用 flow、role、next 和 gate；内部 workflow skills 留在 runtime 中，避免全局技能列表混乱。
+- `v0.5`：native 入口改为用户可见的 `/dev agent`，底层稳定 ID 为 `dev-agent`，并保留 `/dev-agent` 作为兼容别名。
+- `v0.4`：新增 native 安装方式，默认只暴露总技能和命名空间命令，可直接在模型 Agent 中调用 flow、role、next 和 gate；内部 workflow skills 留在 runtime 中，避免全局技能列表混乱。
 - `v0.3`：增加宿主机环境合同、`env-check`、schema v3，以及 host SDK / project dependency / runtime artifact 的边界。
 - `v0.2`：增加结构化门禁、项目模板、runtime 打包、doctor/migrate、Figma/design 资产合约和更严格的 UI 交付流程。
 
@@ -226,9 +229,10 @@ It is more than a prompt pack that asks an agent to “write better code.” It 
 
 If you want to reuse Dev Agent OPC across Codex, Claude Code, and other agent
 hosts, install the native entrypoints. The default `native` mode exposes one
-top-level `dev-agent-opc` skill plus four namespaced commands. Internal workflow
-skills such as `design-flow`, `pm-flow`, and `code-review-and-quality` stay
-inside `dev-agent-opc-runtime/` instead of cluttering the global skill list.
+top-level `dev-agent` skill, the visible `/dev agent` entrypoint, and the
+`/dev-agent` compatibility alias. Internal workflow skills such as
+`design-flow`, `pm-flow`, and `code-review-and-quality` stay inside
+`dev-agent-runtime/` instead of cluttering the global skill list.
 
 First install:
 
@@ -253,11 +257,12 @@ Supported hosts: `codex`, `claude-code`, `gemini`, `openclaw`, `opencode`.
 Common native entrypoints:
 
 ```text
-/opc-flow design <project-name>
-/opc-flow pm <project-name>
-/opc-role opc-product-designer
-/opc-next <project-name>
-/opc-check ship-check <project-name>
+/dev agent flow design <project-name>
+/dev agent flow pm <project-name>
+/dev agent role product-designer
+/dev agent next <project-name>
+/dev agent check ship-check <project-name>
+/dev-agent flow design <project-name>
 ```
 
 Update an installed copy:
@@ -336,7 +341,7 @@ Project types: `ui`, `agent`, `api`, `library`, `docs`.
 Dev Agent OPC is not just more prompting. It gives agents an operating process
 for delivery:
 
-- **Native workflow entrypoints**: call flows, roles, next steps, and gates directly through `/opc-flow`, `/opc-role`, `/opc-next`, and `/opc-check`.
+- **Native workflow entrypoint**: call flows, roles, next steps, and gates directly through `/dev agent`; `/dev-agent` remains as a compatibility alias.
 - **End-to-end delivery control**: keep `idea → spec → design → plan → build → test → review → ship` moving in order, reducing skipped planning, random coding, and weak handoffs.
 - **Traceable phase artifacts**: each step has concrete outputs such as PRDs, specs, design packages, task plans, test evidence, review findings, and launch notes.
 - **Executable quality gates**: `bin/dev-flow` checks phase outputs, design assets, QA evidence, PDCA records, release readiness, and project-local checks.
@@ -357,11 +362,12 @@ visual quality before implementation:
 
 ### Relationship To agent-skills
 
-Dev Agent OPC builds on Addy Osmani's [`agent-skills`](https://github.com/addyosmani/agent-skills). It keeps that engineering skill foundation and adds native installation, `opc-*` commands, project state, executable gates, and an end-to-end delivery operating process.
+Dev Agent OPC builds on Addy Osmani's [`agent-skills`](https://github.com/addyosmani/agent-skills). It keeps that engineering skill foundation and adds native installation, the `dev-agent` entrypoint, project state, executable gates, and an end-to-end delivery operating process.
 
 ### Release Notes
 
-- `v0.4`: Adds native installation with one `dev-agent-opc` top-level skill and `/opc-*` commands, so model agents can call flows, roles, next steps, and gates directly. Internal workflow skills stay inside the runtime to keep the global skill list clean.
+- `v0.5`: Renames the native entrypoint to the visible `/dev agent`, uses `dev-agent` as the stable ID, and keeps `/dev-agent` as a compatibility alias.
+- `v0.4`: Adds native installation with one top-level skill and namespaced commands, so model agents can call flows, roles, next steps, and gates directly. Internal workflow skills stay inside the runtime to keep the global skill list clean.
 - `v0.3`: Adds the host environment contract, `env-check`, schema v3, and clear boundaries between host SDKs, project dependencies, and runtime artifacts.
 - `v0.2`: Adds structured gates, project templates, runtime packaging, doctor/migrate checks, Figma/design asset contracts, and stricter UI delivery.
 

@@ -8,7 +8,7 @@ direct adapter installation.
 
 - `agent-skills/`: canonical workflow pack with skills, agents, commands, references, and platform docs.
 - `agent-skills/commands/`: platform-neutral stage prompts used by Codex, OpenClaw, OpenCode, and other hosts when native slash commands are unavailable.
-- `agent-skills/dev-agent-opc.manifest.json`: native flow, role, and gate index used by `/opc-flow`, `/opc-role`, `/opc-next`, and `/opc-check`.
+- `agent-skills/dev-agent.manifest.json`: native flow, role, and gate index used by `/dev agent` and `/dev-agent`.
 - `agent-skills/.claude/commands/`: Claude Code slash command files.
 - `agent-skills/.gemini/commands/`: Gemini CLI command files.
 - `AGENTS.md`: local instruction layer telling agents how to use the pack here.
@@ -39,16 +39,18 @@ the host supports them:
 Slash command support is host-specific. If a host does not support custom slash
 commands, use the prompt alias or the installed command snippet content.
 
-Installed native adapters also expose four generic entrypoints:
+Installed native adapters expose one visible entrypoint and one compatibility
+alias:
 
 ```text
-/opc-flow <flow-name> [project-name]
-/opc-role <role-name> [task]
-/opc-next <project-name>
-/opc-check <gate-name> <project-name> [phase-or-options]
+/dev agent flow <flow-name> [project-name]
+/dev agent role <role-name> [task]
+/dev agent next <project-name>
+/dev agent check <gate-name> <project-name> [phase-or-options]
+/dev-agent <action> ...
 ```
 
-These route through `agent-skills/dev-agent-opc.manifest.json` and the existing
+These route through `agent-skills/dev-agent.manifest.json` and the existing
 command, skill, persona, and `bin/dev-flow` gate contracts. They are an entry
 surface over the current workflow pack, not a second workflow.
 
@@ -363,8 +365,9 @@ bin/dev-flow install openclaw --scope user
 bin/dev-flow install opencode --scope user
 ```
 
-The default install mode is `native`: install only the `dev-agent-opc` top-level
-skill, `opc-*` commands, and the runtime package. Use `--mode full` to also copy
+The default install mode is `native`: install only the `dev-agent` top-level
+skill, `/dev agent` plus `/dev-agent` commands, and the runtime package. Use
+`--mode full` to also copy
 every internal `agent-skills/skills/*` folder as a top-level skill.
 
 Use `--dest <path>` for staging, CI checks, or custom agent homes:
@@ -385,7 +388,7 @@ Default destinations:
 
 Installer behavior is additive: it creates or updates matching files, but it
 does not delete old custom files in the destination. Direct installs also copy a
-self-contained runtime to `dev-agent-opc-runtime/` under the target directory so
+self-contained runtime to `dev-agent-runtime/` under the target directory so
 installed commands can still reach `bin/dev-flow` gates when a project does not
 vendor this repository.
 

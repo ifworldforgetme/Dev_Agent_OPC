@@ -40,7 +40,7 @@ flowchart TD
 |---|---|---|
 | `AGENTS.md` | 当前 workspace 的 agent 指令层，定义生命周期、技能加载、角色、门禁和产物规则。 | 否 |
 | `DEV_FLOW.md` | 面向用户和维护者的 workflow 使用说明。 | 否 |
-| `agent-skills/dev-agent-opc.manifest.json` | native flow、role、gate 索引，供 `/opc-flow`、`/opc-role`、`/opc-next`、`/opc-check` 使用。 | 否 |
+| `agent-skills/dev-agent.manifest.json` | native flow、role、gate 索引，供 `/dev agent` 和 `/dev-agent` 使用。 | 否 |
 | `agent-skills/commands/` | 平台中立的 command prompt，例如 `design`、`build`、`figma-design`、`ship`。 | 否 |
 | `agent-skills/skills/` | Canonical `SKILL.md` 工作流，定义步骤、输出和退出条件。 | 否 |
 | `agent-skills/agents/` | 专家 persona prompt，例如 designer、reviewer、security auditor、test engineer。 | 否 |
@@ -106,11 +106,12 @@ idea -> pm -> agent -> spec -> design -> plan -> build -> test -> review -> ship
 
 Native 入口是现有 command 的统一路由层：
 
-- `/opc-flow <flow-name> [project-name]` 读取 manifest，再进入对应
+- `/dev agent flow <flow-name> [project-name]` 读取 manifest，再进入对应
   `agent-skills/commands/<flow-name>.md`。
-- `/opc-role <role-name>` 读取 manifest，再进入对应 `agent-skills/agents/*.md`。
-- `/opc-next <project-name>` 包装 `bin/dev-flow status` 和 `bin/dev-flow next`。
-- `/opc-check <gate-name> <project-name>` 包装现有 executable gates。
+- `/dev agent role <role-name>` 读取 manifest，再进入对应 `agent-skills/agents/*.md`。
+- `/dev agent next <project-name>` 包装 `bin/dev-flow status` 和 `bin/dev-flow next`。
+- `/dev agent check <gate-name> <project-name>` 包装现有 executable gates。
+- `/dev-agent <action> ...` 是 `/dev agent <action> ...` 的兼容别名。
 
 这些入口不新增第二套生命周期；它们只把已有 flow、persona 和 gate 做成更容易安装
 和调用的 native surface。
@@ -342,7 +343,7 @@ Adapter 源文件位于 `agent-skills/` 内：
 - Codex、Claude Code、Gemini、OpenClaw、OpenCode 的 rules prompt layer。
 - 包含 `bin/dev-flow`、模板、文档、smoke tests 的 runtime layer。
 
-`bin/dev-flow install ...` 也会在目标目录下写入 `dev-agent-opc-runtime/`，
+`bin/dev-flow install ...` 也会在目标目录下写入 `dev-agent-runtime/`，
 因此直接安装后的 native command 仍可找到可执行 gate。
 
 ## 人工 review 边界

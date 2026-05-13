@@ -1,14 +1,25 @@
 {
   "schemaVersion": 1,
-  "name": "dev-agent-opc",
-  "namespace": "opc",
-  "displayName": "Dev Agent OPC",
-  "description": "Native workflow entrypoints for lifecycle-driven software delivery on top of the existing agent-skills pack.",
+  "name": "dev-agent",
+  "stableId": "dev-agent",
+  "namespace": "dev-agent",
+  "displayName": "Dev Agent",
+  "userVisibleEntry": "/dev agent",
+  "aliases": ["/dev-agent"],
+  "description": "Native workflow entrypoint for lifecycle-driven software delivery on top of the existing agent-skills pack.",
   "entrypoints": {
-    "opc-flow": "agent-skills/commands/opc-flow.md",
-    "opc-role": "agent-skills/commands/opc-role.md",
-    "opc-next": "agent-skills/commands/opc-next.md",
-    "opc-check": "agent-skills/commands/opc-check.md"
+    "dev": "agent-skills/commands/dev.md",
+    "dev-agent": "agent-skills/commands/dev-agent.md",
+    "dev-flow": "agent-skills/commands/dev-flow.md",
+    "dev-role": "agent-skills/commands/dev-role.md",
+    "dev-next": "agent-skills/commands/dev-next.md",
+    "dev-check": "agent-skills/commands/dev-check.md"
+  },
+  "actions": {
+    "flow": "Route to a lifecycle flow by name.",
+    "role": "Invoke a specialist role/persona by name.",
+    "next": "Recover the current project phase and next executable brief.",
+    "check": "Run an executable gate for the current project."
   },
   "flows": [
     { "name": "idea", "skill": "idea-refine", "command": "agent-skills/commands/idea.md", "phase": "idea", "defaultGate": "bin/dev-flow verify-phase <project> idea" },
@@ -30,11 +41,11 @@
     { "name": "code-simplify", "skill": "code-simplification", "command": "agent-skills/commands/code-simplify.md", "phase": "build", "defaultGate": "bin/dev-flow check <project>" }
   ],
   "roles": [
-    { "name": "opc-code-reviewer", "persona": "code-reviewer", "path": "agent-skills/agents/code-reviewer.md", "bestFor": "Five-axis code review before merge or ship." },
-    { "name": "opc-product-designer", "persona": "product-designer", "path": "agent-skills/agents/product-designer.md", "bestFor": "UX, visual system, references, and screen acceptance." },
-    { "name": "opc-security-auditor", "persona": "security-auditor", "path": "agent-skills/agents/security-auditor.md", "bestFor": "Threat analysis and security-sensitive changes." },
-    { "name": "opc-test-engineer", "persona": "test-engineer", "path": "agent-skills/agents/test-engineer.md", "bestFor": "Test strategy, gaps, coverage, and verification evidence." },
-    { "name": "opc-ui-quality-reviewer", "persona": "ui-quality-reviewer", "path": "agent-skills/agents/ui-quality-reviewer.md", "bestFor": "Functional QA, monkey testing, and visual comparison review." }
+    { "name": "code-reviewer", "persona": "code-reviewer", "path": "agent-skills/agents/code-reviewer.md", "bestFor": "Five-axis code review before merge or ship." },
+    { "name": "product-designer", "persona": "product-designer", "path": "agent-skills/agents/product-designer.md", "bestFor": "UX, visual system, references, and screen acceptance." },
+    { "name": "security-auditor", "persona": "security-auditor", "path": "agent-skills/agents/security-auditor.md", "bestFor": "Threat analysis and security-sensitive changes." },
+    { "name": "test-engineer", "persona": "test-engineer", "path": "agent-skills/agents/test-engineer.md", "bestFor": "Test strategy, gaps, coverage, and verification evidence." },
+    { "name": "ui-quality-reviewer", "persona": "ui-quality-reviewer", "path": "agent-skills/agents/ui-quality-reviewer.md", "bestFor": "Functional QA, monkey testing, and visual comparison review." }
   ],
   "gates": [
     { "name": "verify-phase", "command": "bin/dev-flow verify-phase <project> <phase>" },

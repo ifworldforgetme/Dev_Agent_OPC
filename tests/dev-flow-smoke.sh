@@ -24,8 +24,8 @@ ENV_PROJECT="$ROOT/work/__${RUN_ID}_env"
 BAD_ENV="$ROOT/work/__${RUN_ID}_bad_env"
 LEGACY_PROJECT="$ROOT/work/__${RUN_ID}_legacy"
 BAD_VISUAL="$ROOT/work/__${RUN_ID}_bad_visual"
-ADAPTER_OUT="/private/tmp/dev-agent-opc-${RUN_ID}-adapters"
-INSTALL_DEST="/private/tmp/dev-agent-opc-${RUN_ID}-install"
+ADAPTER_OUT="/private/tmp/dev-agent-${RUN_ID}-adapters"
+INSTALL_DEST="/private/tmp/dev-agent-${RUN_ID}-install"
 UI_BLOCK_OUT="/private/tmp/dev-flow-${RUN_ID}-ui-block.out"
 INVALID_OUT="/private/tmp/dev-flow-${RUN_ID}-invalid.out"
 EXCEPTION_OUT="/private/tmp/dev-flow-${RUN_ID}-exception.out"
@@ -108,17 +108,17 @@ cd "$ROOT"
 bash -n bin/dev-flow
 bin/dev-flow list >/dev/null
 bin/dev-flow manifest >/dev/null
-bin/dev-flow command opc-flow >/dev/null
-bin/dev-flow command opc-role >/dev/null
-bin/dev-flow command opc-next >/dev/null
-bin/dev-flow command opc-check >/dev/null
+bin/dev-flow command dev >/dev/null
+bin/dev-flow command dev-agent >/dev/null
+bin/dev-flow agent code-reviewer >/dev/null
 bin/dev-flow agent opc-code-reviewer >/dev/null
 bin/dev-flow command figma-design >/dev/null
 bin/dev-flow command figma-library >/dev/null
-grep -q '"namespace": "opc"' agent-skills/dev-agent-opc.manifest.json
-grep -q '"opc-flow"' agent-skills/dev-agent-opc.manifest.json
-grep -q '"roles"' agent-skills/dev-agent-opc.manifest.json
-grep -q '"gates"' agent-skills/dev-agent-opc.manifest.json
+grep -q '"stableId": "dev-agent"' agent-skills/dev-agent.manifest.json
+grep -q '"userVisibleEntry": "/dev agent"' agent-skills/dev-agent.manifest.json
+grep -q '"/dev-agent"' agent-skills/dev-agent.manifest.json
+grep -q '"roles"' agent-skills/dev-agent.manifest.json
+grep -q '"gates"' agent-skills/dev-agent.manifest.json
 
 if rg -n 'manual design-system comps|another explicitly approved source|manual-design|local-approved|approved design assets or cut assets|no bitmap cut assets|bitmap cut assets are needed|as approved design assets or cut assets' agent-skills/.claude/commands agent-skills/.gemini/commands >/dev/null; then
   rg -n 'manual design-system comps|another explicitly approved source|manual-design|local-approved|approved design assets or cut assets|no bitmap cut assets|bitmap cut assets are needed|as approved design assets or cut assets' agent-skills/.claude/commands agent-skills/.gemini/commands >&2
@@ -606,34 +606,43 @@ bin/dev-flow pdca-check "$(basename "$DELEGATED")" >/dev/null
 bin/dev-flow ship-check "$(basename "$DELEGATED")" >/dev/null
 
 bin/dev-flow package-adapters "$ADAPTER_OUT" >/dev/null
-test -f "$ADAPTER_OUT/codex/commands/opc-flow.md"
-test -f "$ADAPTER_OUT/codex/commands/opc-role.md"
-test -f "$ADAPTER_OUT/claude-code/.claude/commands/opc-flow.md"
-test -f "$ADAPTER_OUT/gemini/dev-flow-quality/commands/opc-flow.toml"
-! test -e "$ADAPTER_OUT/codex/commands/flow.md"
-! test -e "$ADAPTER_OUT/claude-code/.claude/commands/flow.md"
-! test -e "$ADAPTER_OUT/gemini/dev-flow-quality/commands/flow.toml"
+test -f "$ADAPTER_OUT/codex/commands/dev.md"
+test -f "$ADAPTER_OUT/codex/commands/dev-agent.md"
+test -f "$ADAPTER_OUT/claude-code/.claude/commands/dev.md"
+test -f "$ADAPTER_OUT/claude-code/.claude/commands/dev-agent.md"
+test -f "$ADAPTER_OUT/gemini/dev-flow-quality/commands/dev.toml"
+test -f "$ADAPTER_OUT/gemini/dev-flow-quality/commands/dev-agent.toml"
+! test -e "$ADAPTER_OUT/codex/commands/opc-flow.md"
+! test -e "$ADAPTER_OUT/claude-code/.claude/commands/opc-flow.md"
+! test -e "$ADAPTER_OUT/gemini/dev-flow-quality/commands/opc-flow.toml"
 test -x "$ADAPTER_OUT/runtime/bin/dev-flow"
 test -f "$ADAPTER_OUT/runtime/AGENTS.md"
 test -f "$ADAPTER_OUT/runtime/DEV_FLOW.md"
-test -f "$ADAPTER_OUT/runtime/agent-skills/dev-agent-opc.manifest.json"
+test -f "$ADAPTER_OUT/runtime/agent-skills/dev-agent.manifest.json"
 test -f "$ADAPTER_OUT/runtime/tests/dev-flow-smoke.sh"
 test -d "$ADAPTER_OUT/runtime/agent-skills/templates/project"
 test -f "$ADAPTER_OUT/runtime/agent-skills/templates/project/host-requirements.md"
 ! find "$ADAPTER_OUT" -path '*/work/*' -o -path '*/dist/*' | grep -q .
 
+mkdir -p "$INSTALL_DEST/commands" "$INSTALL_DEST/skills/dev-agent-opc" "$INSTALL_DEST/dev-agent-opc-runtime/bin"
+touch "$INSTALL_DEST/commands/opc-flow.md" "$INSTALL_DEST/commands/opc-role.md" "$INSTALL_DEST/skills/dev-agent-opc/SKILL.md" "$INSTALL_DEST/dev-agent-opc-runtime/bin/dev-flow"
 bin/dev-flow install codex --scope user --dest "$INSTALL_DEST" >/dev/null
-test -f "$INSTALL_DEST/commands/opc-flow.md"
-test -f "$INSTALL_DEST/commands/opc-role.md"
-test -f "$INSTALL_DEST/skills/dev-agent-opc/SKILL.md"
+test -f "$INSTALL_DEST/commands/dev.md"
+test -f "$INSTALL_DEST/commands/dev-agent.md"
+test -f "$INSTALL_DEST/skills/dev-agent/SKILL.md"
 ! test -e "$INSTALL_DEST/skills/design-flow/SKILL.md"
 ! test -e "$INSTALL_DEST/commands/design.md"
-test -x "$INSTALL_DEST/dev-agent-opc-runtime/bin/dev-flow"
-test -f "$INSTALL_DEST/dev-agent-opc-runtime/agent-skills/dev-agent-opc.manifest.json"
-"$INSTALL_DEST/dev-agent-opc-runtime/bin/dev-flow" list >/dev/null
-bin/dev-flow uninstall codex --scope user --dest "$INSTALL_DEST" >/dev/null
 ! test -e "$INSTALL_DEST/commands/opc-flow.md"
+! test -e "$INSTALL_DEST/commands/opc-role.md"
 ! test -e "$INSTALL_DEST/skills/dev-agent-opc/SKILL.md"
 ! test -e "$INSTALL_DEST/dev-agent-opc-runtime"
+test -x "$INSTALL_DEST/dev-agent-runtime/bin/dev-flow"
+test -f "$INSTALL_DEST/dev-agent-runtime/agent-skills/dev-agent.manifest.json"
+"$INSTALL_DEST/dev-agent-runtime/bin/dev-flow" list >/dev/null
+bin/dev-flow uninstall codex --scope user --dest "$INSTALL_DEST" >/dev/null
+! test -e "$INSTALL_DEST/commands/dev.md"
+! test -e "$INSTALL_DEST/commands/dev-agent.md"
+! test -e "$INSTALL_DEST/skills/dev-agent/SKILL.md"
+! test -e "$INSTALL_DEST/dev-agent-runtime"
 
 echo "dev-flow smoke passed"
