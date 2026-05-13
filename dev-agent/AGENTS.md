@@ -34,16 +34,13 @@ in natural language.
 Map user intent to the smallest useful flow:
 
 - Idea clarification: `idea-refine`
-- Product scope, PRD, user stories, acceptance, or metrics: `pm-flow`
-- Agent behavior, tools, approvals, memory, operations, or evals: `agent-flow`
-- Requirements and technical specification: `spec-driven-development`
+- Product scope, PRD, user stories, acceptance, metrics, requirements,
+  technical specification, and agent runtime contracts:
+  `spec-driven-development`
 - Customer-facing UI, visual direction, references, or screen acceptance: `design-flow`
-- Implementation planning: `planning-and-task-breakdown`
-- Build slices: `incremental-implementation`
-- Test strategy or verification: `test-driven-development`
+- Build slices, lightweight task slicing, and local proof: `incremental-implementation`
 - Debugging or unexpected behavior: `debugging-and-error-recovery`
-- UI implementation and QA: `frontend-ui-engineering`
-- Code quality review: `code-review-and-quality`
+- UI implementation, optional QA, and quality review: `frontend-ui-engineering`
 - Security-sensitive work: `security-and-hardening`
 - Release readiness: `shipping-and-launch`
 
@@ -65,6 +62,12 @@ review across code, security, and test perspectives.
 - Keep workflow details inside skills and references, not command files.
 - Keep native entry descriptions user-facing and plain language.
 - Preserve design and QA gates for customer-facing UI.
+- Preserve design traceability: design must read idea/product/spec artifacts,
+  and each `SCREEN_ACCEPTANCE.md` screen or global UI surface needs a
+  `Requirement source:` line before UI build.
+- Preserve host requirements as early-recorded but late-blocking: record likely
+  needs during idea/spec/design, run `env-check` before current-slice
+  host-dependent build/test work or before ship.
 - Preserve `work/` as runtime output rather than reusable source.
 
 After command, installer, or runtime changes, run `tests/dev-flow-smoke.sh` from

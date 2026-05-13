@@ -29,6 +29,21 @@ machine or in the user's approved global tool/cache locations.
 |---|---|---|---|---|---|---|---|
 | None yet | host | none | `true` | no | none | satisfied | Add required host SDKs or permissions when project code needs them. |
 
+## Timing
+
+- Idea, product, spec, and design may record likely host needs, but they should
+  not run setup or block on missing SDKs unless that phase directly depends on
+  the tool.
+- Spec or Build should turn known platform and build assumptions into concrete rows.
+- Build and QA should mark a capability `Required: yes` only when the current
+  implementation slice depends on it, then run `bin/dev-flow env-check
+  {{PROJECT}}` before using that host capability.
+- Ship requires every release-scope host dependency to be satisfied or
+  explicitly recorded as a blocker.
+- Slow or permission-heavy setup can be handled by a separate environment-prep
+  pass that audits the host and asks before installing shared SDKs or starting
+  services.
+
 ## Common Examples
 
 | Capability | Scope | Required by | Verify command | Required | Permission | Status | Notes |

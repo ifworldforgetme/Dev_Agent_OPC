@@ -2,15 +2,25 @@
 description: Build or update a Figma component library for a project before UI implementation
 ---
 
-Use local flow: figma-library.
+Use this only when the project needs reusable tokens, component variants, or a
+durable design system. For one-off screens, prefer `figma-design`.
 
-Use this only when reusable tokens, component variants, or a durable design
-system are needed. When Figma tools are available, invoke `figma-use` and
-`figma-generate-library`, run discovery before writes, create tokens before
-components, validate each component, and export implementation-target boards as
-PNG/PDF under `design/approved/components/`.
+1. Read `work/<project-name>/design/VISUAL_SYSTEM.md`, `SCREEN_ACCEPTANCE.md`,
+   `DESIGN_ARTIFACTS.md`, `FIGMA_HANDOFF.md`, existing code components, styling
+   tokens, and required design contract inputs.
+2. If Figma tools are available, invoke the Figma plugin skills
+   `figma-use` and `figma-generate-library`. Follow the plugin workflow:
+   discovery first, tokens before components, small sequential Figma operations,
+   and validation after each component.
+3. Define the library scope before creating components: token collections,
+   text/effect styles, component list, variants, and what code component or
+   runtime asset each Figma component maps to.
+4. Export component boards and update `DESIGN_ARTIFACTS.md`,
+   `FIGMA_HANDOFF.md`, and runtime asset records according to
+   `dev-agent/references/design-artifacts.md` and
+   `dev-agent/references/figma-handoff.md`.
+5. Run `bin/dev-flow figma-check <project-name>` and
+   `bin/dev-flow design-check <project-name>`.
 
-Record Figma source and approved export mappings in `FIGMA_HANDOFF.md` and
-`DESIGN_ARTIFACTS.md`, then run `bin/dev-flow design-check <project-name>`.
-Use `figma-check` or `asset-check` separately only for focused library/handoff
-diagnostics or evidence.
+Do not create a component library solely to satisfy the design gate; the gate is
+already satisfied by valid approved screen assets.

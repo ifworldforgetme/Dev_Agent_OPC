@@ -122,7 +122,7 @@ Keep patterns and principles inline when under 50 lines.
 Reference other skills by name:
 
 ```markdown
-Follow the `test-driven-development` skill for writing tests.
+Follow the Build proof-first checklist for writing tests.
 If the build breaks, use the `debugging-and-error-recovery` skill.
 ```
 

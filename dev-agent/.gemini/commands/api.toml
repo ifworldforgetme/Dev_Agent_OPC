@@ -1,15 +1,2 @@
 description = "Design or review public APIs and module boundaries"
-
-prompt = """
-Invoke the api-and-interface-design skill.
-
-Use this before adding public routes, SDK surfaces, exported modules, or cross-service contracts:
-
-1. Identify callers, lifecycle, compatibility expectations, and failure modes.
-2. Define request, response, error, pagination, auth, and versioning behavior.
-3. Keep contracts narrow, typed, and easy to test.
-4. Add examples and verification commands.
-5. Update specs, docs, and tests for the public boundary.
-
-Do not expose a broad interface just to speed up internal implementation.
-"""
+prompt = "---\ndescription: Design or review public APIs and module boundaries\n---\n\nInvoke the `api-and-interface-design` skill.\n\nUse this before adding public routes, SDK surfaces, exported modules, or cross-service contracts:\n\n1. Identify callers, lifecycle, compatibility expectations, and failure modes.\n2. Define request, response, error, pagination, auth, and versioning behavior.\n3. Keep contracts narrow, typed, and easy to test.\n4. Add examples and verification commands.\n5. Update specs, docs, and tests for the public boundary.\n\nDo not expose a broad interface just to speed up internal implementation.\n"

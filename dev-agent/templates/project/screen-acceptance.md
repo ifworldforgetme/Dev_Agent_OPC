@@ -1,9 +1,10 @@
 # Screen Acceptance: {{PROJECT}}
 
 ## [Screen Name]
+- Requirement source:
 - Required content:
 - Required states:
 - Breakpoints:
-- Required design assets:
+- Design assets / visual source:
 - Visual acceptance:
 - Accessibility acceptance:

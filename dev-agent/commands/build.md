@@ -1,18 +1,19 @@
 ---
-description: Implement the next task incrementally with tests and verification
+description: Think through readiness, then implement the next build slice
 ---
 
-Invoke the `incremental-implementation` skill alongside `test-driven-development`.
+Invoke the `incremental-implementation` skill. It owns lightweight planning and
+proof-first verification inside the build flow. Use its development discipline:
+think before coding, keep it simple, edit canonical sources, and map goals to
+gates, proof commands, or blocker records.
 
-Pick the next pending task under `work/<project-name>/tasks/`:
+Before coding, decide whether the build is ready:
 
-1. Read acceptance criteria, nearby code, tests, and project conventions; state assumptions, tradeoffs, and blockers before editing.
-2. Check `.dev-flow/HOST_REQUIREMENTS.md` before using host SDKs/CLIs; do not install shared SDKs under `work/<project-name>/`.
-3. For customer-facing UI, require `bin/dev-flow design-check <project-name>` and `tasks/IMPLEMENTATION_TRACE.md`; return to design/plan if the design contract is missing.
-4. Write or update the smallest proof for the expected behavior before implementation.
-5. Implement the smallest slice that satisfies the task, without unrelated cleanup or speculative flexibility.
-6. Run relevant lint, test, typecheck, and build commands from the project-local source directory.
-7. For customer-facing UI, finish the planned UI batch before visual scoring, then invoke `frontend-ui-engineering` and run `bin/dev-flow qa-check <project-name>`.
-8. Update `tasks/PDCA.md` Do, task status, and verification evidence.
+1. Read `PRD.md`, `SPEC.md`, design handoff, nearby code/tests, and conventions.
+2. State clarity, source boundary, design readiness, and host needs.
+3. Escalate missing clarity/assets/permissions/env/risk to the owning flow or user.
+4. Check `.dev-flow/HOST_REQUIREMENTS.md`; run `env-check` only for the current slice.
+5. Micro-plan/prove when useful, then implement the smallest focused slice.
+6. Run checks, record `VERIFICATION` or `BLOCKED_BUILD`, then `verify-phase build`.
 
 If the implementation stalls or fails, invoke `debugging-and-error-recovery`.

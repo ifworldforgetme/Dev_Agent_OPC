@@ -9,6 +9,17 @@ description: Delivers changes incrementally. Use when implementing any feature o
 
 Build in thin vertical slices — implement one piece, test it, verify it, then expand. Avoid implementing an entire feature in one pass. Each increment should leave the system in a working, testable state. This is the execution discipline that makes large features manageable.
 
+## Development Discipline
+
+- Think before coding: state assumptions, ambiguity, tradeoffs, and stop points
+  before editing.
+- Keep it simple: retain only rules, abstractions, and artifacts that change the
+  execution result; reduce duplicated wording and speculative structure.
+- Edit precisely: change the canonical source for the behavior; do not
+  hand-edit generated adapters or copied outputs unless that source owns them.
+- Make goals verifiable: turn instructions into success criteria, gates, proof
+  commands, or explicit blocker records.
+
 ## When to Use
 
 - Implementing any multi-file change
@@ -39,7 +50,8 @@ For each slice:
 2. **Test** — run the test suite (or write a test if none exists)
 3. **Verify** — confirm the slice works as expected (tests pass, build succeeds, manual check)
 4. **Commit or checkpoint** -- when inside a git repo and the user/workspace has authorized commits, save progress with a descriptive commit. Otherwise, record a checkpoint in `work/<project-name>/tasks/status.md` with changed files and verification evidence.
-5. **Update PDCA Do** -- record the implemented slice, changed areas, and build artifacts in `work/<project-name>/tasks/PDCA.md`.
+5. **Record evidence** -- update `tasks/status.md` and `reviews/VERIFICATION.md`
+   or `reviews/BLOCKED_BUILD.md` with changed areas, commands, and blockers.
 6. **Move to the next slice** — carry forward, don't restart
 
 Use the project-local workspace layout for all implementation work:
@@ -95,6 +107,32 @@ Slice 3: Add offline support and reconnection
 If Slice 1 fails, you discover it before investing in Slices 2 and 3.
 
 ## Implementation Rules
+
+### Rule -2: Build Micro-Plan
+
+Before coding, write a compact slice note in the working response,
+`tasks/status.md`, or `tasks/PLAN.md` only when the slice is too large to hold
+in the spec/status. Include the goal, target files, source boundary, proof
+command, and blocker/escalation path. This replaces a separate planning phase.
+
+For behavior changes, prefer a failing test or executable proof first. If that
+is not practical, record why and use the smallest manual or smoke proof that
+can catch the intended behavior.
+
+### Rule -1: Escalate Instead Of Forcing
+
+Before coding, check whether the requirement, spec, design resources,
+environment, and risk boundary are clear enough for the current slice.
+
+Return the issue to its owner instead of hard-working around it:
+- unclear user value or acceptance criteria -> idea/spec
+- missing or weak UI design input -> design
+- unavailable SDK/permission/service -> host requirements or user decision
+- reproduced failure with unknown cause -> debugging-and-error-recovery
+- security/payment/permission/data deletion risk -> security-and-hardening or user decision
+
+If no flow can resolve it, record the blocker in `reviews/BLOCKED_BUILD.md` and
+ask the user for the decision.
 
 ### Rule 0: Simplicity First
 
@@ -217,7 +255,7 @@ After each increment, verify:
 - [ ] Linting passes (`npm run lint`)
 - [ ] The new functionality works as expected
 - [ ] The change is committed with a descriptive message, or checkpointed in `tasks/status.md` when commits are unavailable or not authorized
-- [ ] `tasks/PDCA.md` Do records the implemented slice, changed areas, and build artifacts
+- [ ] `tasks/status.md` and `reviews/VERIFICATION.md` or `reviews/BLOCKED_BUILD.md` record changed areas, commands, and blockers
 
 **Note:** Run each verification command after a change that could affect it. After a successful run, don't repeat the same command unless the code has changed since — re-running on unchanged code adds no information.
 

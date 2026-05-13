@@ -1,2 +1,0 @@
-description = "Create product-management artifacts such as PRDs, user stories, metrics, and acceptance criteria"
-prompt = "Use local flow: pm\n\nCreate product-management artifacts for the current project. Invoke pm-flow and save outputs under work/<project-name>/product/. Keep technical architecture, commands, repository layout, and implementation sequencing for spec-driven-development and planning-and-task-breakdown."

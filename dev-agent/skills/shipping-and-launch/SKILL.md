@@ -298,8 +298,7 @@ Before deploying:
 - [ ] Rollback plan documented
 - [ ] Monitoring dashboards set up
 - [ ] Team notified of deployment
-- [ ] `work/<project-name>/tasks/PDCA.md` Act records the go/no-go decision, standardization, follow-up iteration, rollback, or recovery notes
-- [ ] `bin/dev-flow pdca-check <project-name>` passes
+- [ ] `work/<project-name>/ship/LAUNCH.md` records the go/no-go decision, rollback plan, owners, and follow-up notes
 - [ ] `bin/dev-flow ship-check <project-name>` passes
 
 After deploying:

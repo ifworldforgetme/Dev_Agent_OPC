@@ -12,4 +12,4 @@ Simplify the requested scope or recent changes:
 4. Run relevant tests after each meaningful simplification.
 5. Stop if behavior changes or evidence becomes unclear.
 
-Use `code-review-and-quality` to review the final diff.
+Use the QA quality checklist or `code-reviewer` persona to review the final diff when risk warrants it.

@@ -21,45 +21,39 @@ QA. The output should feel intentionally designed, not template-generated.
 
 ## Customer-Facing UI Gate
 
-Do not start implementation until these exist and pass for the current scope:
+Do not start customer-facing UI implementation until these exist and pass for
+the current scope:
 
 - `work/<project-name>/design/DESIGN.md`
 - `work/<project-name>/design/VISUAL_SYSTEM.md`
 - `work/<project-name>/design/SCREEN_ACCEPTANCE.md`
-- `work/<project-name>/design/DESIGN_ARTIFACTS.md`
 - `work/<project-name>/tasks/IMPLEMENTATION_TRACE.md`
 - `bin/dev-flow design-check <project-name>`
 
 Also read these when applicable:
 
-- `DESIGN_IMAGE_DESCRIPTIONS.md` and `design/approved/html/` for AI-generated
-  approved design images
-- `FIGMA_HANDOFF.md` for Figma-backed screens, states, components, or libraries
-- `design/cut-assets/ASSET_MANIFEST.md` for runtime icons, sprites, imagery,
-  matrices, and animation frames
+- `DESIGN_ARTIFACTS.md`, `DESIGN_IMAGE_DESCRIPTIONS.md`, `FIGMA_HANDOFF.md`,
+  and `design/cut-assets/ASSET_MANIFEST.md` when required by the design
+  contract
 
-If the formal source, approved asset, resolution/export detail, status, HTML
-companion, Figma handoff, or cut-asset decision cannot be confirmed, stop and
-return to design instead of implementing around a guess.
+Satisfy `dev-agent/references/design-artifacts.md` and run
+`bin/dev-flow design-check <project-name>`. When Figma is used, satisfy
+`dev-agent/references/figma-handoff.md` and run
+`bin/dev-flow figma-check <project-name>`. If required design inputs cannot be
+confirmed, stop and return to design instead of implementing around a guess.
 
-## Design Source Rules
+## Design Contract Boundary
 
-- Implement from approved raster/PDF design assets, approved Figma exports, and
-  manifested runtime assets.
-- Do not treat browser, Playwright, Chrome, simulator, local HTML/CSS,
-  prototype, draft, SVG/XML sketch, or running-app screenshots as approved
-  design sources.
-- SVG is allowed under `design/cut-assets/` only as a manifested element/runtime
-  asset, never as the reference for a whole screen layout.
-- If a needed icon, illustration, sprite, or image is missing, return to design
-  to create an approved asset or cut-asset entry.
+- Implement from `DESIGN.md`, `VISUAL_SYSTEM.md`, and `SCREEN_ACCEPTANCE.md`.
+  Use formal assets only through the design artifact contract.
+- If a needed visual source, runtime asset, or acceptance decision is missing,
+  return to design instead of guessing.
 
 ## Implementation Workflow
 
 1. **Create a screen checklist**
    - Map each current `SCREEN_ACCEPTANCE.md` screen/state to implementation
-     files, approved asset, source reference, HTML companion when applicable,
-     Figma handoff when applicable, cut assets, and test evidence.
+     files, design contract inputs, and test evidence.
    - Keep `tasks/IMPLEMENTATION_TRACE.md` current as work progresses.
 
 2. **Translate design into primitives**
@@ -129,20 +123,17 @@ Use `references/accessibility-checklist.md` for detail. Minimum bar:
 
 ## Runtime Asset Handling
 
-- Use `design/cut-assets/ASSET_MANIFEST.md` as source of truth for SVG icons,
-  bitmap icons, transparent PNGs, illustrations, spritesheets, matrices, and
-  animation frames.
-- Preserve alpha for transparent assets.
-- Record grid, frame size, frame order, anchor, scale, FPS/state mapping,
-  output path, runtime path, and usage for sprites or matrices.
-- Do not cut assets from drafts, browser screenshots, simulator captures, or
-  runtime screenshots.
+- Use `design/cut-assets/ASSET_MANIFEST.md` as the runtime asset source of truth
+  when the design artifact contract requires it.
+- If a runtime asset is missing or ambiguous, return to design.
 - For mobile apps, replace default app icon, adaptive icon, and splash icon
   before release packaging when product assets are in scope.
 
 ## QA Gate
 
-After implementing the current customer-facing UI batch:
+QA is optional unless `AUTOMATED_QA` or `VISUAL_QA` is required by
+`.dev-flow/applicability.env` or the user asks for it. After implementing the
+current customer-facing UI batch:
 
 1. Confirm every screen/state in the batch is implemented or marked blocked in
    `tasks/IMPLEMENTATION_TRACE.md`.
@@ -150,27 +141,27 @@ After implementing the current customer-facing UI batch:
    `reviews/FUNCTIONAL_TEST.md`.
 3. Run monkey or exploratory checks across navigation, repeated actions,
    invalid inputs, resizing, and state changes; save `reviews/MONKEY_TEST.md`.
-4. Compare the UI against approved design assets, HTML companions, Figma
-   exports, and cut assets; save `reviews/VISUAL_COMPARISON.md`.
+4. When `VISUAL_QA` is required, compare the UI against the required design
+   contract inputs; save `reviews/VISUAL_COMPARISON.md`.
 5. `VISUAL_COMPARISON.md` must include `Overall score: N/100`, per-screen rows
    for every `SCREEN_ACCEPTANCE.md` screen, approved asset path, runtime
    surface, score, decision, differences, and final decision.
-6. High-fidelity delivery requires at least 90/100 unless the user explicitly
+6. Review implementation quality before delivery: correctness, state coverage,
+   accessibility, source boundaries, simplicity, security/privacy impact, and
+   performance risk. Use specialist personas only when risk warrants it.
+7. High-fidelity delivery requires at least 90/100 unless the user explicitly
    narrows scope or lowers the bar.
-7. Capture runtime screenshots under `reviews/visual-screenshots/` only when
+8. Capture runtime screenshots under `reviews/visual-screenshots/` only when
    `reviews/EXCEPTION.md` or `reviews/BLOCKED_FLOW.md` records an exception or
    blocked flow, or when the user explicitly asks for screenshots.
-8. Run `bin/dev-flow qa-check <project-name>` when available.
+9. Run `bin/dev-flow qa-check <project-name>` when QA is required.
 
 Use `references/visual-qa-rubric.md` for detailed scoring.
 
 ## Red Flags
 
 - Implementation starts before `design-check` and `IMPLEMENTATION_TRACE.md`.
-- Approved design assets are missing, invalid, or replaced by screenshots.
-- AI-generated approved images lack semantic HTML companions.
-- Figma-backed assets lack `FIGMA_HANDOFF.md`.
-- SVG is used as a screen/layout reference instead of a manifested runtime asset.
+- Required design artifact or Figma handoff contract evidence is missing.
 - Required states are missing.
 - Text overlaps, clips, or becomes unreadable at required breakpoints.
 - Keyboard or screen-reader access is broken.
@@ -180,11 +171,9 @@ Use `references/visual-qa-rubric.md` for detailed scoring.
 ## Verification
 
 - `bin/dev-flow design-check <project-name>` passed before UI implementation.
-- `tasks/IMPLEMENTATION_TRACE.md` maps screens to implementation targets,
-  approved assets, source references, HTML companions, Figma handoff, cut-asset
-  decisions, and test evidence.
-- The implementation uses approved raster/PDF/Figma exports and manifested cut
-  assets as visual targets.
+- `tasks/IMPLEMENTATION_TRACE.md` maps screens to implementation targets and
+  test evidence; formal asset fields may be `none` when not required.
+- Required design artifact and Figma handoff contracts are satisfied.
 - Required responsive states and accessibility states are implemented.
 - Runtime has no known console/build errors.
 - Functional, monkey, and visual comparison review files exist for
@@ -192,4 +181,4 @@ Use `references/visual-qa-rubric.md` for detailed scoring.
 - Visual comparison covers every accepted screen and meets the required score.
 - Screenshots exist only for recorded exceptions, blocked flows, or explicit
   user requests.
-- `bin/dev-flow qa-check <project-name>` passes before delivery.
+- `bin/dev-flow qa-check <project-name>` passes when QA is required.

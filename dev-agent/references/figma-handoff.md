@@ -14,7 +14,7 @@ reusable components, or a more reliable visual QA baseline.
 4. Record Figma-backed rows in `DESIGN_ARTIFACTS.md` with Source type `figma` or
    `figma-mcp`.
 5. Record the Figma file/node and export mapping in `design/FIGMA_HANDOFF.md`.
-6. Run `bin/dev-flow figma-check <project-name>` before planning or build when
+6. Run `bin/dev-flow figma-check <project-name>` before build when
    any approved design asset is Figma-backed.
 
 ## Screen vs Library

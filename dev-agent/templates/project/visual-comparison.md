@@ -1,6 +1,6 @@
 # Visual Comparison: {{PROJECT}}
 
-Compare the implemented UI with approved design assets and derived cut assets.
+Compare the implemented UI with required design contract inputs.
 
 Overall score: 0/100
 

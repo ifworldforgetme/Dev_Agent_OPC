@@ -1,6 +1,6 @@
 # Design Rubric
 
-Use this rubric before implementation planning for customer-facing UI.
+Use this rubric before customer-facing UI build.
 
 ## Required Checks
 
