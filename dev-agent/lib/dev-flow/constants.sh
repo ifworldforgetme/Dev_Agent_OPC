@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-DEV_FLOW_PROJECT_SCHEMA_VERSION="${DEV_FLOW_PROJECT_SCHEMA_VERSION:-3}"
+DEV_FLOW_PROJECT_SCHEMA_VERSION="${DEV_FLOW_PROJECT_SCHEMA_VERSION:-4}"
 
 dev_flow_valid_project_type() {
   case "${1:-}" in

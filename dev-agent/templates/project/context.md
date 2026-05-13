@@ -3,15 +3,11 @@
 Load only the files needed for the current phase.
 
 - Idea: read `ideas/` and relevant user notes.
-- Product: read `product/` only when PM_FLOW is required or product artifacts exist.
-- Agent: read `agent/` only when AGENT_FLOW is required or agent artifacts exist.
-- Spec: read approved idea/product/agent artifacts that apply, and existing app files if present.
-- Host environment: read `.dev-flow/HOST_REQUIREMENTS.md` before installing or relying on machine-level SDKs, CLIs, services, credentials, simulators, or MCP connections.
-- Design: read `specs/SPEC.md`, `design/reference-intake.md`, `design/DESIGN_ARTIFACTS.md`, `design/DESIGN_IMAGE_DESCRIPTIONS.md`, `design/FIGMA_HANDOFF.md`, `design/REFERENCE_BOARD.md` when delegated, user-provided references, existing screens, and platform constraints.
-- Plan: read approved spec/design, `tasks/IMPLEMENTATION_TRACE.md`, and inspect likely source boundaries.
-- Build: read the assigned task, approved design docs, `design/approved/` layout/state assets, `design/approved/html/` semantic companions when AI-generated images are used, `design/FIGMA_HANDOFF.md` when Figma is used, cut-asset manifest, implementation trace, nearby source files, and tests.
-- PDCA: keep `tasks/PDCA.md` current across Current Cycle, Plan, Do, Check, and Act so decisions and evidence survive handoffs.
-- QA: after the current planned UI implementation batch is complete or explicitly blocked, read verification evidence, functional and monkey test logs, visual comparison score, and exception screenshots only when a flow is blocked.
-- Ship: read review results, QA evidence, verification evidence, PDCA evidence, and launch notes.
+- Spec: read the idea brief, existing product notes, relevant agent notes, and existing app files if present. Produce PRD + SPEC together, including an Agent Runtime Contract section when agent automation is in scope.
+- Host environment: record likely host needs during idea/spec/design, but run `env-check` only before the current build/test slice or ship scope relies on machine-level SDKs, CLIs, services, credentials, simulators, or MCP connections.
+- Design: read `ideas/idea-brief.md`, product artifacts (`PRD.md`, `USER_STORIES.md`, `ACCEPTANCE.md`, `METRICS.md`) when present, agent notes when present, `specs/SPEC.md`, reference intake, delegated reference board when present, user-provided references, existing screens, and platform constraints. Read formal asset ledgers only when formal assets are required or already present.
+- Build: think through clarity, architecture, environment needs, and design readiness first; then read the current build slice, implementation trace, required design docs/assets, nearby source files, and tests.
+- QA: optional unless `AUTOMATED_QA` or `VISUAL_QA` is required; read verification, functional/monkey logs, visual comparison, and exception screenshots only when needed.
+- Ship: optional; read QA evidence, verification evidence, risks, rollback, and launch notes.
 
 Do not bulk-load `dev-agent/` or unrelated project folders.

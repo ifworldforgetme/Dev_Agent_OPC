@@ -1,6 +1,6 @@
 # Design Artifacts
 
-Customer-facing UI must have approved design assets before implementation planning. The gate is provider-neutral but provenance is strict: only formal producers can qualify.
+Customer-facing UI must have approved design assets before high-fidelity UI build. The gate is provider-neutral but provenance is strict: only formal producers can qualify.
 
 ## Asset Classes
 
@@ -8,7 +8,7 @@ Customer-facing UI must have approved design assets before implementation planni
 - Drafts: sketches, SVG/Mermaid/Markdown wireframes, low-fidelity prototypes, local HTML/CSS mock screenshots, and files named draft/sketch/prototype. Save under `design/drafts/` or `design/mocks/`.
 - Approved assets: implementation-ready raster/PDF boards and state images from formal producers. Save under `design/approved/`.
 - AI image HTML companions: when imagegen, GPT Image, or another AI image model generates an approved asset, save a semantic HTML description under `design/approved/html/` and record the mapping in `design/DESIGN_IMAGE_DESCRIPTIONS.md`.
-- Figma handoff: when Figma is used to formalize imagegen/GPT Image or reference-driven direction, record file/node and export mappings in `design/FIGMA_HANDOFF.md`.
+- Figma handoff: when Figma is used, satisfy `dev-agent/references/figma-handoff.md`.
 - Verification assets: browser screenshots, simulator captures, Playwright/Chrome captures, and runtime output. Save under `reviews/visual-screenshots/` only when an exception or blocked flow needs evidence.
 - Delegated reference board: when the user delegates visual direction and no external reference is provided, save the generated reference direction in `design/REFERENCE_BOARD.md`.
 
@@ -16,7 +16,7 @@ Drafts and verification assets are forbidden as implementation targets. Use them
 
 ## Coverage Contract
 
-Derive required screens from the PRD, spec, design, and interaction model. Record each as a `##` heading in `SCREEN_ACCEPTANCE.md`, then add at least one `DESIGN_ARTIFACTS.md` Screen Coverage row for each exact heading:
+Derive required screens from the idea brief, PRD, user stories, acceptance criteria, spec, design, and interaction model. Record each screen or global UI surface as a `##` heading in `SCREEN_ACCEPTANCE.md` with `Requirement source:`, then add at least one `DESIGN_ARTIFACTS.md` Screen Coverage row for each exact heading:
 
 | Screen | State | Source type | Source reference | Approved asset path | Resolution / export | Status | Implementation notes |
 |---|---|---|---|---|---|---|---|
@@ -36,18 +36,11 @@ Do not use `manual-design`, `local-approved`, SVG/HTML renders, browser captures
 
 When `Source type` is `imagegen`, `gpt-image`, or `gpt-image-2`, `Implementation notes` must include a semantic HTML companion path such as `HTML: design/approved/html/dashboard.html`. The companion must be a real non-empty `.html` file under `design/approved/html/`, and `design/DESIGN_IMAGE_DESCRIPTIONS.md` must map the approved image to the HTML description.
 
-## Figma Handoff Contract
+## Figma Handoff
 
-Use Figma after visual exploration when it improves fidelity, component reuse,
-or visual QA. Do not require a Figma library for every UI; simple one-screen
-work can use imagegen/GPT Image, uploaded designer assets, or design-system exports directly.
-
-When `Source type` is `figma` or `figma-mcp`:
-
-- `Source reference` must be a Figma URL or `figma://...` reference with file/node context.
-- `Approved asset path` must point to a real exported PNG/PDF under `design/approved/`.
-- `design/FIGMA_HANDOFF.md` must map the same Figma source to the same approved export.
-- Run `bin/dev-flow figma-check <project-name>` before planning or build.
+When `Source type` is `figma` or `figma-mcp`, satisfy
+`dev-agent/references/figma-handoff.md` and run
+`bin/dev-flow figma-check <project-name>` before build.
 
 ## Output Rules
 

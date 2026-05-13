@@ -18,9 +18,11 @@ a host that supports native subagents.
 - Personas are the perspective: the who.
 - Commands are the entrypoint: the when.
 
-Personas do not invoke other personas. If multiple reviews are needed, the main
-agent or command should fan out to independent personas, collect reports, and
-merge the go/no-go decision.
+Personas do not invoke other personas. Do not call a persona just because a
+phase exists; invoke one only when the user asks for that role or the current
+risk needs that specialist view. If multiple reviews are needed, the main agent
+or command should fan out to independent personas, collect reports, and merge the
+go/no-go decision.
 
 ## Use Cases
 

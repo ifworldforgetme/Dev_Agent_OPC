@@ -4,6 +4,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 RUN_ID="smoke_$$"
 UI_BLOCK="$ROOT/work/__${RUN_ID}_ui_block"
+LIGHT_UI="$ROOT/work/__${RUN_ID}_light_ui"
 DELEGATED="$ROOT/work/__${RUN_ID}_delegated"
 INVALID="$ROOT/work/__${RUN_ID}_invalid"
 SVG_ONLY="$ROOT/work/__${RUN_ID}_svg_only"
@@ -20,13 +21,16 @@ FIGMA_SECTION_BOUNDARY="$ROOT/work/__${RUN_ID}_figma_section_boundary"
 FIGMA_MISSING_SOURCE="$ROOT/work/__${RUN_ID}_figma_missing_source"
 FIGMA_BAD_EXPORT="$ROOT/work/__${RUN_ID}_figma_bad_export"
 API_PROJECT="$ROOT/work/__${RUN_ID}_api"
+AGENT_PROJECT="$ROOT/work/__${RUN_ID}_agent"
 ENV_PROJECT="$ROOT/work/__${RUN_ID}_env"
 BAD_ENV="$ROOT/work/__${RUN_ID}_bad_env"
 LEGACY_PROJECT="$ROOT/work/__${RUN_ID}_legacy"
 BAD_VISUAL="$ROOT/work/__${RUN_ID}_bad_visual"
 ADAPTER_OUT="/private/tmp/dev-agent-${RUN_ID}-adapters"
 INSTALL_DEST="/private/tmp/dev-agent-${RUN_ID}-install"
+INSTALL_WORKSPACE="/private/tmp/dev-agent-${RUN_ID}-workspace"
 UI_BLOCK_OUT="/private/tmp/dev-flow-${RUN_ID}-ui-block.out"
+LIGHT_UI_NEXT_OUT="/private/tmp/dev-flow-${RUN_ID}-light-ui-next.out"
 INVALID_OUT="/private/tmp/dev-flow-${RUN_ID}-invalid.out"
 EXCEPTION_OUT="/private/tmp/dev-flow-${RUN_ID}-exception.out"
 SVG_ONLY_OUT="/private/tmp/dev-flow-${RUN_ID}-svg-only.out"
@@ -39,8 +43,8 @@ DRAFT_PATH_OUT="/private/tmp/dev-flow-${RUN_ID}-draft-path.out"
 AI_MISSING_HTML_OUT="/private/tmp/dev-flow-${RUN_ID}-ai-missing-html.out"
 FIGMA_MISSING_SOURCE_OUT="/private/tmp/dev-flow-${RUN_ID}-figma-missing-source.out"
 FIGMA_BAD_EXPORT_OUT="/private/tmp/dev-flow-${RUN_ID}-figma-bad-export.out"
-PDCA_OUT="/private/tmp/dev-flow-${RUN_ID}-pdca.out"
 API_OUT="/private/tmp/dev-flow-${RUN_ID}-api.out"
+AGENT_OUT="/private/tmp/dev-flow-${RUN_ID}-agent.out"
 ENV_OUT="/private/tmp/dev-flow-${RUN_ID}-env.out"
 BAD_ENV_OUT="/private/tmp/dev-flow-${RUN_ID}-bad-env.out"
 DOCTOR_OUT="/private/tmp/dev-flow-${RUN_ID}-doctor.out"
@@ -48,8 +52,19 @@ BAD_VISUAL_OUT="/private/tmp/dev-flow-${RUN_ID}-bad-visual.out"
 TRACE_MISSING_HTML_OUT="/private/tmp/dev-flow-${RUN_ID}-trace-missing-html.out"
 NEXT_UI_OUT="/private/tmp/dev-flow-${RUN_ID}-next-ui.out"
 
+cleanup_path() {
+  local path
+  for path in "$@"; do
+    [[ -e "$path" ]] || continue
+    rm -rf "$path" 2>/dev/null || {
+      find "$path" -name .DS_Store -delete 2>/dev/null || true
+      rm -rf "$path"
+    }
+  done
+}
+
 cleanup() {
-  rm -rf "$UI_BLOCK" "$DELEGATED" "$INVALID" "$SVG_ONLY" "$SVG_LEAK" "$SVG_CUT_ALLOWED" "$SELF_RENDERED_PNG" "$MISSING_COVERAGE" "$SCREENSHOT_SWAP" "$DRAFT_PATH" "$NO_CUTS" "$AI_MISSING_HTML" "$FIGMA_GOOD" "$FIGMA_SECTION_BOUNDARY" "$FIGMA_MISSING_SOURCE" "$FIGMA_BAD_EXPORT" "$API_PROJECT" "$ENV_PROJECT" "$BAD_ENV" "$LEGACY_PROJECT" "$BAD_VISUAL" "$ADAPTER_OUT" "$INSTALL_DEST" "$UI_BLOCK_OUT" "$INVALID_OUT" "$EXCEPTION_OUT" "$SVG_ONLY_OUT" "$SVG_LEAK_OUT" "$SVG_CUT_ALLOWED_OUT" "$SELF_RENDERED_PNG_OUT" "$MISSING_COVERAGE_OUT" "$SCREENSHOT_SWAP_OUT" "$DRAFT_PATH_OUT" "$AI_MISSING_HTML_OUT" "$FIGMA_MISSING_SOURCE_OUT" "$FIGMA_BAD_EXPORT_OUT" "$PDCA_OUT" "$API_OUT" "$ENV_OUT" "$BAD_ENV_OUT" "$DOCTOR_OUT" "$BAD_VISUAL_OUT" "$TRACE_MISSING_HTML_OUT" "$NEXT_UI_OUT"
+  cleanup_path "$UI_BLOCK" "$LIGHT_UI" "$DELEGATED" "$INVALID" "$SVG_ONLY" "$SVG_LEAK" "$SVG_CUT_ALLOWED" "$SELF_RENDERED_PNG" "$MISSING_COVERAGE" "$SCREENSHOT_SWAP" "$DRAFT_PATH" "$NO_CUTS" "$AI_MISSING_HTML" "$FIGMA_GOOD" "$FIGMA_SECTION_BOUNDARY" "$FIGMA_MISSING_SOURCE" "$FIGMA_BAD_EXPORT" "$API_PROJECT" "$AGENT_PROJECT" "$ENV_PROJECT" "$BAD_ENV" "$LEGACY_PROJECT" "$BAD_VISUAL" "$ADAPTER_OUT" "$INSTALL_DEST" "$INSTALL_WORKSPACE" "$UI_BLOCK_OUT" "$LIGHT_UI_NEXT_OUT" "$INVALID_OUT" "$EXCEPTION_OUT" "$SVG_ONLY_OUT" "$SVG_LEAK_OUT" "$SVG_CUT_ALLOWED_OUT" "$SELF_RENDERED_PNG_OUT" "$MISSING_COVERAGE_OUT" "$SCREENSHOT_SWAP_OUT" "$DRAFT_PATH_OUT" "$AI_MISSING_HTML_OUT" "$FIGMA_MISSING_SOURCE_OUT" "$FIGMA_BAD_EXPORT_OUT" "$API_OUT" "$AGENT_OUT" "$ENV_OUT" "$BAD_ENV_OUT" "$DOCTOR_OUT" "$BAD_VISUAL_OUT" "$TRACE_MISSING_HTML_OUT" "$NEXT_UI_OUT"
 }
 trap cleanup EXIT
 
@@ -114,11 +129,25 @@ bin/dev-flow agent code-reviewer >/dev/null
 bin/dev-flow agent opc-code-reviewer >/dev/null
 bin/dev-flow command figma-design >/dev/null
 bin/dev-flow command figma-library >/dev/null
+for removed_command in pm agent plan test review; do
+  if bin/dev-flow command "$removed_command" >/dev/null 2>&1; then
+    echo "Expected helper command to be removed from public flow surface: $removed_command" >&2
+    exit 1
+  fi
+done
 grep -q '"stableId": "dev-agent"' dev-agent/dev-agent.manifest.json
 grep -q '"userVisibleEntry": "/dev agent"' dev-agent/dev-agent.manifest.json
 grep -q '"/dev-agent"' dev-agent/dev-agent.manifest.json
 grep -q '"roles"' dev-agent/dev-agent.manifest.json
 grep -q '"gates"' dev-agent/dev-agent.manifest.json
+grep -q 'bin/dev-flow is the only execution navigator' AGENTS.md
+grep -q 'bin/dev-flow status <project-name>' AGENTS.md
+grep -q 'bin/dev-flow next <project-name>' AGENTS.md
+grep -q 'Do not start by bulk-reading Markdown' AGENTS.md
+grep -q '唯一执行导航器' README.md
+grep -q 'bin/dev-flow status <project-name>' dev-agent/native/skills/dev-agent/SKILL.md
+grep -q 'bin/dev-flow next <project-name>' dev-agent/native/skills/dev-agent/SKILL.md
+grep -q 'Do not bulk-read Markdown' dev-agent/commands/dev.md
 
 node -e '
 const fs = require("fs");
@@ -141,6 +170,11 @@ if (geminiMissing.length) problems.push(`Gemini missing: ${geminiMissing.join(",
 if (claudeExtra.length) problems.push(`Claude extra: ${claudeExtra.join(", ")}`);
 if (geminiExtra.length) problems.push(`Gemini extra: ${geminiExtra.join(", ")}`);
 if (gemini.includes("planning")) problems.push("Gemini command planning.toml is stale; use plan.toml");
+for (const removed of ["pm", "agent", "plan", "test", "review"]) {
+  if (canonical.includes(removed)) problems.push(`Removed helper command still exists: ${removed}`);
+  if (claude.includes(removed)) problems.push(`Claude removed helper command still exists: ${removed}`);
+  if (gemini.includes(removed)) problems.push(`Gemini removed helper command still exists: ${removed}`);
+}
 if (problems.length) {
   console.error("Adapter command parity failed:");
   for (const problem of problems) console.error(`- ${problem}`);
@@ -158,27 +192,58 @@ if rg -n 'No bitmap cut assets required' bin/dev-flow dev-agent/templates >/dev/
   echo "Stale cut-asset opt-out wording found." >&2
   exit 1
 fi
-grep -q 'SVG files under.*design/cut-assets.*element/runtime assets' dev-agent/.claude/commands/design.md
-grep -q 'SVG files under.*design/cut-assets.*element/runtime assets' dev-agent/.gemini/commands/design.toml
+grep -q 'Satisfy `dev-agent/references/design-artifacts.md`' AGENTS.md
+grep -q 'Satisfy `dev-agent/references/design-artifacts.md`' DEV_FLOW.md
+grep -q 'Satisfy `dev-agent/references/design-artifacts.md`' dev-agent/commands/design.md
+grep -q 'Satisfy `dev-agent/references/design-artifacts.md`' dev-agent/skills/design-flow/SKILL.md
+grep -q 'Satisfy `dev-agent/references/design-artifacts.md`' dev-agent/skills/frontend-ui-engineering/SKILL.md
+grep -q 'Satisfy `dev-agent/references/design-artifacts.md`' dev-agent/templates/project/design-artifacts.md
+grep -q 'satisfy `dev-agent/references/figma-handoff.md`' dev-agent/commands/design.md
+grep -q 'satisfy `dev-agent/references/figma-handoff.md`' dev-agent/skills/design-flow/SKILL.md
+grep -q 'dev-agent/references/figma-handoff.md' dev-agent/templates/project/figma-handoff.md
+if rg -n 'Valid Source type values|Allowed `Source type`|manual-design|local-approved|SVG/XML sketches|SVG files may|Browser, Playwright|browser/simulator/runtime screenshots|semantic HTML companion|HTML companions|imagegen/GPT Image high-fidelity|formal producers|designer-upload|uploaded-approved|external-design|Figma frames created from those captures|Source type` set to `figma`|Keep SVG|SVG files under' AGENTS.md DEV_FLOW.md README.md dev-agent/commands dev-agent/.claude/commands dev-agent/.gemini/commands dev-agent/skills dev-agent/agents dev-agent/templates/project >/dev/null; then
+  rg -n 'Valid Source type values|Allowed `Source type`|manual-design|local-approved|SVG/XML sketches|SVG files may|Browser, Playwright|browser/simulator/runtime screenshots|semantic HTML companion|HTML companions|imagegen/GPT Image high-fidelity|formal producers|designer-upload|uploaded-approved|external-design|Figma frames created from those captures|Source type` set to `figma`|Keep SVG|SVG files under' AGENTS.md DEV_FLOW.md README.md dev-agent/commands dev-agent/.claude/commands dev-agent/.gemini/commands dev-agent/skills dev-agent/agents dev-agent/templates/project >&2
+  echo "Design contract drift: non-authoritative files must point to references and gates instead of restating hard source rules." >&2
+  exit 1
+fi
+if rg -n 'artifact contract|approved asset|approved design|Figma|SVG|HTML companion|DESIGN_ARTIFACTS|FIGMA_HANDOFF|ASSET_MANIFEST|design-artifacts' dev-agent/agents/product-designer.md >/dev/null; then
+  rg -n 'artifact contract|approved asset|approved design|Figma|SVG|HTML companion|DESIGN_ARTIFACTS|FIGMA_HANDOFF|ASSET_MANIFEST|design-artifacts' dev-agent/agents/product-designer.md >&2
+  echo "product-designer must stay a design-judgment persona, not an artifact schema contract." >&2
+  exit 1
+fi
 assert_max_lines dev-agent/skills/design-flow/SKILL.md 180
 assert_max_lines dev-agent/skills/frontend-ui-engineering/SKILL.md 280
 assert_max_lines dev-agent/commands/design.md 20
 assert_max_lines dev-agent/commands/build.md 20
 assert_max_lines dev-agent/commands/ui.md 20
-assert_max_lines dev-agent/commands/plan.md 20
 assert_max_lines dev-agent/agents/product-designer.md 30
 
 bin/dev-flow init "$(basename "$API_PROJECT")" --type api >/dev/null
-grep -q 'PROJECT_SCHEMA_VERSION="3"' "$API_PROJECT/.dev-flow/schema.env"
+grep -q 'PROJECT_SCHEMA_VERSION="4"' "$API_PROJECT/.dev-flow/schema.env"
 grep -q 'PROJECT_TYPE="api"' "$API_PROJECT/.dev-flow/schema.env"
 grep -q 'UI_FLOW="disabled"' "$API_PROJECT/.dev-flow/applicability.env"
 grep -q 'UI_DESIGN_ASSETS="disabled"' "$API_PROJECT/.dev-flow/applicability.env"
+grep -q 'AGENT_CONTRACT="auto"' "$API_PROJECT/.dev-flow/applicability.env"
+grep -q 'SHIP_FLOW="auto"' "$API_PROJECT/.dev-flow/applicability.env"
+! test -f "$API_PROJECT/tasks/PDCA.md"
 write_file "$API_PROJECT/ideas/idea-brief.md" \
   "# Idea Brief" "" "Build a JSON API." "No customer-facing UI is in scope." "The workflow should not require design assets."
+write_file "$API_PROJECT/product/PRD.md" \
+  "# PRD" "" "Build a JSON API." "MVP scope is one small HTTP API." "No customer-facing UI is in scope."
 write_file "$API_PROJECT/specs/SPEC.md" \
   "# Spec" "" "Create a small HTTP API." "Implementation will live under apps/api." "UI design is out of scope."
-bin/dev-flow phase "$(basename "$API_PROJECT")" plan "Plan API implementation without UI design" >"$API_OUT" 2>&1
-grep -q "Updated $(basename "$API_PROJECT") to phase: plan" "$API_OUT"
+bin/dev-flow phase "$(basename "$API_PROJECT")" build "Build API implementation without UI design" >"$API_OUT" 2>&1
+grep -q "Updated $(basename "$API_PROJECT") to phase: build" "$API_OUT"
+
+bin/dev-flow init "$(basename "$AGENT_PROJECT")" --type agent >/dev/null
+grep -q 'AGENT_CONTRACT="required"' "$AGENT_PROJECT/.dev-flow/applicability.env"
+write_file "$AGENT_PROJECT/ideas/idea-brief.md" \
+  "# Idea Brief" "" "Build an agent automation." "The automation needs safe tool use and explicit escalation."
+write_file "$AGENT_PROJECT/product/PRD.md" \
+  "# PRD" "" "Build an agent automation." "MVP scope is one workflow with clear human approval points." "The output must fail closed on unclear tools or permissions."
+write_file "$AGENT_PROJECT/specs/SPEC.md" \
+  "# Spec" "" "Build an agent automation." "## Agent Runtime Contract" "Job: process the requested workflow." "Tools and permissions: read project files; ask before external writes." "Failure recovery and escalation: record blockers and ask the user when the tool or permission boundary is unclear."
+bin/dev-flow verify-phase "$(basename "$AGENT_PROJECT")" spec >"$AGENT_OUT" 2>&1
 
 bin/dev-flow init "$(basename "$ENV_PROJECT")" --type api >/dev/null
 test -f "$ENV_PROJECT/.dev-flow/HOST_REQUIREMENTS.md"
@@ -212,23 +277,30 @@ grep -q "Missing template file: .dev-flow/HOST_REQUIREMENTS.md" "$DOCTOR_OUT"
 grep -q "Missing template file: tasks/IMPLEMENTATION_TRACE.md" "$DOCTOR_OUT"
 bin/dev-flow migrate "$(basename "$LEGACY_PROJECT")" --type api >/dev/null
 bin/dev-flow doctor "$(basename "$LEGACY_PROJECT")" >/dev/null
-grep -q 'PROJECT_SCHEMA_VERSION="3"' "$LEGACY_PROJECT/.dev-flow/schema.env"
+grep -q 'PROJECT_SCHEMA_VERSION="4"' "$LEGACY_PROJECT/.dev-flow/schema.env"
 grep -q 'PROJECT_TYPE="api"' "$LEGACY_PROJECT/.dev-flow/schema.env"
 test -f "$LEGACY_PROJECT/.dev-flow/HOST_REQUIREMENTS.md"
+! test -f "$LEGACY_PROJECT/tasks/PDCA.md"
 
 bin/dev-flow init "$(basename "$UI_BLOCK")" >/dev/null
-grep -q 'PROJECT_SCHEMA_VERSION="3"' "$UI_BLOCK/.dev-flow/schema.env"
+grep -q 'PROJECT_SCHEMA_VERSION="4"' "$UI_BLOCK/.dev-flow/schema.env"
 grep -q 'PROJECT_TYPE="ui"' "$UI_BLOCK/.dev-flow/schema.env"
+grep -q 'AGENT_CONTRACT="auto"' "$UI_BLOCK/.dev-flow/applicability.env"
 grep -q 'UI_FLOW="required"' "$UI_BLOCK/.dev-flow/applicability.env"
+grep -q 'UI_DESIGN_ASSETS="auto"' "$UI_BLOCK/.dev-flow/applicability.env"
+grep -q 'SHIP_FLOW="auto"' "$UI_BLOCK/.dev-flow/applicability.env"
 bin/dev-flow phase "$(basename "$UI_BLOCK")" design "Prepare design execution brief" --force >/dev/null
 bin/dev-flow next "$(basename "$UI_BLOCK")" >"$NEXT_UI_OUT"
 grep -q "Type: ui" "$NEXT_UI_OUT"
+grep -q "Execution navigator: follow this brief" "$NEXT_UI_OUT"
 grep -q "Next command: Use local flow: design" "$NEXT_UI_OUT"
 grep -q "Load:" "$NEXT_UI_OUT"
 grep -q "dev-agent/commands/design.md" "$NEXT_UI_OUT"
 grep -q "dev-agent/skills/design-flow/SKILL.md" "$NEXT_UI_OUT"
+grep -q "product/PRD.md" "$NEXT_UI_OUT"
 grep -q "Required outputs:" "$NEXT_UI_OUT"
 grep -q "design/DESIGN.md" "$NEXT_UI_OUT"
+grep -q "Requirement source" "$NEXT_UI_OUT"
 grep -q "Gate before next phase:" "$NEXT_UI_OUT"
 grep -q "bin/dev-flow design-check $(basename "$UI_BLOCK")" "$NEXT_UI_OUT"
 grep -q "After pass:" "$NEXT_UI_OUT"
@@ -237,19 +309,55 @@ write_file "$UI_BLOCK/ideas/idea-brief.md" \
   "" \
   "Build a customer-facing dashboard app." \
   "The UI must be polished and responsive." \
-  "The workflow must block planning before design exists."
+  "The workflow must block build before design exists."
+write_file "$UI_BLOCK/product/PRD.md" \
+  "# PRD" "" "Build a customer-facing dashboard app." "The product must feel trustworthy." "Build must wait for design."
+write_file "$UI_BLOCK/product/USER_STORIES.md" \
+  "# User Stories" "" "- As a user, I can understand my dashboard quickly." "- As a user, I can recover from empty states." "- As a user, I can act from the primary CTA."
+write_file "$UI_BLOCK/product/ACCEPTANCE.md" \
+  "# Acceptance" "" "- Dashboard requirements are documented." "- Empty states are documented." "- Design is required before build."
+write_file "$UI_BLOCK/product/METRICS.md" \
+  "# Metrics" "" "- Activation success." "- Primary action completion." "- Visual readiness gate pass rate."
 write_file "$UI_BLOCK/specs/SPEC.md" \
   "# Spec" \
   "" \
   "Create a browser dashboard with navigation, cards, and empty state." \
   "Implementation will live under apps/web." \
   "The workflow should require design and approved design assets first."
-if bin/dev-flow phase "$(basename "$UI_BLOCK")" plan "Attempt planning without design" >"$UI_BLOCK_OUT" 2>&1; then
+if bin/dev-flow phase "$(basename "$UI_BLOCK")" build "Attempt build without design" >"$UI_BLOCK_OUT" 2>&1; then
   cat "$UI_BLOCK_OUT" >&2
-  echo "Expected UI project planning to fail before design." >&2
+  echo "Expected UI project build to fail before design." >&2
   exit 1
 fi
 grep -q "Phase verification failed: $(basename "$UI_BLOCK")/design" "$UI_BLOCK_OUT"
+
+bin/dev-flow init "$(basename "$LIGHT_UI")" >/dev/null
+write_file "$LIGHT_UI/ideas/idea-brief.md" \
+  "# Idea Brief" "" "Build a simple customer-facing status page." "Use delegated visual direction." "Formal design boards are not required for this fixture."
+write_file "$LIGHT_UI/product/PRD.md" \
+  "# PRD" "" "Build a compact status page." "MVP scope is one page with an empty state." "No visual QA or formal asset handoff is required."
+write_file "$LIGHT_UI/specs/SPEC.md" \
+  "# Spec" "" "Create a static status page under apps/web." "Use DESIGN.md, VISUAL_SYSTEM.md, and SCREEN_ACCEPTANCE.md." "Formal assets may be none."
+write_file "$LIGHT_UI/design/DESIGN.md" \
+  "# Design" "" "## UX Problem" "Users need a clear status page." "## Recommended Direction" "Use a simple one-page layout." "## Alternatives Considered" "- Full dashboard: too much." "## Information Architecture" "Status page only." "## Interaction Model" "Read status and use one action." "## Visual System" "Neutral product surface." "## Design Artifacts" "No formal assets required for this lightweight scope." "## Build Implications" "Build from acceptance and visual system."
+write_file "$LIGHT_UI/design/VISUAL_SYSTEM.md" \
+  "# Visual System" "" "## Reference Influence" "Delegated visual direction." "## Palette" "Neutral surfaces with one action color." "## Typography" "Readable product scale." "## Spacing and Layout" "Simple responsive stack." "## Components and Motion" "Button and status badge states." "## Forbidden Patterns" "No generic gradients."
+write_file "$LIGHT_UI/design/SCREEN_ACCEPTANCE.md" \
+  "# Screen Acceptance" "" "## Status" "- Requirement source: specs/SPEC.md." "- Required content: title, status badge, empty-state copy, primary action." "- Required states: default, empty, loading, error." "- Breakpoints: 320, 768, 1440." "- Design assets / visual source: none; implement from DESIGN.md and VISUAL_SYSTEM.md." "- Visual acceptance: clear hierarchy and responsive spacing." "- Accessibility acceptance: primary action keyboard reachable."
+write_file "$LIGHT_UI/design/REFERENCE_BOARD.md" \
+  "# Reference Board" "" "## Delegated Direction" "Use a quiet product utility style." "## Patterns" "- Compact hierarchy." "- One obvious action."
+bin/dev-flow design-check "$(basename "$LIGHT_UI")" --allow-no-reference >/dev/null
+write_file "$LIGHT_UI/tasks/IMPLEMENTATION_TRACE.md" \
+  "# Implementation Trace" "" "## Screen Trace" "| Screen | State | Implementation target | Approved asset | Design source | HTML companion | Cut assets | Test evidence | Status |" "|---|---|---|---|---|---|---|---|---|" "| Status | Default | apps/web/index.html | none | none | none | none | reviews/VERIFICATION.md | implemented |"
+write_file "$LIGHT_UI/apps/web/index.html" \
+  "<!doctype html>" \
+  "<html lang=\"en\"><head><meta charset=\"utf-8\"><title>Status</title></head><body><main><h1>Status</h1><button>Refresh</button></main></body></html>"
+write_file "$LIGHT_UI/reviews/VERIFICATION.md" \
+  "# Verification" "" "## Result" "Static status page source exists." "Lightweight UI build does not require formal design assets."
+bin/dev-flow phase "$(basename "$LIGHT_UI")" build "Implement lightweight UI without formal assets" >/dev/null
+bin/dev-flow verify-phase "$(basename "$LIGHT_UI")" build >/dev/null
+bin/dev-flow next "$(basename "$LIGHT_UI")" >"$LIGHT_UI_NEXT_OUT"
+grep -q "Workflow is at the final applicable phase" "$LIGHT_UI_NEXT_OUT"
 
 bin/dev-flow init "$(basename "$INVALID")" >/dev/null
 write_file "$INVALID/ideas/idea-brief.md" \
@@ -261,7 +369,7 @@ write_file "$INVALID/design/DESIGN.md" \
 write_file "$INVALID/design/VISUAL_SYSTEM.md" \
   "# Visual System" "" "## Reference Influence" "Delegated visual direction." "## Palette" "Use neutral surfaces." "## Typography" "Readable product scale." "## Spacing and Layout" "Dense but clear." "## Components and Motion" "Buttons have visible states." "## Forbidden Patterns" "No generic AI gradients."
 write_file "$INVALID/design/SCREEN_ACCEPTANCE.md" \
-  "# Screen Acceptance" "" "## Dashboard" "- Required content: dashboard body." "- Required states: default." "- Breakpoints: 320, 768, 1440." "- Required design assets: design/approved/dashboard.png." "- Visual acceptance: follows the board." "- Accessibility acceptance: primary action reachable."
+  "# Screen Acceptance" "" "## Dashboard" "- Requirement source: specs/SPEC.md." "- Required content: dashboard body." "- Required states: default." "- Breakpoints: 320, 768, 1440." "- Required design assets: design/approved/dashboard.png." "- Visual acceptance: follows the board." "- Accessibility acceptance: primary action reachable."
 write_file "$INVALID/design/DESIGN_ARTIFACTS.md" \
   "# Design Artifacts" "" "## Required Coverage" "- Dashboard board." "## Screen Coverage" "| Screen | State | Source type | Source reference | Approved asset path | Resolution / export | Status | Implementation notes |" "|---|---|---|---|---|---|---|---|" "| Dashboard | Default | gpt-image-2 | gpt-image-2://smoke/dashboard | design/approved/dashboard.png | 1440x900 png | approved | Use as visual target |"
 write_file "$INVALID/design/approved/dashboard.png" "not a real png"
@@ -282,7 +390,7 @@ write_file "$SVG_ONLY/design/DESIGN.md" \
 write_file "$SVG_ONLY/design/VISUAL_SYSTEM.md" \
   "# Visual System" "" "## Reference Influence" "Delegated visual direction." "## Palette" "Use neutral surfaces." "## Typography" "Readable product scale." "## Spacing and Layout" "Dense but clear." "## Components and Motion" "Buttons have visible states." "## Forbidden Patterns" "No generic AI gradients."
 write_file "$SVG_ONLY/design/SCREEN_ACCEPTANCE.md" \
-  "# Screen Acceptance" "" "## Dashboard" "- Required content: dashboard body." "- Required states: default." "- Breakpoints: 320, 768, 1440." "- Required design assets: design/approved/dashboard.svg." "- Visual acceptance: follows the final board." "- Accessibility acceptance: primary action reachable."
+  "# Screen Acceptance" "" "## Dashboard" "- Requirement source: specs/SPEC.md." "- Required content: dashboard body." "- Required states: default." "- Breakpoints: 320, 768, 1440." "- Required design assets: design/approved/dashboard.svg." "- Visual acceptance: follows the final board." "- Accessibility acceptance: primary action reachable."
 write_file "$SVG_ONLY/design/DESIGN_ARTIFACTS.md" \
   "# Design Artifacts" "" "## Required Coverage" "- Dashboard board." "## Screen Coverage" "| Screen | State | Source type | Source reference | Approved asset path | Resolution / export | Status | Implementation notes |" "|---|---|---|---|---|---|---|---|" "| Dashboard | Default | manual-design | manual://svg-draft | design/approved/dashboard.svg | svg draft | approved | Structure draft only |"
 write_valid_svg "$SVG_ONLY/design/approved/dashboard.svg"
@@ -303,7 +411,7 @@ write_file "$SVG_LEAK/design/DESIGN.md" \
 write_file "$SVG_LEAK/design/VISUAL_SYSTEM.md" \
   "# Visual System" "" "## Reference Influence" "Delegated visual direction." "## Palette" "Use neutral surfaces." "## Typography" "Readable product scale." "## Spacing and Layout" "Dense but clear." "## Components and Motion" "Buttons have visible states." "## Forbidden Patterns" "No SVG sketches as final design assets."
 write_file "$SVG_LEAK/design/SCREEN_ACCEPTANCE.md" \
-  "# Screen Acceptance" "" "## Dashboard" "- Required content: dashboard body." "- Required states: default." "- Breakpoints: 320, 768, 1440." "- Required design assets: design/approved/dashboard.png." "- Visual acceptance: follows the final raster board." "- Accessibility acceptance: primary action reachable."
+  "# Screen Acceptance" "" "## Dashboard" "- Requirement source: specs/SPEC.md." "- Required content: dashboard body." "- Required states: default." "- Breakpoints: 320, 768, 1440." "- Required design assets: design/approved/dashboard.png." "- Visual acceptance: follows the final raster board." "- Accessibility acceptance: primary action reachable."
 write_file "$SVG_LEAK/design/DESIGN_ARTIFACTS.md" \
   "# Design Artifacts" "" "## Required Coverage" "- Dashboard board." "## Screen Coverage" "| Screen | State | Source type | Source reference | Approved asset path | Resolution / export | Status | Implementation notes |" "|---|---|---|---|---|---|---|---|" "| Dashboard | Default | designer-upload | upload://smoke/dashboard-final | design/approved/dashboard.png | 1440x900 png | approved | Use as visual target |"
 write_valid_png "$SVG_LEAK/design/approved/dashboard.png"
@@ -328,7 +436,7 @@ write_file "$SVG_CUT_ALLOWED/design/DESIGN.md" \
 write_file "$SVG_CUT_ALLOWED/design/VISUAL_SYSTEM.md" \
   "# Visual System" "" "## Reference Influence" "Delegated visual direction." "## Palette" "Use neutral surfaces." "## Typography" "Readable product scale." "## Spacing and Layout" "Dense but clear." "## Components and Motion" "Buttons have visible states." "## Forbidden Patterns" "No SVG screen reference or screenshot-as-design."
 write_file "$SVG_CUT_ALLOWED/design/SCREEN_ACCEPTANCE.md" \
-  "# Screen Acceptance" "" "## Dashboard" "- Required content: dashboard body." "- Required states: default." "- Breakpoints: 320, 768, 1440." "- Required design assets: design/approved/dashboard.png." "- Visual acceptance: follows the approved raster board." "- Accessibility acceptance: primary action reachable."
+  "# Screen Acceptance" "" "## Dashboard" "- Requirement source: specs/SPEC.md." "- Required content: dashboard body." "- Required states: default." "- Breakpoints: 320, 768, 1440." "- Required design assets: design/approved/dashboard.png." "- Visual acceptance: follows the approved raster board." "- Accessibility acceptance: primary action reachable."
 write_file "$SVG_CUT_ALLOWED/design/DESIGN_ARTIFACTS.md" \
   "# Design Artifacts" "" "## Required Coverage" "- Dashboard board." "## Screen Coverage" "| Screen | State | Source type | Source reference | Approved asset path | Resolution / export | Status | Implementation notes |" "|---|---|---|---|---|---|---|---|" "| Dashboard | Default | designer-upload | upload://smoke/dashboard-final | design/approved/dashboard.png | 1440x900 png | approved | Use as layout and visual target |"
 write_file "$SVG_CUT_ALLOWED/design/REFERENCE_BOARD.md" \
@@ -350,7 +458,7 @@ write_file "$SELF_RENDERED_PNG/design/DESIGN.md" \
 write_file "$SELF_RENDERED_PNG/design/VISUAL_SYSTEM.md" \
   "# Visual System" "" "## Reference Influence" "Delegated visual direction." "## Palette" "Use neutral surfaces." "## Typography" "Readable product scale." "## Spacing and Layout" "Dense but clear." "## Components and Motion" "Buttons have visible states." "## Forbidden Patterns" "No self-rendered SVG screenshots as final design assets."
 write_file "$SELF_RENDERED_PNG/design/SCREEN_ACCEPTANCE.md" \
-  "# Screen Acceptance" "" "## Dashboard" "- Required content: dashboard body." "- Required states: default." "- Breakpoints: 320, 768, 1440." "- Required design assets: design/approved/dashboard.png." "- Visual acceptance: follows a formal design producer output." "- Accessibility acceptance: primary action reachable."
+  "# Screen Acceptance" "" "## Dashboard" "- Requirement source: specs/SPEC.md." "- Required content: dashboard body." "- Required states: default." "- Breakpoints: 320, 768, 1440." "- Required design assets: design/approved/dashboard.png." "- Visual acceptance: follows a formal design producer output." "- Accessibility acceptance: primary action reachable."
 write_file "$SELF_RENDERED_PNG/design/DESIGN_ARTIFACTS.md" \
   "# Design Artifacts" "" "## Required Coverage" "- Dashboard board." "## Screen Coverage" "| Screen | State | Source type | Source reference | Approved asset path | Resolution / export | Status | Implementation notes |" "|---|---|---|---|---|---|---|---|" "| Dashboard | Default | local-approved | local-render://svg-wireframe-to-png | design/approved/dashboard.png | 1440x900 png | approved | Should fail because this is a self-rendered SVG/HTML screenshot renamed as PNG |"
 write_file "$SELF_RENDERED_PNG/design/REFERENCE_BOARD.md" \
@@ -375,7 +483,7 @@ write_file "$MISSING_COVERAGE/design/DESIGN.md" \
 write_file "$MISSING_COVERAGE/design/VISUAL_SYSTEM.md" \
   "# Visual System" "" "## Reference Influence" "Delegated visual direction." "## Palette" "Use neutral surfaces." "## Typography" "Readable product scale." "## Spacing and Layout" "Dense but clear." "## Components and Motion" "Buttons have visible states." "## Forbidden Patterns" "No generic AI gradients."
 write_file "$MISSING_COVERAGE/design/SCREEN_ACCEPTANCE.md" \
-  "# Screen Acceptance" "" "## Dashboard" "- Required content: dashboard body." "- Required states: default." "- Breakpoints: 320, 768, 1440." "- Required design assets: design/approved/dashboard.png." "- Visual acceptance: follows the board." "- Accessibility acceptance: primary action reachable." "" "## Settings" "- Required content: settings controls." "- Required states: default." "- Breakpoints: 320, 768, 1440." "- Required design assets: design/approved/settings.png." "- Visual acceptance: follows the board." "- Accessibility acceptance: controls reachable."
+  "# Screen Acceptance" "" "## Dashboard" "- Requirement source: specs/SPEC.md." "- Required content: dashboard body." "- Required states: default." "- Breakpoints: 320, 768, 1440." "- Required design assets: design/approved/dashboard.png." "- Visual acceptance: follows the board." "- Accessibility acceptance: primary action reachable." "" "## Settings" "- Requirement source: specs/SPEC.md." "- Required content: settings controls." "- Required states: default." "- Breakpoints: 320, 768, 1440." "- Required design assets: design/approved/settings.png." "- Visual acceptance: follows the board." "- Accessibility acceptance: controls reachable."
 write_file "$MISSING_COVERAGE/design/DESIGN_ARTIFACTS.md" \
   "# Design Artifacts" "" "## Required Coverage" "- Dashboard board only." "## Screen Coverage" "| Screen | State | Source type | Source reference | Approved asset path | Resolution / export | Status | Implementation notes |" "|---|---|---|---|---|---|---|---|" "| Dashboard | Default | figma-mcp | figma://smoke/dashboard | design/approved/dashboard.png | 1440x900 png | approved | Use as visual target |"
 write_valid_png "$MISSING_COVERAGE/design/approved/dashboard.png"
@@ -396,7 +504,7 @@ write_file "$SCREENSHOT_SWAP/design/DESIGN.md" \
 write_file "$SCREENSHOT_SWAP/design/VISUAL_SYSTEM.md" \
   "# Visual System" "" "## Reference Influence" "Delegated visual direction." "## Palette" "Use neutral surfaces." "## Typography" "Readable product scale." "## Spacing and Layout" "Dense but clear." "## Components and Motion" "Buttons have visible states." "## Forbidden Patterns" "No generic AI gradients."
 write_file "$SCREENSHOT_SWAP/design/SCREEN_ACCEPTANCE.md" \
-  "# Screen Acceptance" "" "## Dashboard" "- Required content: dashboard body." "- Required states: default." "- Breakpoints: 320, 768, 1440." "- Required design assets: design/approved/dashboard.png." "- Visual acceptance: follows the board." "- Accessibility acceptance: primary action reachable."
+  "# Screen Acceptance" "" "## Dashboard" "- Requirement source: specs/SPEC.md." "- Required content: dashboard body." "- Required states: default." "- Breakpoints: 320, 768, 1440." "- Required design assets: design/approved/dashboard.png." "- Visual acceptance: follows the board." "- Accessibility acceptance: primary action reachable."
 write_file "$SCREENSHOT_SWAP/design/DESIGN_ARTIFACTS.md" \
   "# Design Artifacts" "" "## Required Coverage" "- Dashboard board." "## Screen Coverage" "| Screen | State | Source type | Source reference | Approved asset path | Resolution / export | Status | Implementation notes |" "|---|---|---|---|---|---|---|---|" "| Dashboard | Default | browser-screenshot | design/screenshots/dashboard.png | design/approved/dashboard.png | 1440x900 png | approved | Should fail because screenshots are verification assets |"
 write_valid_png "$SCREENSHOT_SWAP/design/approved/dashboard.png"
@@ -418,7 +526,7 @@ write_file "$DRAFT_PATH/design/DESIGN.md" \
 write_file "$DRAFT_PATH/design/VISUAL_SYSTEM.md" \
   "# Visual System" "" "## Reference Influence" "Delegated visual direction." "## Palette" "Use neutral surfaces." "## Typography" "Readable product scale." "## Spacing and Layout" "Dense but clear." "## Components and Motion" "Buttons have visible states." "## Forbidden Patterns" "No generic AI gradients."
 write_file "$DRAFT_PATH/design/SCREEN_ACCEPTANCE.md" \
-  "# Screen Acceptance" "" "## Dashboard" "- Required content: dashboard body." "- Required states: default." "- Breakpoints: 320, 768, 1440." "- Required design assets: design/approved/dashboard.png." "- Visual acceptance: follows the board." "- Accessibility acceptance: primary action reachable."
+  "# Screen Acceptance" "" "## Dashboard" "- Requirement source: specs/SPEC.md." "- Required content: dashboard body." "- Required states: default." "- Breakpoints: 320, 768, 1440." "- Required design assets: design/approved/dashboard.png." "- Visual acceptance: follows the board." "- Accessibility acceptance: primary action reachable."
 write_file "$DRAFT_PATH/design/DESIGN_ARTIFACTS.md" \
   "# Design Artifacts" "" "## Required Coverage" "- Dashboard board." "## Screen Coverage" "| Screen | State | Source type | Source reference | Approved asset path | Resolution / export | Status | Implementation notes |" "|---|---|---|---|---|---|---|---|" "| Dashboard | Default | designer-upload | upload://smoke/draft-dashboard | design/drafts/dashboard.png | 1440x900 png | approved | Should fail because approved asset path points to drafts |"
 write_valid_png "$DRAFT_PATH/design/drafts/dashboard.png"
@@ -439,20 +547,20 @@ write_file "$NO_CUTS/design/DESIGN.md" \
 write_file "$NO_CUTS/design/VISUAL_SYSTEM.md" \
   "# Visual System" "" "## Reference Influence" "Delegated visual direction." "## Palette" "Use neutral surfaces." "## Typography" "Readable product scale." "## Spacing and Layout" "Dense but clear." "## Components and Motion" "Buttons have visible states." "## Forbidden Patterns" "No generic AI gradients."
 write_file "$NO_CUTS/design/SCREEN_ACCEPTANCE.md" \
-  "# Screen Acceptance" "" "## Dashboard" "- Required content: dashboard body." "- Required states: default." "- Breakpoints: 320, 768, 1440." "- Required design assets: design/approved/dashboard.png." "- Visual acceptance: follows the board." "- Accessibility acceptance: primary action reachable."
+  "# Screen Acceptance" "" "## Dashboard" "- Requirement source: specs/SPEC.md." "- Required content: dashboard body." "- Required states: default." "- Breakpoints: 320, 768, 1440." "- Required design assets: design/approved/dashboard.png." "- Visual acceptance: follows the board." "- Accessibility acceptance: primary action reachable."
 write_file "$NO_CUTS/design/DESIGN_ARTIFACTS.md" \
   "# Design Artifacts" "" "## Required Coverage" "- Dashboard board." "## Screen Coverage" "| Screen | State | Source type | Source reference | Approved asset path | Resolution / export | Status | Implementation notes |" "|---|---|---|---|---|---|---|---|" "| Dashboard | Default | designer-upload | upload://smoke/no-cuts-dashboard | design/approved/dashboard.png | 1440x900 png | approved | Use as visual target |"
 write_file "$NO_CUTS/design/REFERENCE_BOARD.md" \
   "# Reference Board" "" "## Delegated Direction" "Use a focused product dashboard with neutral surfaces." "## Patterns" "- Clear hierarchy." "- System icons only."
 write_file "$NO_CUTS/design/cut-assets/ASSET_MANIFEST.md" \
-  "# Cut Assets" "" "## Decision" "- CUT_ASSETS_REQUIRED: no" "- Rationale: this fixture uses CSS and platform icons only."
+  "# Cut Assets" "" "## Decision" "- CUT_ASSETS_REQUIRED: no" "- Rationale: this fixture uses CSS and platform icons only." "" "## Recommended Later" "| Idea | Future path | Notes |" "|---|---|---|" "| Optional badge | design/cut-assets/future-badge.svg | Future backlog only; not required for current gate. |"
 write_valid_png "$NO_CUTS/design/approved/dashboard.png"
 bin/dev-flow design-check "$(basename "$NO_CUTS")" --allow-no-reference >/dev/null
 bin/dev-flow asset-check "$(basename "$NO_CUTS")" >/dev/null
 
 bin/dev-flow init "$(basename "$AI_MISSING_HTML")" >/dev/null
 write_file "$AI_MISSING_HTML/design/SCREEN_ACCEPTANCE.md" \
-  "# Screen Acceptance" "" "## Dashboard" "- Required content: dashboard body." "- Required states: default." "- Breakpoints: 320, 768, 1440." "- Required design assets: design/approved/dashboard.png." "- Visual acceptance: follows the generated board." "- Accessibility acceptance: primary action reachable."
+  "# Screen Acceptance" "" "## Dashboard" "- Requirement source: specs/SPEC.md." "- Required content: dashboard body." "- Required states: default." "- Breakpoints: 320, 768, 1440." "- Required design assets: design/approved/dashboard.png." "- Visual acceptance: follows the generated board." "- Accessibility acceptance: primary action reachable."
 write_file "$AI_MISSING_HTML/design/DESIGN_ARTIFACTS.md" \
   "# Design Artifacts" "" "## Required Coverage" "- Dashboard board." "## Screen Coverage" "| Screen | State | Source type | Source reference | Approved asset path | Resolution / export | Status | Implementation notes |" "|---|---|---|---|---|---|---|---|" "| Dashboard | Default | imagegen | imagegen://smoke/dashboard | design/approved/dashboard.png | 1440x900 png | approved | Missing HTML companion should fail |"
 write_file "$AI_MISSING_HTML/design/cut-assets/ASSET_MANIFEST.md" \
@@ -477,7 +585,7 @@ write_file "$FIGMA_GOOD/design/DESIGN.md" \
 write_file "$FIGMA_GOOD/design/VISUAL_SYSTEM.md" \
   "# Visual System" "" "## Reference Influence" "Delegated visual direction formalized in Figma." "## Palette" "Use neutral surfaces." "## Typography" "Readable product scale." "## Spacing and Layout" "Dense but clear." "## Components and Motion" "Buttons have visible states." "## Forbidden Patterns" "No generic AI gradients."
 write_file "$FIGMA_GOOD/design/SCREEN_ACCEPTANCE.md" \
-  "# Screen Acceptance" "" "## Dashboard" "- Required content: dashboard body." "- Required states: default." "- Breakpoints: 320, 768, 1440." "- Required design assets: design/approved/screens/dashboard.png." "- Visual acceptance: follows the Figma export." "- Accessibility acceptance: primary action reachable."
+  "# Screen Acceptance" "" "## Dashboard" "- Requirement source: specs/SPEC.md." "- Required content: dashboard body." "- Required states: default." "- Breakpoints: 320, 768, 1440." "- Required design assets: design/approved/screens/dashboard.png." "- Visual acceptance: follows the Figma export." "- Accessibility acceptance: primary action reachable."
 write_file "$FIGMA_GOOD/design/DESIGN_ARTIFACTS.md" \
   "# Design Artifacts" "" "## Required Coverage" "- Dashboard board." "## Screen Coverage" "| Screen | State | Source type | Source reference | Approved asset path | Resolution / export | Status | Implementation notes |" "|---|---|---|---|---|---|---|---|" "| Dashboard | Default | figma-mcp | figma://smoke/file/dashboard-node | design/approved/screens/dashboard.png | Figma frame 1440x900 export @1x PNG | approved | Use as visual target |"
 write_file "$FIGMA_GOOD/design/REFERENCE_BOARD.md" \
@@ -519,6 +627,14 @@ grep -q "Invalid Figma approved export for screen: Dashboard" "$FIGMA_BAD_EXPORT
 bin/dev-flow init "$(basename "$DELEGATED")" >/dev/null
 write_file "$DELEGATED/ideas/idea-brief.md" \
   "# Idea Brief" "" "Build a habit tracker." "The user delegated visual direction." "The app needs onboarding and dashboard screens."
+write_file "$DELEGATED/product/PRD.md" \
+  "# PRD" "" "Build a habit tracker." "Onboarding and dashboard are in MVP." "Visual direction is delegated to the agent."
+write_file "$DELEGATED/product/USER_STORIES.md" \
+  "# User Stories" "" "- As a user, I can complete onboarding." "- As a user, I can review habit progress." "- As a user, I can recover from empty and error states."
+write_file "$DELEGATED/product/ACCEPTANCE.md" \
+  "# Acceptance" "" "- Onboarding has approved design coverage." "- Dashboard has approved design coverage." "- QA evidence proves the implemented screens."
+write_file "$DELEGATED/product/METRICS.md" \
+  "# Metrics" "" "- Setup completion." "- Dashboard engagement." "- Visual comparison score."
 write_file "$DELEGATED/specs/SPEC.md" \
   "# Spec" "" "Create onboarding and dashboard screens." "Support default, empty, loading, error, and success states." "Use approved design assets before implementation."
 write_file "$DELEGATED/design/DESIGN.md" \
@@ -526,7 +642,7 @@ write_file "$DELEGATED/design/DESIGN.md" \
 write_file "$DELEGATED/design/VISUAL_SYSTEM.md" \
   "# Visual System" "" "## Reference Influence" "Delegated visual direction from product goals." "## Palette" "Neutral surfaces and one action color." "## Typography" "Readable product scale." "## Spacing and Layout" "Cards and sections use stable spacing." "## Components and Motion" "Cards, tabs, and buttons need states." "## Forbidden Patterns" "No generic AI gradients or nested card stacks."
 write_file "$DELEGATED/design/SCREEN_ACCEPTANCE.md" \
-  "# Screen Acceptance" "" "## Onboarding" "- Required content: setup title, habit input, primary action." "- Required states: default, loading, error, success." "- Breakpoints: 320, 768, 1440." "- Required design assets: design/approved/onboarding-default.png." "- Visual acceptance: follows the onboarding board hierarchy." "- Accessibility acceptance: primary action keyboard reachable." "" "## Dashboard" "- Required content: habit cards, progress summary, primary action." "- Required states: default, empty, loading, selected, success." "- Breakpoints: 320, 768, 1440." "- Required design assets: design/approved/dashboard-empty.png." "- Visual acceptance: follows the dashboard board hierarchy." "- Accessibility acceptance: cards and actions keyboard reachable."
+  "# Screen Acceptance" "" "## Onboarding" "- Requirement source: specs/SPEC.md." "- Required content: setup title, habit input, primary action." "- Required states: default, loading, error, success." "- Breakpoints: 320, 768, 1440." "- Required design assets: design/approved/onboarding-default.png." "- Visual acceptance: follows the onboarding board hierarchy." "- Accessibility acceptance: primary action keyboard reachable." "" "## Dashboard" "- Requirement source: specs/SPEC.md." "- Required content: habit cards, progress summary, primary action." "- Required states: default, empty, loading, selected, success." "- Breakpoints: 320, 768, 1440." "- Required design assets: design/approved/dashboard-empty.png." "- Visual acceptance: follows the dashboard board hierarchy." "- Accessibility acceptance: cards and actions keyboard reachable."
 write_file "$DELEGATED/design/DESIGN_ARTIFACTS.md" \
   "# Design Artifacts" "" "## Required Coverage" "- Onboarding board." "- Dashboard board." "" "## Screen Coverage" "| Screen | State | Source type | Source reference | Approved asset path | Resolution / export | Status | Implementation notes |" "|---|---|---|---|---|---|---|---|" "| Onboarding | Default | imagegen | imagegen://smoke/onboarding-default | design/approved/onboarding-default.png | 1440x900 png | approved | Use as visual target. HTML: design/approved/html/onboarding-default.html |" "| Dashboard | Empty | gpt-image-2 | gpt-image-2://smoke/dashboard-empty | design/approved/dashboard-empty.png | 1440x900 png | approved | Use as visual target. HTML: design/approved/html/dashboard-empty.html |"
 write_file "$DELEGATED/design/DESIGN_IMAGE_DESCRIPTIONS.md" \
@@ -542,13 +658,13 @@ write_file "$DELEGATED/design/cut-assets/ASSET_MANIFEST.md" \
   "# Cut Assets" "" "## Decision" "- CUT_ASSETS_REQUIRED: yes" "" "## Asset Manifest" "| Asset | Source approved asset | Source region / frame | Output path | Format | Alpha | Runtime path | Usage | Notes |" "|---|---|---|---|---|---|---|---|---|" "| Primary icon | design/approved/onboarding-default.png | x=24 y=24 w=96 h=96 | design/cut-assets/primary-icon.png | PNG 2x | yes | apps/web/assets/primary-icon.png | Primary action icon | Derived from approved board |"
 bin/dev-flow design-check "$(basename "$DELEGATED")" --allow-no-reference >/dev/null
 grep -q 'UI_REFERENCES="delegated"' "$DELEGATED/.dev-flow/applicability.env"
-bin/dev-flow phase "$(basename "$DELEGATED")" plan "Plan implementation after delegated design" >/dev/null
+printf '%s\n' 'AUTOMATED_QA="required"' 'VISUAL_QA="required"' >> "$DELEGATED/.dev-flow/applicability.env"
 
 write_file "$DELEGATED/tasks/PLAN.md" \
   "# Plan" "" "## Design Handoff" "Implement from DESIGN.md, VISUAL_SYSTEM.md, SCREEN_ACCEPTANCE.md, and approved design assets under design/approved/." "" "## Task 1" "Build the static UI under apps/web." "Acceptance: source exists, functional QA passes, monkey QA passes, and VISUAL_COMPARISON.md scores the implemented screens."
 write_file "$DELEGATED/tasks/IMPLEMENTATION_TRACE.md" \
   "# Implementation Trace" "" "## Screen Trace" "| Screen | State | Implementation target | Approved asset | Design source | HTML companion | Cut assets | Test evidence | Status |" "|---|---|---|---|---|---|---|---|---|" "| Onboarding | Default | apps/web/index.html | design/approved/onboarding-default.png | imagegen://smoke/onboarding-default | none | design/cut-assets/primary-icon.png | reviews/FUNCTIONAL_TEST.md | planned |" "| Dashboard | Empty | apps/web/index.html | design/approved/dashboard-empty.png | gpt-image-2://smoke/dashboard-empty | design/approved/html/dashboard-empty.html | none | reviews/FUNCTIONAL_TEST.md | planned |"
-if bin/dev-flow verify-phase "$(basename "$DELEGATED")" plan >"$TRACE_MISSING_HTML_OUT" 2>&1; then
+if bin/dev-flow verify-phase "$(basename "$DELEGATED")" build >"$TRACE_MISSING_HTML_OUT" 2>&1; then
   cat "$TRACE_MISSING_HTML_OUT" >&2
   echo "Expected missing implementation trace HTML companion to fail." >&2
   exit 1
@@ -573,7 +689,6 @@ write_file "$DELEGATED/ship/LAUNCH.md" \
   "# Launch" "" "## Summary" "Workflow fixture reached ship-check." "## Go / No-Go" "Go for workflow validation."
 bin/dev-flow phase "$(basename "$DELEGATED")" build "Implement audited UI slice" >/dev/null
 bin/dev-flow verify-phase "$(basename "$DELEGATED")" build >/dev/null
-bin/dev-flow verify-phase "$(basename "$DELEGATED")" test >/dev/null
 if bin/dev-flow qa-check "$(basename "$DELEGATED")" >/dev/null 2>&1; then
   echo "Expected visual score below 90 to fail." >&2
   exit 1
@@ -600,37 +715,7 @@ fi
 grep -q "Exception or blocked-flow record found" "$EXCEPTION_OUT"
 write_valid_png "$DELEGATED/reviews/visual-screenshots/dashboard-exception.png"
 bin/dev-flow qa-check "$(basename "$DELEGATED")" >/dev/null
-if bin/dev-flow pdca-check "$(basename "$DELEGATED")" >"$PDCA_OUT" 2>&1; then
-  cat "$PDCA_OUT" >&2
-  echo "Expected default PDCA template to fail before cycle evidence is recorded." >&2
-  exit 1
-fi
-grep -q "Missing Do section evidence" "$PDCA_OUT"
-write_file "$DELEGATED/tasks/PDCA.md" \
-  "# PDCA" "" \
-  "## Current Cycle" \
-  "- Cycle ID: smoke-${RUN_ID}" \
-  "- Scope: delegated UI delivery fixture." \
-  "- Owner / agent: smoke test." \
-  "- Checkpoint: ship-check." "" \
-  "## Plan" \
-  "- Objective: Deliver the delegated UI fixture from specs/SPEC.md, design/DESIGN.md, SCREEN_ACCEPTANCE.md, and tasks/PLAN.md." \
-  "- Acceptance evidence: functional flow, monkey test, and visual comparison score at or above 90/100." \
-  "- Quality gates: bin/dev-flow design-check, qa-check, pdca-check, and ship-check." "" \
-  "## Do" \
-  "- Implementation slices: built the static UI under apps/web/index.html." \
-  "- Changed areas: apps/web, reviews, and launch evidence." \
-  "- Build artifacts: project-local source under apps/web." "" \
-  "## Check" \
-  "- Verification evidence: reviews/VERIFICATION.md." \
-  "- Functional test evidence: reviews/FUNCTIONAL_TEST.md." \
-  "- Monkey test evidence: reviews/MONKEY_TEST.md." \
-  "- UI visual comparison evidence: reviews/VISUAL_COMPARISON.md score 92/100 against approved design assets." "" \
-  "## Act" \
-  "- Decision: standardize the approved-design to implementation handoff for this cycle." \
-  "- Iterate / follow-up: keep the same qa-check and pdca-check gates for the next cycle." \
-  "- Rollback or recovery notes: use ship/LAUNCH.md if a release needs recovery."
-bin/dev-flow pdca-check "$(basename "$DELEGATED")" >/dev/null
+! test -f "$DELEGATED/tasks/PDCA.md"
 bin/dev-flow ship-check "$(basename "$DELEGATED")" >/dev/null
 
 bin/dev-flow package-adapters "$ADAPTER_OUT" >/dev/null
@@ -646,6 +731,11 @@ test -f "$ADAPTER_OUT/claude-code/.claude/commands/api.md"
 test -f "$ADAPTER_OUT/claude-code/.claude/commands/debug.md"
 test -f "$ADAPTER_OUT/claude-code/.claude/commands/security.md"
 test -f "$ADAPTER_OUT/claude-code/.claude/commands/ui.md"
+! test -e "$ADAPTER_OUT/claude-code/.claude/commands/pm.md"
+! test -e "$ADAPTER_OUT/claude-code/.claude/commands/agent.md"
+! test -e "$ADAPTER_OUT/claude-code/.claude/commands/plan.md"
+! test -e "$ADAPTER_OUT/claude-code/.claude/commands/test.md"
+! test -e "$ADAPTER_OUT/claude-code/.claude/commands/review.md"
 ! test -e "$ADAPTER_OUT/claude-code/.claude/commands/dev-flow.md"
 ! test -e "$ADAPTER_OUT/claude-code/.claude/commands/dev-role.md"
 ! test -e "$ADAPTER_OUT/claude-code/.claude/commands/dev-next.md"
@@ -654,9 +744,13 @@ test -f "$ADAPTER_OUT/gemini/dev-flow-quality/commands/dev.toml"
 test -f "$ADAPTER_OUT/gemini/dev-flow-quality/commands/dev-agent.toml"
 test -f "$ADAPTER_OUT/gemini/dev-flow-quality/commands/api.toml"
 test -f "$ADAPTER_OUT/gemini/dev-flow-quality/commands/debug.toml"
-test -f "$ADAPTER_OUT/gemini/dev-flow-quality/commands/plan.toml"
 test -f "$ADAPTER_OUT/gemini/dev-flow-quality/commands/security.toml"
 test -f "$ADAPTER_OUT/gemini/dev-flow-quality/commands/ui.toml"
+! test -e "$ADAPTER_OUT/gemini/dev-flow-quality/commands/pm.toml"
+! test -e "$ADAPTER_OUT/gemini/dev-flow-quality/commands/agent.toml"
+! test -e "$ADAPTER_OUT/gemini/dev-flow-quality/commands/plan.toml"
+! test -e "$ADAPTER_OUT/gemini/dev-flow-quality/commands/test.toml"
+! test -e "$ADAPTER_OUT/gemini/dev-flow-quality/commands/review.toml"
 ! test -e "$ADAPTER_OUT/gemini/dev-flow-quality/commands/planning.toml"
 ! test -e "$ADAPTER_OUT/gemini/dev-flow-quality/commands/dev-flow.toml"
 ! test -e "$ADAPTER_OUT/gemini/dev-flow-quality/commands/dev-role.toml"
@@ -672,6 +766,7 @@ test -f "$ADAPTER_OUT/runtime/dev-agent/dev-agent.manifest.json"
 test -f "$ADAPTER_OUT/runtime/tests/dev-flow-smoke.sh"
 test -d "$ADAPTER_OUT/runtime/dev-agent/templates/project"
 test -f "$ADAPTER_OUT/runtime/dev-agent/templates/project/host-requirements.md"
+! test -f "$ADAPTER_OUT/runtime/dev-agent/templates/project/pdca.md"
 ! find "$ADAPTER_OUT" -path '*/work/*' -o -path '*/dist/*' | grep -q .
 
 mkdir -p "$INSTALL_DEST/commands" "$INSTALL_DEST/skills/dev-agent-opc" "$INSTALL_DEST/dev-agent-opc-runtime/bin"
@@ -693,6 +788,14 @@ test -f "$INSTALL_DEST/skills/dev-agent/SKILL.md"
 test -x "$INSTALL_DEST/dev-agent-runtime/bin/dev-flow"
 test -f "$INSTALL_DEST/dev-agent-runtime/dev-agent/dev-agent.manifest.json"
 "$INSTALL_DEST/dev-agent-runtime/bin/dev-flow" list >/dev/null
+mkdir -p "$INSTALL_WORKSPACE"
+(
+  cd "$INSTALL_WORKSPACE"
+  "$INSTALL_DEST/dev-agent-runtime/bin/dev-flow" init runtime_probe --type api >/dev/null
+  "$INSTALL_DEST/dev-agent-runtime/bin/dev-flow" status runtime_probe >/dev/null
+)
+test -d "$INSTALL_WORKSPACE/work/runtime_probe/.dev-flow"
+! test -d "$INSTALL_DEST/dev-agent-runtime/work/runtime_probe"
 bin/dev-flow uninstall codex --scope user --dest "$INSTALL_DEST" >/dev/null
 ! test -e "$INSTALL_DEST/commands/dev.md"
 ! test -e "$INSTALL_DEST/commands/dev-agent.md"

@@ -1,6 +1,6 @@
 ---
 name: dev-agent
-description: 全流程帮你梳理想法、拆解方案、调用专业角色，并通过质量门禁推进到可落地交付。
+description: 用精简流程帮你从想法进入 spec、design、build，并按需执行 QA 与发布门禁。
 ---
 
 # Dev Agent
@@ -8,6 +8,17 @@ description: 全流程帮你梳理想法、拆解方案、调用专业角色，�
 Use this as the single native entry skill for Dev Agent. The detailed
 workflow skills, personas, commands, references, templates, and gates live in
 the installed `dev-agent-runtime/` folder.
+
+For existing project work, do not start by reading workflow Markdown. Locate the
+runtime and run:
+
+```bash
+bin/dev-flow status <project-name>
+bin/dev-flow next <project-name>
+```
+
+Treat `next` as the execution brief and load only the command, skill,
+references, and project files it names.
 
 Prefer the visible entry:
 
@@ -20,12 +31,17 @@ Compatibility alias:
 
 - `/dev-agent <action> ...`
 
-Supported flows include `idea`, `pm`, `agent`, `spec`, `design`,
-`figma-design`, `figma-library`, `plan`, `build`, `test`, `review`, `ship`,
-`debug`, `ui`, `api`, `security`, and `code-simplify`.
+Primary lifecycle flows are `idea`, `spec`, `design`, `build`, `qa`, and
+`ship`. `qa` and `ship` are optional unless the user or project applicability
+requires them.
+
+Focused auxiliary flows include `figma-design`, `figma-library`, `debug`, `ui`,
+`api`, `security`, and `code-simplify`.
 
 Supported roles are `code-reviewer`, `product-designer`, `security-auditor`,
-`test-engineer`, and `ui-quality-reviewer`.
+`test-engineer`, and `ui-quality-reviewer`. Invoke roles only on explicit user
+request or when the current risk needs that specialist view; lifecycle phases do
+not auto-require personas.
 
 When command snippets are unavailable, locate the installed runtime in one of:
 
@@ -34,9 +50,13 @@ When command snippets are unavailable, locate the installed runtime in one of:
 - `.claude/dev-agent-runtime/`
 - `$HOME/.claude/dev-agent-runtime/`
 
-Then use `bin/dev-flow manifest`, `bin/dev-flow command <flow-name>`,
-`bin/dev-flow agent <role-name>`, `bin/dev-flow status <project-name>`, and
-`bin/dev-flow next <project-name>` to load the current flow instructions.
+Then use `bin/dev-flow status <project-name>` and
+`bin/dev-flow next <project-name>` to load the current execution brief. Use
+`bin/dev-flow manifest`, `bin/dev-flow command <flow-name>`, and
+`bin/dev-flow agent <role-name>` only when the brief or maintenance task calls
+for them.
+Installed runtime commands manage `work/<project-name>/` in the active
+workspace/current shell directory, or in `DEV_FLOW_WORKSPACE_ROOT` when set.
 
 Do not copy project-specific work into the install directory. Project artifacts
 belong under `work/<project-name>/` in the active workspace.

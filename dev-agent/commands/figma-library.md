@@ -6,9 +6,8 @@ Use this only when the project needs reusable tokens, component variants, or a
 durable design system. For one-off screens, prefer `figma-design`.
 
 1. Read `work/<project-name>/design/VISUAL_SYSTEM.md`, `SCREEN_ACCEPTANCE.md`,
-   `DESIGN_ARTIFACTS.md`, `DESIGN_IMAGE_DESCRIPTIONS.md` when AI-generated
-   images are used, `FIGMA_HANDOFF.md`, existing code components, styling tokens,
-   and any approved visual assets.
+   `DESIGN_ARTIFACTS.md`, `FIGMA_HANDOFF.md`, existing code components, styling
+   tokens, and required design contract inputs.
 2. If Figma tools are available, invoke the Figma plugin skills
    `figma-use` and `figma-generate-library`. Follow the plugin workflow:
    discovery first, tokens before components, small sequential Figma operations,
@@ -16,16 +15,12 @@ durable design system. For one-off screens, prefer `figma-design`.
 3. Define the library scope before creating components: token collections,
    text/effect styles, component list, variants, and what code component or
    runtime asset each Figma component maps to.
-4. Export component boards or component-set snapshots as PNG/PDF under
-   `design/approved/components/` when they are used as implementation targets.
-5. Update `DESIGN_ARTIFACTS.md` for any component-backed screen/state assets and
-   update `FIGMA_HANDOFF.md` with file/node IDs, component roles, approved
-   exports, and status.
-6. If component boards require SVG or bitmap runtime assets, save them under
-   `design/cut-assets/` and record them in `ASSET_MANIFEST.md`.
-7. Run `bin/dev-flow design-check <project-name>`. Use
-   `bin/dev-flow figma-check <project-name>` or `asset-check` separately only
-   when you need focused library/handoff diagnostics or evidence.
+4. Export component boards and update `DESIGN_ARTIFACTS.md`,
+   `FIGMA_HANDOFF.md`, and runtime asset records according to
+   `dev-agent/references/design-artifacts.md` and
+   `dev-agent/references/figma-handoff.md`.
+5. Run `bin/dev-flow figma-check <project-name>` and
+   `bin/dev-flow design-check <project-name>`.
 
 Do not create a component library solely to satisfy the design gate; the gate is
 already satisfied by valid approved screen assets.

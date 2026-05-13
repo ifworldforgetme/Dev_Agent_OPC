@@ -6,11 +6,12 @@ Project-specific verification belongs here. Keep commands runnable from this pro
 - [ ] Required workflow folders exist
 - [ ] Schema and status ledgers exist
 - [ ] Context loading guidance exists
-- [ ] Host SDKs, CLIs, services, credentials, and permissions are recorded in `.dev-flow/HOST_REQUIREMENTS.md`
+- [ ] Host SDKs, CLIs, services, credentials, and permissions are recorded in `.dev-flow/HOST_REQUIREMENTS.md` when known
 - [ ] Shared host SDKs are not downloaded into `work/{{PROJECT}}/`
-- [ ] `bin/dev-flow env-check {{PROJECT}}` passes before host-dependent build/test/ship work
+- [ ] `bin/dev-flow env-check {{PROJECT}}` passes before the current build slice or ship scope uses host capabilities
 - [ ] Reference intake exists for customer-facing UI work
-- [ ] Approved design assets exist under `design/approved/` before UI implementation, when UI applies
+- [ ] `dev-agent/references/design-artifacts.md` is satisfied when formal visual assets are required
+- [ ] `dev-agent/references/figma-handoff.md` is satisfied when Figma is used
 - [ ] `bin/dev-flow design-check {{PROJECT}}` passes before UI implementation, when UI applies
 - [ ] `tasks/IMPLEMENTATION_TRACE.md` maps required UI screens to implementation targets and evidence, when UI applies
 
@@ -20,10 +21,8 @@ Project-specific verification belongs here. Keep commands runnable from this pro
 - [ ] Unit tests
 - [ ] Build
 - [ ] Browser or device smoke test, when user-facing
-- [ ] Functional flow test, when user-facing
-- [ ] Monkey or exploratory stress test, when user-facing
-- [ ] Current planned UI implementation batch is complete or explicitly blocked before visual comparison, when user-facing
-- [ ] Visual comparison score is at least 90/100 against approved design assets, when user-facing
-- [ ] `tasks/PDCA.md` records Current Cycle, Plan, Do, Check, and Act evidence for the current cycle
+- [ ] Functional flow test, when `AUTOMATED_QA` is required
+- [ ] Monkey or exploratory stress test, when `AUTOMATED_QA` is required
+- [ ] Visual comparison score is at least 90/100 against required design contract inputs, when `VISUAL_QA` is required
 - [ ] `bin/dev-flow doctor {{PROJECT}}`, before delivery
-- [ ] `bin/dev-flow qa-check {{PROJECT}}`, before delivery for customer-facing UI
+- [ ] `bin/dev-flow qa-check {{PROJECT}}`, before delivery only when QA is required

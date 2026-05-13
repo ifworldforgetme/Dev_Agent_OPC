@@ -1,2 +1,0 @@
-description = "Design AI agent workflows, tools, permissions, prompts, memory, recovery, operations, and evaluations"
-prompt = "Use local flow: agent\n\nDesign the AI agent workflow for the current project. Invoke agent-flow and save outputs under work/<project-name>/agent/. Include tool permissions, human checkpoints, prompt-injection and data-exfiltration handling, observability, cost/rate limits, locks, idempotency, resume behavior, model/tool fallback, eval thresholds, and launch blockers."

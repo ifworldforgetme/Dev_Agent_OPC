@@ -1,8 +1,12 @@
 # Orchestration Patterns
 
-Reference catalog of agent orchestration patterns this repo endorses, plus anti-patterns to avoid. Read this before adding a new slash command that coordinates multiple personas, or before introducing a new persona that "wraps" existing ones.
+Reference catalog of agent orchestration patterns this repo endorses, plus anti-patterns to avoid. Read this before adding a new native command that coordinates multiple personas, or before introducing a new persona that "wraps" existing ones.
 
-The governing rule: **the user (or a slash command) is the orchestrator. Personas do not invoke other personas.** Skills are mandatory hops inside a persona's workflow.
+The governing rule: **the user (or a native command) is the orchestrator. Personas do not invoke other personas.** Skills are mandatory hops inside a persona's workflow.
+
+Native examples use `/dev agent flow <name>`. Host-specific full adapters may
+also expose short direct commands such as `/review`, but those are aliases, not
+the stable cross-host entrypoint.
 
 ---
 
@@ -27,21 +31,21 @@ user → code-reviewer → report → user
 
 ---
 
-### 2. Single-persona slash command
+### 2. Focused auxiliary command
 
-A slash command that wraps one persona with the project's skills. Saves the user from re-explaining the workflow every time.
+A native command that wraps one focused workflow or role with the project's skills. Saves the user from re-explaining the workflow every time.
 
 ```
-/review → code-reviewer (with code-review-and-quality skill) → report
+/dev agent role code-reviewer → report
 ```
 
 **Use when:** the same single-persona invocation happens repeatedly with the same setup.
 
-**Examples in this repo:** `/review`, `/test`, `/code-simplify`.
+**Examples in this repo:** `/dev agent role code-reviewer`, `/dev agent role test-engineer`, `/dev agent flow code-simplify`.
 
-**Cost:** same as direct invocation. The slash command is just a saved prompt.
+**Cost:** same as direct invocation. The native command is just a saved prompt.
 
-**Anti-signal:** if the slash command's body is mostly "decide which persona to call," delete it and let the user call the persona directly.
+**Anti-signal:** if the command's body is mostly "decide which persona to call," delete it and let the user call the persona directly.
 
 ---
 
@@ -51,7 +55,7 @@ Multiple personas operate on the same input concurrently, each producing an inde
 
 ```
                     ┌─→ code-reviewer    ─┐
-/ship → fan out  ───┼─→ security-auditor ─┤→ merge → go/no-go + rollback
+/dev agent flow ship ─┼─→ security-auditor ─┤→ merge → go/no-go + rollback
                     └─→ test-engineer    ─┘
 ```
 
@@ -61,7 +65,7 @@ Multiple personas operate on the same input concurrently, each producing an inde
 - The merge step is small enough to stay in the main context
 - Wall-clock latency matters
 
-**Examples in this repo:** `/ship`.
+**Examples in this repo:** `/dev agent flow ship`.
 
 **Cost:** N parallel sub-agent contexts + one merge turn. Higher than direct invocation, but faster wall-clock and produces better reports because each sub-agent stays focused on its single perspective.
 
@@ -75,17 +79,17 @@ If any answer is "no," fall back to direct invocation or a single-persona comman
 
 ---
 
-### 4. Sequential pipeline as user-driven slash commands
+### 4. Sequential pipeline as user-driven native commands
 
-The user runs slash commands in a defined order, carrying context (or commit history) between them. There is no orchestrator agent — the user IS the orchestrator.
+The user runs native commands in a defined order, carrying context (or commit history) between them. There is no orchestrator agent — the user IS the orchestrator.
 
 ```
-user runs:  /spec  →  /plan  →  /build  →  /test  →  /review  →  /ship
+user runs: /dev agent flow spec → /dev agent flow design → /dev agent flow build → /dev agent flow qa → /dev agent flow ship
 ```
 
 **Use when:** the workflow has dependencies (each step needs the previous step's output) and human judgment between steps adds value.
 
-**Examples in this repo:** the entire DEFINE → PLAN → BUILD → VERIFY → REVIEW → SHIP lifecycle.
+**Examples in this repo:** the `idea → spec → design → build → optional QA → optional ship` lifecycle.
 
 **Cost:** one sub-agent context per step. Free for the orchestration layer because there is no orchestrator agent.
 
@@ -138,7 +142,7 @@ Claude Code has two parallelism primitives. Pattern 3 (parallel fan-out with mer
 | Status | Stable | Experimental — requires `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` |
 | Cost | Lower | Higher — each teammate is a separate Claude instance |
 
-**The personas in this repo work in both modes.** When spawned as subagents (e.g. by `/ship`), they report findings to the main session. When spawned as teammates (`Spawn a teammate using the security-auditor agent type…`), they can challenge each other's findings directly. The persona definition is the same; only the spawning context changes.
+**The personas in this repo work in both modes.** When spawned as subagents (e.g. by `/dev agent flow ship`), they report findings to the main session. When spawned as teammates (`Spawn a teammate using the security-auditor agent type…`), they can challenge each other's findings directly. The persona definition is the same; only the spawning context changes.
 
 One subtlety: the `skills` and `mcpServers` frontmatter fields in a persona are honored when it runs as a subagent but **ignored when it runs as a teammate** — teammates load skills and MCP servers from your project and user settings, the same as a regular session. If a persona depends on a specific skill or MCP server being loaded, configure it at the session level so it's available in both modes.
 
@@ -171,13 +175,13 @@ The fields that DO work in plugin agents are: `name`, `description`, `tools`, `d
 
 ### Spawning multiple subagents in parallel
 
-In Claude Code, parallel fan-out (Pattern 3) requires issuing **multiple Agent tool calls in a single assistant turn**. Sequential turns serialize execution. `/ship` calls this out explicitly. Any new orchestrator command should do the same.
+In Claude Code, parallel fan-out (Pattern 3) requires issuing **multiple Agent tool calls in a single assistant turn**. Sequential turns serialize execution. `/dev agent flow ship` calls this out explicitly. Any new orchestrator command should do the same.
 
 ---
 
 ## Worked example: Agent Teams for competing-hypothesis debugging
 
-This example shows when to reach for **Agent Teams** instead of `/ship`'s subagent fan-out. The two patterns look similar from a distance — both spawn the same three personas — but the value comes from a different place.
+This example shows when to reach for **Agent Teams** instead of `/dev agent flow ship`'s subagent fan-out. The two patterns look similar from a distance — both spawn the same three personas — but the value comes from a different place.
 
 ### The scenario
 
@@ -190,19 +194,19 @@ Plausible root causes (mutually exclusive, all fit the symptoms):
 3. A missing index on a query that scales with cart size
 4. A flaky third-party API where the SDK retries silently before timing out
 
-A single agent will pick the first plausible theory and stop investigating. A `/ship`-style subagent fan-out would have each persona report independently — but their reports never meet, so nothing rules out the wrong theories.
+A single agent will pick the first plausible theory and stop investigating. A `/dev agent flow ship`-style subagent fan-out would have each persona report independently — but their reports never meet, so nothing rules out the wrong theories.
 
 This is exactly the case the Agent Teams docs describe: *"With multiple independent investigators actively trying to disprove each other, the theory that survives is much more likely to be the actual root cause."*
 
-### Why this is *not* a `/ship` job
+### Why this is *not* a `/dev agent flow ship` job
 
-| | `/ship` (subagents) | Agent Teams |
+| | `/dev agent flow ship` (subagents) | Agent Teams |
 |--|--------------------|-------------|
 | Sub-agents see | The same diff, different lenses | A shared task list, each other's messages |
 | Output | Three independent reports → one merge | Adversarial debate → consensus root cause |
 | Right when | You want a verdict on a known artifact | You want to *find* the artifact among hypotheses |
 
-`/ship` is a verdict; Agent Teams is an investigation.
+`/dev agent flow ship` is a verdict; Agent Teams is an investigation.
 
 ### Setup (one-time, per-environment)
 
@@ -266,17 +270,17 @@ Always cleanup through the lead, not a teammate (per the docs: teammates lack fu
 
 ### Cost expectation
 
-Three Sonnet teammates running for ~10–15 minutes of investigation costs noticeably more than the same three personas spawned as subagents by `/ship`. The justification is *quality of conclusion* — for production debugging where the wrong fix is expensive, the extra tokens are a bargain. For a routine PR review, stick with `/ship`.
+Three Sonnet teammates running for ~10–15 minutes of investigation costs noticeably more than the same three personas spawned as subagents by `/dev agent flow ship`. The justification is *quality of conclusion* — for production debugging where the wrong fix is expensive, the extra tokens are a bargain. For a routine PR review, stick with `/dev agent flow ship`.
 
 ### Anti-pattern in this scenario
 
-Do **not** rebuild this as a `/debug` slash command that fans out subagents. Subagents can't message each other — you'd lose the adversarial debate that makes the pattern work. If a workflow keeps coming up, document the trigger prompt above as a snippet rather than wrapping it in a slash command that misuses subagents.
+Do **not** rebuild this as a `/dev agent flow debug` command that fans out subagents. Subagents can't message each other — you'd lose the adversarial debate that makes the pattern work. If a workflow keeps coming up, document the trigger prompt above as a snippet rather than wrapping it in a native command that misuses subagents.
 
 ### When *not* to use Agent Teams
 
-- Production-bound verdict on a known diff → use `/ship` (subagents).
+- Production-bound verdict on a known diff → use `/dev agent flow ship` (subagents).
 - One specialist perspective on one artifact → direct persona invocation.
-- Sequential lifecycle (spec → plan → build) → user-driven slash commands (Pattern 4).
+- Sequential lifecycle (spec → design → build → optional QA/ship) → user-driven native commands (Pattern 4).
 - Read-heavy research with a small digest → built-in `Explore` subagent.
 
 Reach for Agent Teams only when teammates **need** to challenge each other to produce the right answer.
@@ -296,10 +300,10 @@ A persona whose job is to decide which other persona to call.
 **Why it fails:**
 - Pure routing layer with no domain value
 - Adds two paraphrasing hops → information loss + roughly 2× token cost
-- The user already knew they wanted a review; they could have called `/review` directly
-- Replicates the work that slash commands and intent mapping in `AGENTS.md` already do
+- The user already knew they wanted a review; they could have called `/dev agent role code-reviewer` directly
+- Replicates the work that native commands and intent mapping in `AGENTS.md` already do
 
-**What to do instead:** add or refine slash commands. Document intent → command mapping in `AGENTS.md`.
+**What to do instead:** add or refine native commands. Document intent → command mapping in `AGENTS.md`.
 
 ---
 
@@ -313,13 +317,13 @@ A `code-reviewer` that internally invokes `security-auditor` when it sees auth c
 - Failure modes multiply (which persona's output format wins? whose rules apply?)
 - Hides cost from the user
 
-**What to do instead:** have the calling persona *recommend* a follow-up audit in its report. The user or a slash command runs the second pass.
+**What to do instead:** have the calling persona *recommend* a follow-up audit in its report. The user or a native command runs the second pass.
 
 ---
 
 ### C. Sequential orchestrator that paraphrases
 
-An agent that calls `/spec`, then `/plan`, then `/build`, etc. on the user's behalf.
+An agent that calls `/dev agent flow spec`, then `/dev agent flow design`, then `/dev agent flow build`, etc. on the user's behalf.
 
 **Why it fails:**
 - Loses the human checkpoints that catch wrong-direction work
@@ -333,14 +337,14 @@ An agent that calls `/spec`, then `/plan`, then `/build`, etc. on the user's beh
 
 ### D. Deep persona trees
 
-`/ship` calls a `pre-ship-coordinator` that calls a `quality-coordinator` that calls `code-reviewer`.
+`/dev agent flow ship` calls a `pre-ship-coordinator` that calls a `quality-coordinator` that calls `code-reviewer`.
 
 **Why it fails:**
 - Each layer adds latency and tokens with no decision value
 - Debugging becomes a multi-level investigation
 - The leaf personas lose context to multiple summarization steps
 
-**What to do instead:** keep the orchestration depth at most 1 (slash command → personas). The merge happens in the main agent.
+**What to do instead:** keep the orchestration depth at most 1 (native command → personas). The merge happens in the main agent.
 
 ---
 
@@ -354,7 +358,7 @@ Is the work one perspective on one artifact?
 └── No  → Will the same composition repeat?
          ├── No  → Direct invocation, ad hoc. Stop.
          └── Yes → Are sub-tasks independent?
-                  ├── No  → Sequential slash commands run by user (Pattern 4).
+                  ├── No  → Sequential native commands run by user (Pattern 4).
                   └── Yes → Parallel fan-out with merge (Pattern 3).
                            Validate against the checklist above.
                            If any check fails → fall back to single-persona command (Pattern 2).

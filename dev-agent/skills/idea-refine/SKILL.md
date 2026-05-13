@@ -18,8 +18,8 @@ Refines raw ideas into sharp, actionable concepts worth building through structu
 This skill is primarily an interactive dialogue. Invoke it with an idea, and the agent will guide you through the process.
 
 ```bash
-# Optional: Initialize the ideas directory
-bash /mnt/skills/user/idea-refine/scripts/idea-refine.sh
+# Optional: initialize a dev-flow project before saving artifacts
+bin/dev-flow init <project-name> --type <ui|agent|api|library|docs>
 ```
 
 **Trigger Phrases:**
@@ -29,7 +29,7 @@ bash /mnt/skills/user/idea-refine/scripts/idea-refine.sh
 
 ## Output
 
-The final output is a markdown one-pager saved to `work/<project-name>/ideas/[idea-name].md` (after user confirmation), containing:
+The final output is a markdown one-pager saved to `work/<project-name>/ideas/idea-brief.md`, containing:
 - Problem Statement
 - Recommended Direction
 - Key Assumptions
@@ -137,7 +137,9 @@ Produce a concrete artifact — a markdown one-pager that moves work forward:
 
 **The "Not Doing" list is arguably the most valuable part.** Focus is about saying no to good ideas. Make the trade-offs explicit.
 
-Ask the user if they'd like to save this to `work/<project-name>/ideas/[idea-name].md` (or a location of their choosing). Only save if they confirm.
+When operating inside a dev-flow project, save this as the canonical
+`work/<project-name>/ideas/idea-brief.md`. If no project exists yet, ask before
+creating one or present the artifact for confirmation.
 
 ### Anti-patterns to Avoid
 
@@ -175,4 +177,5 @@ After completing an ideation session:
 - [ ] Hidden assumptions are explicitly listed with validation strategies
 - [ ] A "Not Doing" list makes trade-offs explicit
 - [ ] The output is a concrete artifact (markdown one-pager), not just conversation
+- [ ] In dev-flow projects, the artifact is saved as `work/<project-name>/ideas/idea-brief.md`
 - [ ] The user confirmed the final direction before any implementation work

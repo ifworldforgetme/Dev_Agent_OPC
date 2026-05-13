@@ -6,7 +6,7 @@
   "displayName": "Dev Agent",
   "userVisibleEntry": "/dev agent",
   "aliases": ["/dev-agent"],
-  "description": "Native workflow entrypoint for Dev Agent OPC lifecycle-driven software delivery.",
+  "description": "Native workflow entrypoint for the lean Dev Agent lifecycle: idea, spec, design, build, optional QA, optional ship.",
   "entrypoints": {
     "dev": "dev-agent/commands/dev.md",
     "dev-agent": "dev-agent/commands/dev-agent.md"
@@ -19,22 +19,18 @@
   },
   "flows": [
     { "name": "idea", "skill": "idea-refine", "command": "dev-agent/commands/idea.md", "phase": "idea", "defaultGate": "bin/dev-flow verify-phase <project> idea" },
-    { "name": "pm", "skill": "pm-flow", "command": "dev-agent/commands/pm.md", "phase": "pm", "defaultGate": "bin/dev-flow verify-phase <project> pm" },
-    { "name": "agent", "skill": "agent-flow", "command": "dev-agent/commands/agent.md", "phase": "agent", "defaultGate": "bin/dev-flow verify-phase <project> agent" },
-    { "name": "spec", "skill": "spec-driven-development", "command": "dev-agent/commands/spec.md", "phase": "spec", "defaultGate": "bin/dev-flow verify-phase <project> spec" },
+    { "name": "spec", "skill": "spec-driven-development with PRD and agent-contract sections when needed", "command": "dev-agent/commands/spec.md", "phase": "spec", "defaultGate": "bin/dev-flow verify-phase <project> spec" },
     { "name": "design", "skill": "design-flow", "command": "dev-agent/commands/design.md", "phase": "design", "defaultGate": "bin/dev-flow design-check <project>" },
     { "name": "figma-design", "skill": "figma-use + figma-generate-design", "command": "dev-agent/commands/figma-design.md", "phase": "design", "defaultGate": "bin/dev-flow figma-check <project>" },
     { "name": "figma-library", "skill": "figma-use + figma-generate-library", "command": "dev-agent/commands/figma-library.md", "phase": "design", "defaultGate": "bin/dev-flow figma-check <project>" },
-    { "name": "plan", "skill": "planning-and-task-breakdown", "command": "dev-agent/commands/plan.md", "phase": "plan", "defaultGate": "bin/dev-flow verify-phase <project> plan" },
-    { "name": "build", "skill": "incremental-implementation + test-driven-development", "command": "dev-agent/commands/build.md", "phase": "build", "defaultGate": "bin/dev-flow check <project>" },
-    { "name": "test", "skill": "test-driven-development", "command": "dev-agent/commands/test.md", "phase": "test", "defaultGate": "bin/dev-flow verify-phase <project> test" },
-    { "name": "review", "skill": "code-review-and-quality", "command": "dev-agent/commands/review.md", "phase": "review", "defaultGate": "bin/dev-flow verify-phase <project> review" },
+    { "name": "build", "skill": "incremental-implementation with micro-plan and proof-first checklist", "command": "dev-agent/commands/build.md", "phase": "build", "defaultGate": "bin/dev-flow env-check <project> when host-dependent, then bin/dev-flow verify-phase <project> build, then bin/dev-flow check <project>" },
+    { "name": "qa", "skill": "frontend-ui-engineering with optional functional, monkey, visual, and quality review", "command": "dev-agent/commands/qa.md", "phase": "qa", "defaultGate": "bin/dev-flow qa-check <project> when QA is required" },
     { "name": "ship", "skill": "shipping-and-launch", "command": "dev-agent/commands/ship.md", "phase": "ship", "defaultGate": "bin/dev-flow ship-check <project>" },
     { "name": "debug", "skill": "debugging-and-error-recovery", "command": "dev-agent/commands/debug.md", "phase": null, "defaultGate": null },
     { "name": "ui", "skill": "frontend-ui-engineering", "command": "dev-agent/commands/ui.md", "phase": "build", "defaultGate": "bin/dev-flow qa-check <project>" },
     { "name": "api", "skill": "api-and-interface-design", "command": "dev-agent/commands/api.md", "phase": "spec", "defaultGate": "bin/dev-flow verify-phase <project> spec" },
-    { "name": "security", "skill": "security-and-hardening", "command": "dev-agent/commands/security.md", "phase": "review", "defaultGate": "bin/dev-flow verify-phase <project> review" },
-    { "name": "code-simplify", "skill": "code-simplification", "command": "dev-agent/commands/code-simplify.md", "phase": "build", "defaultGate": "bin/dev-flow check <project>" }
+    { "name": "security", "skill": "security-and-hardening", "command": "dev-agent/commands/security.md", "phase": "qa", "defaultGate": "bin/dev-flow verify-phase <project> qa" },
+    { "name": "code-simplify", "skill": "code-simplification", "command": "dev-agent/commands/code-simplify.md", "phase": "build", "defaultGate": "bin/dev-flow verify-phase <project> build, then bin/dev-flow check <project>" }
   ],
   "roles": [
     { "name": "code-reviewer", "persona": "code-reviewer", "path": "dev-agent/agents/code-reviewer.md", "bestFor": "Five-axis code review before merge or ship." },
@@ -51,7 +47,6 @@
     { "name": "design-check", "command": "bin/dev-flow design-check <project> [--allow-no-reference]" },
     { "name": "qa-check", "command": "bin/dev-flow qa-check <project>" },
     { "name": "env-check", "command": "bin/dev-flow env-check <project>" },
-    { "name": "pdca-check", "command": "bin/dev-flow pdca-check <project>" },
     { "name": "ship-check", "command": "bin/dev-flow ship-check <project>" },
     { "name": "doctor", "command": "bin/dev-flow doctor <project>" },
     { "name": "check", "command": "bin/dev-flow check <project>" }

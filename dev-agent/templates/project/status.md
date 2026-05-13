@@ -10,11 +10,9 @@
 - [ ] Idea approved
 - [ ] Spec approved
 - [ ] Design approved, when UI applies
-- [ ] Plan approved
-- [ ] Build slices complete
-- [ ] Tests and quality gates pass
-- [ ] Review complete
-- [ ] Ship package ready
+- [ ] Build complete
+- [ ] QA complete, when required
+- [ ] Ship package ready, when requested
 
 ## Human Review Gates
 - Requirement confirmation

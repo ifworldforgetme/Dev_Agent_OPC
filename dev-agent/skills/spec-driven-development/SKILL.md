@@ -9,7 +9,14 @@ description: Creates specs before coding. Use when starting a new project, featu
 
 Write a structured specification before writing any code. The spec is the shared source of truth between you and the human engineer — it defines what we're building, why, and how we'll know it's done. Code without a spec is guessing.
 
-When a PRD or product artifact already exists under `work/<project-name>/product/`, do not recreate product-management work. Treat `pm-flow` artifacts as the source for users, jobs, MVP scope, metrics, and product acceptance criteria; this skill converts those decisions into a buildable technical/product spec with commands, structure, code style, testing strategy, boundaries, and implementation-facing success criteria.
+This skill owns the lean product/spec merge. Capture product intent, MVP scope,
+stories, acceptance criteria, useful metrics, technical constraints, and any
+AI-agent runtime contract in one pass. Do not create separate PM or agent
+phases. The required outputs are `product/PRD.md` and `specs/SPEC.md`.
+
+In Dev Agent projects, this skill owns `work/<project-name>/specs/SPEC.md`.
+Do not create implementation artifacts from this skill; hand off to
+`design-flow` for customer-facing UI and then `incremental-implementation`.
 
 ## When to Use
 
@@ -21,22 +28,24 @@ When a PRD or product artifact already exists under `work/<project-name>/product
 
 **When NOT to use:** Single-line fixes, typo corrections, or changes where requirements are unambiguous and self-contained.
 
-## The Gated Workflow
+## Lifecycle Boundary
 
-Spec-driven development has four phases. Do not advance to the next phase until the current one is validated. Validation can be explicit human approval or a recorded delegated assumption when workspace instructions allow autonomous progress.
+Spec work has one gate here: produce and validate `product/PRD.md` and
+`specs/SPEC.md`. The broader Dev Agent lifecycle continues through design,
+build, optional QA, and optional ship.
 
 ```
-SPECIFY ──→ DESIGN ──→ PLAN ──→ TASKS ──→ IMPLEMENT
-   │          │          │        │          │
-   ▼          ▼          ▼        ▼          ▼
-Validate   Validate   Validate Validate   Verify
+IDEA INPUTS ──→ PRD + SPEC ──→ design when UI applies ──→ build
 ```
 
 ### Phase 1: Specify
 
 Start with a high-level vision. Ask the human clarifying questions until requirements are concrete.
 
-If `pm-flow` artifacts exist, start by reading `PRD.md`, `USER_STORIES.md`, `ACCEPTANCE.md`, and `METRICS.md`. Summarize their decisions briefly, then fill only the technical and delivery gaps. Do not silently change product scope, user stories, or metrics in the spec; flag conflicts and ask for resolution or record the delegated assumption.
+If product artifacts already exist, reuse them. Otherwise write the minimum PRD:
+objective, target user, MVP scope, acceptance criteria, non-goals, and metrics
+only when they affect build or QA decisions. Flag conflicts instead of silently
+changing product scope.
 
 **Surface assumptions immediately.** Before writing any spec content, list what you're assuming:
 
@@ -51,7 +60,7 @@ ASSUMPTIONS I'M MAKING:
 
 Don't silently fill in ambiguous requirements. The spec's entire purpose is to surface misunderstandings *before* code gets written — assumptions are the most dangerous form of misunderstanding. If the workspace instructions explicitly delegate defaults, record those assumptions in the spec and continue unless the issue is a named human review gate.
 
-**Write a spec document covering these six core areas:**
+**Write a PRD and spec covering these core areas:**
 
 1. **Objective** — What are we building and why? Who is the user? What does success look like?
 
@@ -81,10 +90,34 @@ Don't silently fill in ambiguous requirements. The spec's entire purpose is to s
 
 5. **Testing Strategy** — What framework, where tests live, coverage expectations, which test levels for which concerns.
 
-6. **Boundaries** — Three-tier system:
+6. **Agent Runtime Contract** — Only when agent automation is in scope. Define
+   the agent job, non-goals, tools, permissions, approval points, prompts,
+   skills/context, memory/checkpoints, evals, observability, and failure
+   recovery/escalation. If a tool, permission, or recovery path is unclear,
+   raise it instead of inventing a workaround.
+
+7. **Boundaries** — Three-tier system:
    - **Always do:** Run tests before commits or checkpoints, follow naming conventions, validate inputs
    - **Ask first:** Database schema changes, adding dependencies, changing CI config, high-risk architecture, security/payment/permission/data-deletion behavior, production launch approval
    - **Never do:** Commit secrets, edit vendor directories, remove failing tests without approval
+
+**Minimum PRD template:**
+
+```markdown
+# PRD: [Project/Feature Name]
+
+## Objective
+
+## Users And Jobs
+
+## MVP Scope
+
+## Acceptance Criteria
+
+## Non-Goals
+
+## Metrics / Guardrails
+```
 
 **Spec template:**
 
@@ -108,6 +141,11 @@ Don't silently fill in ambiguous requirements. The spec's entire purpose is to s
 
 ## Testing Strategy
 [Framework, test locations, coverage requirements, test levels]
+
+## Agent Runtime Contract
+[Only when agent automation is in scope: job, tools/permissions, approval
+points, prompts/skills/context, memory/checkpoints, evals, operations, and
+failure recovery/escalation.]
 
 ## Boundaries
 - Always: [...]
@@ -135,45 +173,21 @@ REFRAMED SUCCESS CRITERIA:
 
 This lets you loop, retry, and problem-solve toward a clear goal rather than guessing what "faster" means.
 
-### Phase 2: Design
+### Downstream: Design
 
-For user-facing products, run `design-flow` before technical planning. The design package should define information architecture, interaction model, platform/HCI requirements, and visual direction under `work/<project-name>/design/`.
+For user-facing products, run `design-flow` before build. The design package
+should define information architecture, interaction model, platform/HCI
+requirements, and visual direction under `work/<project-name>/design/`.
 
 Skip this phase only for non-UI work or tiny changes with no user-facing behavior.
 
-### Phase 3: Plan
+Do not write design files from this skill; hand off once `SPEC.md` is clear.
 
-With the validated spec, generate a technical implementation plan:
+### Downstream: Implement
 
-1. Identify the major components and their dependencies
-2. Determine the implementation order (what must be built first)
-3. Note risks and mitigation strategies
-4. Identify what can be built in parallel vs. what must be sequential
-5. Define verification checkpoints between phases
-
-The plan should be reviewable: the human should be able to read it and say "yes, that's the right approach" or "no, change X." If the user has delegated routine implementation, proceed after recording assumptions unless the plan crosses a named review gate.
-
-### Phase 4: Tasks
-
-Break the plan into discrete, implementable tasks:
-
-- Each task should be completable in a single focused session
-- Each task has explicit acceptance criteria
-- Each task includes a verification step (test, build, manual check)
-- Tasks are ordered by dependency, not by perceived importance
-- No task should require changing more than ~5 files
-
-**Task template:**
-```markdown
-- [ ] Task: [Description]
-  - Acceptance: [What must be true when done]
-  - Verify: [How to confirm — test command, build, manual check]
-  - Files: [Which files will be touched]
-```
-
-### Phase 5: Implement
-
-Execute tasks one at a time following `incremental-implementation` and `test-driven-development` skills. Use `context-engineering` to load the right spec sections and source files at each step rather than flooding the agent with the entire spec.
+Execute one build slice at a time with `incremental-implementation`. A separate
+`tasks/PLAN.md` is optional; use it only when the slice cannot be held clearly
+inside the spec and status ledger.
 
 ## Keeping the Spec Alive
 
@@ -206,7 +220,8 @@ The spec is a living document, not a one-time artifact:
 
 Before proceeding to implementation, confirm:
 
-- [ ] The spec covers all six core areas
+- [ ] `product/PRD.md` exists with MVP scope and acceptance criteria
+- [ ] `specs/SPEC.md` covers all core technical areas
 - [ ] The human has reviewed and approved the spec, or workspace instructions explicitly delegate defaults and no human review gate is open
 - [ ] Success criteria are specific and testable
 - [ ] Boundaries (Always/Ask First/Never) are defined

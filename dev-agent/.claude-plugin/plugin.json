@@ -1,7 +1,7 @@
 {
-  "name": "dev-agent-opc-runtime",
-  "description": "Dev Agent OPC runtime for idea, spec, design, plan, build, test, review, and ship workflows.",
-  "version": "0.5.0",
+  "name": "dev-agent-runtime",
+  "description": "Dev Agent runtime for idea, spec, design, build, optional QA, and optional ship workflows.",
+  "version": "0.6.0",
   "author": {
     "name": "Kevin KE / laoke.ai"
   },
