@@ -14,7 +14,7 @@ stories, acceptance criteria, useful metrics, technical constraints, and any
 AI-agent runtime contract in one pass. Do not create separate PM or agent
 phases. The required outputs are `product/PRD.md` and `specs/SPEC.md`.
 
-In Dev Agent projects, this skill owns `work/<project-name>/specs/SPEC.md`.
+In Dev Agent projects, this skill owns `<project-name>/specs/SPEC.md`.
 Do not create implementation artifacts from this skill; hand off to
 `design-flow` for customer-facing UI and then `incremental-implementation`.
 
@@ -74,16 +74,16 @@ Don't silently fill in ambiguous requirements. The spec's entire purpose is to s
 
 3. **Project Structure** — Where source code lives, where tests go, where docs belong.
    ```
-   work/<project-name>/           → Project root for code and workflow artifacts
-   work/<project-name>/apps/      → Runnable app packages for this project
-   work/<project-name>/specs/     → Product and technical specs
-   work/<project-name>/tasks/     → Plans and task lists
-   src/           → Application source code
-   src/components → React components
-   src/lib        → Shared utilities
-   tests/         → Unit and integration tests
-   e2e/           → End-to-end tests
-   docs/          → Documentation
+   <project-name>/           → Project root for code and workflow artifacts
+   <project-name>/apps/      → Runnable app packages for this project
+   <project-name>/specs/     → Product and technical specs
+   <project-name>/tasks/     → Plans and task lists
+   apps/web/src/           → Application source code
+   apps/web/src/components → React components
+   apps/web/src/lib        → Shared utilities
+   apps/web/tests/         → Unit and integration tests
+   apps/web/e2e/           → End-to-end tests
+   docs/                   → Project documentation
    ```
 
 4. **Code Style** — One real code snippet showing your style beats three paragraphs describing it. Include naming conventions, formatting rules, and examples of good output.
@@ -177,7 +177,7 @@ This lets you loop, retry, and problem-solve toward a clear goal rather than gue
 
 For user-facing products, run `design-flow` before build. The design package
 should define information architecture, interaction model, platform/HCI
-requirements, and visual direction under `work/<project-name>/design/`.
+requirements, and visual direction under `<project-name>/design/`.
 
 Skip this phase only for non-UI work or tiny changes with no user-facing behavior.
 
@@ -225,5 +225,5 @@ Before proceeding to implementation, confirm:
 - [ ] The human has reviewed and approved the spec, or workspace instructions explicitly delegate defaults and no human review gate is open
 - [ ] Success criteria are specific and testable
 - [ ] Boundaries (Always/Ask First/Never) are defined
-- [ ] The spec is saved under `work/<project-name>/specs/`
-- [ ] Project-specific app or source directories are under `work/<project-name>/`, not the workspace root
+- [ ] The spec is saved under `<project-name>/specs/`
+- [ ] Project-specific app or source directories are under `<project-name>/`, not beside it

@@ -11,7 +11,7 @@ if [ -z "$PROJECT_NAME" ]; then
   exit 1
 fi
 
-IDEAS_DIR="work/$PROJECT_NAME/ideas"
+IDEAS_DIR="$PROJECT_NAME/ideas"
 
 if [ ! -d "$IDEAS_DIR" ]; then
   mkdir -p "$IDEAS_DIR"

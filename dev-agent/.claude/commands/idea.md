@@ -10,6 +10,6 @@ Turn the rough request into a project brief before writing specs or code:
 2. Separate must-have scope from optional exploration.
 3. Capture constraints, non-goals, risks, and open questions.
 4. For customer-facing apps, ask for reference images, reference software, links, screenshots, or Figma files when visual direction is not already delegated.
-5. Save the result under `work/<project-name>/ideas/idea-brief.md`.
+5. Save the result under `<project-name>/ideas/idea-brief.md`.
 
 Do not jump to implementation from this phase.

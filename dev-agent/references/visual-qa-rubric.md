@@ -4,12 +4,12 @@ Use this after implementing customer-facing UI and before delivery.
 
 ## Evidence
 
-- Run critical functional flows from `SCREEN_ACCEPTANCE.md` and save results in `work/<project-name>/reviews/FUNCTIONAL_TEST.md`.
-- Run monkey or exploratory stress checks and save results in `work/<project-name>/reviews/MONKEY_TEST.md`.
+- Run critical functional flows from `SCREEN_ACCEPTANCE.md` and save results in `<project-name>/reviews/FUNCTIONAL_TEST.md`.
+- Run monkey or exploratory stress checks and save results in `<project-name>/reviews/MONKEY_TEST.md`.
 - Compare the implemented UI against approved design assets, cut assets, references, and design requirements.
-- Save findings, a per-screen fidelity matrix covering every `SCREEN_ACCEPTANCE.md` screen, and `Overall score: N/100` in `work/<project-name>/reviews/VISUAL_COMPARISON.md`.
+- Save findings, a per-screen fidelity matrix covering every `SCREEN_ACCEPTANCE.md` screen, and `Overall score: N/100` in `<project-name>/reviews/VISUAL_COMPARISON.md`.
 - Every matrix row must include screen, approved asset path, runtime surface, fidelity score, decision, and notes.
-- Capture screenshots under `work/<project-name>/reviews/visual-screenshots/` only when an exception occurs or a flow cannot be completed.
+- Capture screenshots under `<project-name>/reviews/visual-screenshots/` only when an exception occurs or a flow cannot be completed.
 
 ## Review Axes
 

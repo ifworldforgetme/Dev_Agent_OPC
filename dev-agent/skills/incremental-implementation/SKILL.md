@@ -49,17 +49,17 @@ For each slice:
 1. **Implement** the smallest complete piece of functionality
 2. **Test** — run the test suite (or write a test if none exists)
 3. **Verify** — confirm the slice works as expected (tests pass, build succeeds, manual check)
-4. **Commit or checkpoint** -- when inside a git repo and the user/workspace has authorized commits, save progress with a descriptive commit. Otherwise, record a checkpoint in `work/<project-name>/tasks/status.md` with changed files and verification evidence.
+4. **Commit or checkpoint** -- when inside a git repo and the user/workspace has authorized commits, save progress with a descriptive commit. Otherwise, record a checkpoint in `<project-name>/tasks/status.md` with changed files and verification evidence.
 5. **Record evidence** -- update `tasks/status.md` and `reviews/VERIFICATION.md`
    or `reviews/BLOCKED_BUILD.md` with changed areas, commands, and blockers.
 6. **Move to the next slice** — carry forward, don't restart
 
 Use the project-local workspace layout for all implementation work:
 
-- Read tasks from `work/<project-name>/tasks/`
-- Edit app/source files under `work/<project-name>/apps/` or another `work/<project-name>/...` source directory
-- Run commands from the project-local app directory, for example `work/<project-name>/apps/mobile`
-- Do not create project-specific source directories at the workspace root
+- Read tasks from `<project-name>/tasks/`
+- Edit app/source files under `<project-name>/apps/` or another `<project-name>/...` source directory
+- Run commands from the project-local app directory, for example `<project-name>/apps/mobile`
+- Do not create project-specific source directories outside the project folder
 
 ## Slicing Strategies
 

@@ -3,10 +3,11 @@
 Use this file for host-machine SDKs, CLIs, services, credentials, and permissions
 that are required to run, build, test, or ship this project.
 
-Do not install shared host SDKs under `work/{{PROJECT}}/`. Project-local source,
-lockfiles, virtual environments, generated reviews, and runtime artifacts may
-live under `work/{{PROJECT}}/`, but host tools should be installed once on the
-machine or in the user's approved global tool/cache locations.
+Do not install shared host SDKs inside the `{{PROJECT}}/` project runtime.
+Project-local source, lockfiles, virtual environments, generated reviews, and
+runtime artifacts may live under `{{PROJECT}}/`, but host tools should be
+installed once on the machine or in the user's approved global tool/cache
+locations.
 
 ## Policy
 
@@ -49,7 +50,7 @@ machine or in the user's approved global tool/cache locations.
 | Capability | Scope | Required by | Verify command | Required | Permission | Status | Notes |
 |---|---|---|---|---|---|---|---|
 | Node.js 22 | host | web app build | `node --version` | yes | user install | TODO | Example only; move to Requirements when needed. |
-| Android SDK | host | Android release build | `adb version` | yes | user/system install | TODO | Example only; do not install under `work/{{PROJECT}}/`. |
+| Android SDK | host | Android release build | `adb version` | yes | user/system install | TODO | Example only; do not install inside `{{PROJECT}}/`. |
 | Figma MCP | host | Figma-backed design handoff | `n/a` | no | user auth | TODO | Example only; requires explicit user connection. |
 
 ## Notes

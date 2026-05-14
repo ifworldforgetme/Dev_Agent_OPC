@@ -29,7 +29,7 @@ bin/dev-flow init <project-name> --type <ui|agent|api|library|docs>
 
 ## Output
 
-The final output is a markdown one-pager saved to `work/<project-name>/ideas/idea-brief.md`, containing:
+The final output is a markdown one-pager saved to `<project-name>/ideas/idea-brief.md`, containing:
 - Problem Statement
 - Recommended Direction
 - Key Assumptions
@@ -138,7 +138,7 @@ Produce a concrete artifact — a markdown one-pager that moves work forward:
 **The "Not Doing" list is arguably the most valuable part.** Focus is about saying no to good ideas. Make the trade-offs explicit.
 
 When operating inside a dev-flow project, save this as the canonical
-`work/<project-name>/ideas/idea-brief.md`. If no project exists yet, ask before
+`<project-name>/ideas/idea-brief.md`. If no project exists yet, ask before
 creating one or present the artifact for confirmation.
 
 ### Anti-patterns to Avoid
@@ -177,5 +177,5 @@ After completing an ideation session:
 - [ ] Hidden assumptions are explicitly listed with validation strategies
 - [ ] A "Not Doing" list makes trade-offs explicit
 - [ ] The output is a concrete artifact (markdown one-pager), not just conversation
-- [ ] In dev-flow projects, the artifact is saved as `work/<project-name>/ideas/idea-brief.md`
+- [ ] In dev-flow projects, the artifact is saved as `<project-name>/ideas/idea-brief.md`
 - [ ] The user confirmed the final direction before any implementation work

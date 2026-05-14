@@ -16,14 +16,14 @@ interaction quality affects delivery.
   trade-offs before choosing a direction.
 - Keep it simple: produce only the artifacts needed for the current product
   scope, but do not skip required design gates.
-- Modify precisely: keep artifacts project-local under `work/<project-name>/`.
+- Modify precisely: keep artifacts project-local under `<project-name>/`.
 - Work toward a verifiable target: every key screen must have acceptance
   criteria before build. Delegate formal visual-source rules to the design
   artifact reference and executable gates.
 
 ## Outputs
 
-Save design artifacts under `work/<project-name>/design/`:
+Save design artifacts under `<project-name>/design/`:
 
 - `DESIGN.md`
 - `VISUAL_SYSTEM.md`
@@ -46,7 +46,7 @@ Use `dev-agent/templates/project/` for file templates. Use
      `ACCEPTANCE.md`, `METRICS.md`) when present, agent notes when present, the
      spec, project type, applicability flags, prior design
      artifacts, reference intake, and existing app screens when code exists.
-   - Keep commands and paths inside `work/<project-name>/`.
+   - Keep commands and paths inside `<project-name>/`.
 
 2. **Run reference intake**
    - For customer-facing UI, run

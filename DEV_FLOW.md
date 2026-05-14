@@ -11,7 +11,7 @@ adapter installation.
 - `dev-agent/dev-agent.manifest.json`: native flow, role, and gate index used by `/dev agent` and `/dev-agent`.
 - `AGENTS.md`: local instruction layer telling agents how to use the pack here.
 - `bin/dev-flow`: helper script for listing workflows, managing project state, checking host requirements, enforcing gates, packaging adapters, and installing adapters.
-- `work/`: runtime project-local specs, source roots, reviews, and launch artifacts created on demand by `bin/dev-flow init`; ignored by git by default.
+- `<project-name>/`: project-local specs, source roots, reviews, and launch artifacts created directly in the active workspace; stage folders are created only when the current phase needs them.
 
 ## Lifecycle Commands
 
@@ -75,18 +75,16 @@ bin/dev-flow qa-check <project-name>      # only when QA is required
 bin/dev-flow ship-check <project-name>    # only when shipping
 ```
 
-`init` creates the control layer under `work/<project-name>/`:
+`init` creates only the control layer under `<project-name>/`:
 
 - `.dev-flow/state.env`: current phase, active task, blockers, last verification
 - `.dev-flow/schema.env`: project schema version and project type
 - `.dev-flow/applicability.env`: optional gates such as `UI_FLOW`, `UI_REFERENCES`, `UI_DESIGN_ASSETS`, `AUTOMATED_QA`, `VISUAL_QA`, and `SHIP_FLOW`
 - `.dev-flow/context.md`: minimal context loading guidance
 - `.dev-flow/HOST_REQUIREMENTS.md`: host SDKs, CLIs, services, credentials, and permissions
-- `product/PRD.md` and `specs/SPEC.md`: product + build source of truth
-- `design/`: UI design, references, formal assets, and handoff records when UI applies
-- `tasks/status.md`, `tasks/quality-gates.md`, `tasks/IMPLEMENTATION_TRACE.md`: status and build handoff
-- `reviews/`: verification, optional QA evidence, blocked build records, and exception screenshots
-- `ship/`: optional launch notes and rollback/go-no-go evidence
+Phase folders are created later by `bin/dev-flow next` or `bin/dev-flow phase`
+when that phase becomes current: `ideas/`, `product/`, `specs/`, `design/`,
+`tasks/`, `reviews/`, `ship/`, `apps/`, and `packages/`.
 
 `bin/dev-flow phase` only records state. By default it verifies all prior
 applicable lifecycle phases before moving forward. Use `--force` only when you
@@ -97,7 +95,7 @@ intentionally record early state and will complete missing artifacts later.
 Host SDKs and services are machine capabilities, not project runtime files. Do
 not install shared SDKs such as Xcode, Android SDK, Java/JDK, Docker,
 Playwright browsers, Figma MCP, simulators, or package-manager caches inside
-`work/<project-name>/`.
+`<project-name>/`.
 
 Record those requirements in `.dev-flow/HOST_REQUIREMENTS.md`. Run
 `bin/dev-flow env-check <project-name>` only before a build slice or ship scope
@@ -133,7 +131,7 @@ AUTOMATED_QA="required"
 VISUAL_QA="required"
 ```
 
-in `work/<project-name>/.dev-flow/applicability.env`, or run it when the user
+in `<project-name>/.dev-flow/applicability.env`, or run it when the user
 asks. Automated QA records `reviews/FUNCTIONAL_TEST.md` and
 `reviews/MONKEY_TEST.md`; visual QA records `reviews/VISUAL_COMPARISON.md` with
 `Overall score: N/100`. Runtime screenshots are required only for exceptions,

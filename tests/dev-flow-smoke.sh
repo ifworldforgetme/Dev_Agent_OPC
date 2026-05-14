@@ -3,29 +3,30 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 RUN_ID="smoke_$$"
-UI_BLOCK="$ROOT/work/__${RUN_ID}_ui_block"
-LIGHT_UI="$ROOT/work/__${RUN_ID}_light_ui"
-DELEGATED="$ROOT/work/__${RUN_ID}_delegated"
-INVALID="$ROOT/work/__${RUN_ID}_invalid"
-SVG_ONLY="$ROOT/work/__${RUN_ID}_svg_only"
-SVG_LEAK="$ROOT/work/__${RUN_ID}_svg_leak"
-SVG_CUT_ALLOWED="$ROOT/work/__${RUN_ID}_svg_cut_allowed"
-SELF_RENDERED_PNG="$ROOT/work/__${RUN_ID}_self_rendered_png"
-MISSING_COVERAGE="$ROOT/work/__${RUN_ID}_missing_coverage"
-SCREENSHOT_SWAP="$ROOT/work/__${RUN_ID}_screenshot_swap"
-DRAFT_PATH="$ROOT/work/__${RUN_ID}_draft_path"
-NO_CUTS="$ROOT/work/__${RUN_ID}_no_cuts"
-AI_MISSING_HTML="$ROOT/work/__${RUN_ID}_ai_missing_html"
-FIGMA_GOOD="$ROOT/work/__${RUN_ID}_figma_good"
-FIGMA_SECTION_BOUNDARY="$ROOT/work/__${RUN_ID}_figma_section_boundary"
-FIGMA_MISSING_SOURCE="$ROOT/work/__${RUN_ID}_figma_missing_source"
-FIGMA_BAD_EXPORT="$ROOT/work/__${RUN_ID}_figma_bad_export"
-API_PROJECT="$ROOT/work/__${RUN_ID}_api"
-AGENT_PROJECT="$ROOT/work/__${RUN_ID}_agent"
-ENV_PROJECT="$ROOT/work/__${RUN_ID}_env"
-BAD_ENV="$ROOT/work/__${RUN_ID}_bad_env"
-LEGACY_PROJECT="$ROOT/work/__${RUN_ID}_legacy"
-BAD_VISUAL="$ROOT/work/__${RUN_ID}_bad_visual"
+LAZY_PROJECT="$ROOT/__${RUN_ID}_lazy"
+UI_BLOCK="$ROOT/__${RUN_ID}_ui_block"
+LIGHT_UI="$ROOT/__${RUN_ID}_light_ui"
+DELEGATED="$ROOT/__${RUN_ID}_delegated"
+INVALID="$ROOT/__${RUN_ID}_invalid"
+SVG_ONLY="$ROOT/__${RUN_ID}_svg_only"
+SVG_LEAK="$ROOT/__${RUN_ID}_svg_leak"
+SVG_CUT_ALLOWED="$ROOT/__${RUN_ID}_svg_cut_allowed"
+SELF_RENDERED_PNG="$ROOT/__${RUN_ID}_self_rendered_png"
+MISSING_COVERAGE="$ROOT/__${RUN_ID}_missing_coverage"
+SCREENSHOT_SWAP="$ROOT/__${RUN_ID}_screenshot_swap"
+DRAFT_PATH="$ROOT/__${RUN_ID}_draft_path"
+NO_CUTS="$ROOT/__${RUN_ID}_no_cuts"
+AI_MISSING_HTML="$ROOT/__${RUN_ID}_ai_missing_html"
+FIGMA_GOOD="$ROOT/__${RUN_ID}_figma_good"
+FIGMA_SECTION_BOUNDARY="$ROOT/__${RUN_ID}_figma_section_boundary"
+FIGMA_MISSING_SOURCE="$ROOT/__${RUN_ID}_figma_missing_source"
+FIGMA_BAD_EXPORT="$ROOT/__${RUN_ID}_figma_bad_export"
+API_PROJECT="$ROOT/__${RUN_ID}_api"
+AGENT_PROJECT="$ROOT/__${RUN_ID}_agent"
+ENV_PROJECT="$ROOT/__${RUN_ID}_env"
+BAD_ENV="$ROOT/__${RUN_ID}_bad_env"
+LEGACY_PROJECT="$ROOT/__${RUN_ID}_legacy"
+BAD_VISUAL="$ROOT/__${RUN_ID}_bad_visual"
 ADAPTER_OUT="/private/tmp/dev-agent-${RUN_ID}-adapters"
 INSTALL_DEST="/private/tmp/dev-agent-${RUN_ID}-install"
 INSTALL_WORKSPACE="/private/tmp/dev-agent-${RUN_ID}-workspace"
@@ -64,7 +65,7 @@ cleanup_path() {
 }
 
 cleanup() {
-  cleanup_path "$UI_BLOCK" "$LIGHT_UI" "$DELEGATED" "$INVALID" "$SVG_ONLY" "$SVG_LEAK" "$SVG_CUT_ALLOWED" "$SELF_RENDERED_PNG" "$MISSING_COVERAGE" "$SCREENSHOT_SWAP" "$DRAFT_PATH" "$NO_CUTS" "$AI_MISSING_HTML" "$FIGMA_GOOD" "$FIGMA_SECTION_BOUNDARY" "$FIGMA_MISSING_SOURCE" "$FIGMA_BAD_EXPORT" "$API_PROJECT" "$AGENT_PROJECT" "$ENV_PROJECT" "$BAD_ENV" "$LEGACY_PROJECT" "$BAD_VISUAL" "$ADAPTER_OUT" "$INSTALL_DEST" "$INSTALL_WORKSPACE" "$UI_BLOCK_OUT" "$LIGHT_UI_NEXT_OUT" "$INVALID_OUT" "$EXCEPTION_OUT" "$SVG_ONLY_OUT" "$SVG_LEAK_OUT" "$SVG_CUT_ALLOWED_OUT" "$SELF_RENDERED_PNG_OUT" "$MISSING_COVERAGE_OUT" "$SCREENSHOT_SWAP_OUT" "$DRAFT_PATH_OUT" "$AI_MISSING_HTML_OUT" "$FIGMA_MISSING_SOURCE_OUT" "$FIGMA_BAD_EXPORT_OUT" "$API_OUT" "$AGENT_OUT" "$ENV_OUT" "$BAD_ENV_OUT" "$DOCTOR_OUT" "$BAD_VISUAL_OUT" "$TRACE_MISSING_HTML_OUT" "$NEXT_UI_OUT"
+  cleanup_path "$LAZY_PROJECT" "$UI_BLOCK" "$LIGHT_UI" "$DELEGATED" "$INVALID" "$SVG_ONLY" "$SVG_LEAK" "$SVG_CUT_ALLOWED" "$SELF_RENDERED_PNG" "$MISSING_COVERAGE" "$SCREENSHOT_SWAP" "$DRAFT_PATH" "$NO_CUTS" "$AI_MISSING_HTML" "$FIGMA_GOOD" "$FIGMA_SECTION_BOUNDARY" "$FIGMA_MISSING_SOURCE" "$FIGMA_BAD_EXPORT" "$API_PROJECT" "$AGENT_PROJECT" "$ENV_PROJECT" "$BAD_ENV" "$LEGACY_PROJECT" "$BAD_VISUAL" "$ADAPTER_OUT" "$INSTALL_DEST" "$INSTALL_WORKSPACE" "$UI_BLOCK_OUT" "$LIGHT_UI_NEXT_OUT" "$INVALID_OUT" "$EXCEPTION_OUT" "$SVG_ONLY_OUT" "$SVG_LEAK_OUT" "$SVG_CUT_ALLOWED_OUT" "$SELF_RENDERED_PNG_OUT" "$MISSING_COVERAGE_OUT" "$SCREENSHOT_SWAP_OUT" "$DRAFT_PATH_OUT" "$AI_MISSING_HTML_OUT" "$FIGMA_MISSING_SOURCE_OUT" "$FIGMA_BAD_EXPORT_OUT" "$API_OUT" "$AGENT_OUT" "$ENV_OUT" "$BAD_ENV_OUT" "$DOCTOR_OUT" "$BAD_VISUAL_OUT" "$TRACE_MISSING_HTML_OUT" "$NEXT_UI_OUT"
 }
 trap cleanup EXIT
 
@@ -218,6 +219,22 @@ assert_max_lines dev-agent/commands/build.md 20
 assert_max_lines dev-agent/commands/ui.md 20
 assert_max_lines dev-agent/agents/product-designer.md 30
 
+bin/dev-flow init "$(basename "$LAZY_PROJECT")" --type ui >/dev/null
+test -d "$LAZY_PROJECT/.dev-flow"
+test -d "$LAZY_PROJECT/bin"
+test -x "$LAZY_PROJECT/bin/check"
+test -f "$LAZY_PROJECT/.dev-flow/schema.env"
+test -f "$LAZY_PROJECT/.dev-flow/HOST_REQUIREMENTS.md"
+! test -d "$LAZY_PROJECT/design"
+! test -d "$LAZY_PROJECT/tasks"
+! test -d "$LAZY_PROJECT/reviews"
+! test -d "$LAZY_PROJECT/apps"
+! test -d "$LAZY_PROJECT/packages"
+! test -d "$ROOT/work/$(basename "$LAZY_PROJECT")"
+bin/dev-flow next "$(basename "$LAZY_PROJECT")" >/dev/null
+test -d "$LAZY_PROJECT/ideas"
+! test -d "$LAZY_PROJECT/design"
+
 bin/dev-flow init "$(basename "$API_PROJECT")" --type api >/dev/null
 grep -q 'PROJECT_SCHEMA_VERSION="4"' "$API_PROJECT/.dev-flow/schema.env"
 grep -q 'PROJECT_TYPE="api"' "$API_PROJECT/.dev-flow/schema.env"
@@ -256,7 +273,7 @@ write_file "$BAD_ENV/.dev-flow/HOST_REQUIREMENTS.md" \
   "## Requirements" "" \
   "| Capability | Scope | Required by | Verify command | Required | Permission | Status | Notes |" \
   "|---|---|---|---|---|---|---|---|" \
-  "| Android SDK | work/project | Android release build | adb version | yes | user install | missing | Must be installed on host, not under work. |"
+  "| Android SDK | project-runtime | Android release build | adb version | yes | user install | missing | Must be installed on host, not inside the project runtime. |"
 if bin/dev-flow env-check "$(basename "$BAD_ENV")" >"$BAD_ENV_OUT" 2>&1; then
   cat "$BAD_ENV_OUT" >&2
   echo "Expected missing host SDK requirement to fail env-check." >&2
@@ -266,15 +283,14 @@ grep -q "Invalid host requirement scope" "$BAD_ENV_OUT"
 grep -q "Blocked host requirement: Android SDK" "$BAD_ENV_OUT"
 
 bin/dev-flow init "$(basename "$LEGACY_PROJECT")" --type api >/dev/null
-rm -f "$LEGACY_PROJECT/.dev-flow/schema.env" "$LEGACY_PROJECT/.dev-flow/HOST_REQUIREMENTS.md" "$LEGACY_PROJECT/tasks/IMPLEMENTATION_TRACE.md"
+rm -f "$LEGACY_PROJECT/.dev-flow/schema.env" "$LEGACY_PROJECT/.dev-flow/HOST_REQUIREMENTS.md"
 if bin/dev-flow doctor "$(basename "$LEGACY_PROJECT")" >"$DOCTOR_OUT" 2>&1; then
   cat "$DOCTOR_OUT" >&2
-  echo "Expected doctor to fail on missing schema and implementation trace." >&2
+  echo "Expected doctor to fail on missing core control files." >&2
   exit 1
 fi
 grep -q "Missing schema" "$DOCTOR_OUT"
 grep -q "Missing template file: .dev-flow/HOST_REQUIREMENTS.md" "$DOCTOR_OUT"
-grep -q "Missing template file: tasks/IMPLEMENTATION_TRACE.md" "$DOCTOR_OUT"
 bin/dev-flow migrate "$(basename "$LEGACY_PROJECT")" --type api >/dev/null
 bin/dev-flow doctor "$(basename "$LEGACY_PROJECT")" >/dev/null
 grep -q 'PROJECT_SCHEMA_VERSION="4"' "$LEGACY_PROJECT/.dev-flow/schema.env"
@@ -574,6 +590,8 @@ fi
 grep -q "Missing AI design HTML description for screen: Dashboard" "$AI_MISSING_HTML_OUT"
 
 bin/dev-flow init "$(basename "$FIGMA_GOOD")" >/dev/null
+! test -f "$FIGMA_GOOD/design/FIGMA_HANDOFF.md"
+bin/dev-flow phase "$(basename "$FIGMA_GOOD")" design "Prepare Figma handoff" --force >/dev/null
 test -f "$FIGMA_GOOD/design/FIGMA_HANDOFF.md"
 grep -q 'UI_FIGMA_HANDOFF="auto"' "$FIGMA_GOOD/.dev-flow/applicability.env"
 write_file "$FIGMA_GOOD/ideas/idea-brief.md" \
@@ -794,7 +812,7 @@ mkdir -p "$INSTALL_WORKSPACE"
   "$INSTALL_DEST/dev-agent-runtime/bin/dev-flow" init runtime_probe --type api >/dev/null
   "$INSTALL_DEST/dev-agent-runtime/bin/dev-flow" status runtime_probe >/dev/null
 )
-test -d "$INSTALL_WORKSPACE/work/runtime_probe/.dev-flow"
+test -d "$INSTALL_WORKSPACE/runtime_probe/.dev-flow"
 ! test -d "$INSTALL_DEST/dev-agent-runtime/work/runtime_probe"
 bin/dev-flow uninstall codex --scope user --dest "$INSTALL_DEST" >/dev/null
 ! test -e "$INSTALL_DEST/commands/dev.md"
