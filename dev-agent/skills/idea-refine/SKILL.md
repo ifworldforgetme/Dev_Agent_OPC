@@ -29,9 +29,10 @@ bin/dev-flow init <project-name> --type <ui|agent|api|library|docs>
 
 ## Output
 
-The final output is a markdown one-pager saved to `work/<project-name>/ideas/idea-brief.md`, containing:
+The final output is a markdown one-pager saved to `<project-name>/ideas/idea-brief.md`, containing:
 - Problem Statement
 - Recommended Direction
+- Requirement Attribution
 - Key Assumptions
 - MVP Scope
 - Not Doing list
@@ -118,6 +119,13 @@ Produce a concrete artifact — a markdown one-pager that moves work forward:
 ## Recommended Direction
 [The chosen direction and why — 2-3 paragraphs max]
 
+## Requirement Attribution
+| Source | Input / Inference | Decision | Status |
+|---|---|---|---|
+| User-stated | [explicit requirement] | [keep / refine / defer] | accepted / open |
+| Agent inference | [assumption made from context] | [decision it drives] | validate |
+| External constraint | [platform, policy, tech, compliance] | [decision it drives] | accepted / verify |
+
 ## Key Assumptions to Validate
 - [ ] [Assumption 1 — how to test it]
 - [ ] [Assumption 2 — how to test it]
@@ -137,8 +145,10 @@ Produce a concrete artifact — a markdown one-pager that moves work forward:
 
 **The "Not Doing" list is arguably the most valuable part.** Focus is about saying no to good ideas. Make the trade-offs explicit.
 
+Keep attribution lightweight. Do not turn the idea brief into a full PRD; use the table to prevent future spec work from blending explicit user input, agent guesses, and platform constraints into one untraceable blob.
+
 When operating inside a dev-flow project, save this as the canonical
-`work/<project-name>/ideas/idea-brief.md`. If no project exists yet, ask before
+`<project-name>/ideas/idea-brief.md`. If no project exists yet, ask before
 creating one or present the artifact for confirmation.
 
 ### Anti-patterns to Avoid
@@ -162,6 +172,7 @@ Read `examples.md` in this skill directory for examples of what great ideation s
 - Generating 20+ shallow variations instead of 5-8 considered ones
 - Skipping the "who is this for" question
 - No assumptions surfaced before committing to a direction
+- No requirement attribution; user-stated inputs and agent inferences are mixed together
 - Yes-machining weak ideas instead of pushing back with specificity
 - Producing a plan without a "Not Doing" list
 - Ignoring existing codebase constraints when ideating inside a project
@@ -175,7 +186,8 @@ After completing an ideation session:
 - [ ] The target user and success criteria are defined
 - [ ] Multiple directions were explored, not just the first idea
 - [ ] Hidden assumptions are explicitly listed with validation strategies
+- [ ] Requirement attribution distinguishes user-stated needs, agent inferences, decisions, and open confirmations
 - [ ] A "Not Doing" list makes trade-offs explicit
 - [ ] The output is a concrete artifact (markdown one-pager), not just conversation
-- [ ] In dev-flow projects, the artifact is saved as `work/<project-name>/ideas/idea-brief.md`
+- [ ] In dev-flow projects, the artifact is saved as `<project-name>/ideas/idea-brief.md`
 - [ ] The user confirmed the final direction before any implementation work

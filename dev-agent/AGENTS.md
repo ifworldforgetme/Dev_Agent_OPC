@@ -68,7 +68,7 @@ review across code, security, and test perspectives.
 - Preserve host requirements as early-recorded but late-blocking: record likely
   needs during idea/spec/design, run `env-check` before current-slice
   host-dependent build/test work or before ship.
-- Preserve `work/` as runtime output rather than reusable source.
+- Preserve project runtime folders as output rather than reusable workflow source.
 
 After command, installer, or runtime changes, run `tests/dev-flow-smoke.sh` from
 the repository root.

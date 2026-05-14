@@ -84,7 +84,7 @@ state, then complete missing artifacts before delivery.
 
 Host SDKs, CLIs, simulators, MCP servers, credentials, and system services are
 host-machine capabilities, not project runtime files. Record them in
-`work/<project-name>/.dev-flow/HOST_REQUIREMENTS.md`. Run `env-check` only before
+`<project-name>/.dev-flow/HOST_REQUIREMENTS.md`. Run `env-check` only before
 the current build slice or ship scope uses that host capability.
 
 ## UI Design And Build
@@ -93,7 +93,7 @@ For customer-facing apps, ask whether the user has reference images, screenshots
 Figma exports, apps, websites, or competitor products. If references exist, use
 them. If no reference is present and the user has not delegated visual direction,
 ask for examples before UI build. If visual direction is delegated, create
-`work/<project-name>/design/REFERENCE_BOARD.md` and run
+`<project-name>/design/REFERENCE_BOARD.md` and run
 `bin/dev-flow design-check <project-name> --allow-no-reference`.
 
 Do not require sketches or prototypes. The design phase should produce the
@@ -113,7 +113,7 @@ missing, return to design/spec instead of guessing.
 ## QA And Ship
 
 QA is optional by default. Enable it by setting `AUTOMATED_QA="required"` or
-`VISUAL_QA="required"` in `work/<project-name>/.dev-flow/applicability.env`, or
+`VISUAL_QA="required"` in `<project-name>/.dev-flow/applicability.env`, or
 run it when the user asks. Automated QA records `reviews/FUNCTIONAL_TEST.md` and
 `reviews/MONKEY_TEST.md`; visual QA records `reviews/VISUAL_COMPARISON.md` with
 `Overall score: N/100`. Runtime screenshots are required only for exceptions,
@@ -124,9 +124,11 @@ rollback, and go/no-go decisions.
 
 ## Artifacts
 
-Keep every project self-contained under `work/<project-name>/`. Project-specific
+Keep every project self-contained under `<project-name>/`. Project-specific
 source code and runtime apps belong inside that project folder, not at the
 workspace root.
+`init` creates only the control layer; lifecycle folders below are created when
+`next`, `phase`, or a gate needs that phase.
 
 - State: `.dev-flow/state.env`, `.dev-flow/schema.env`, `.dev-flow/context.md`, `.dev-flow/HOST_REQUIREMENTS.md`
 - Ideas: `ideas/idea-brief.md`
@@ -147,7 +149,7 @@ automatically when the current spec, design, and build gate are clear.
 Do not create project-specific `./apps`, `./packages`, `./server`, `./src`, or
 similar root-level directories unless the user explicitly says the code is shared
 across multiple projects. When running commands, use the project-local path, for
-example `cd work/<project-name>/apps/mobile`.
+example `cd <project-name>/apps/mobile`.
 
 Do not create root-level `skills/`, `agents/`, or checked-in `dist/` directories.
 Skills and personas belong under `dev-agent/`; generated adapter packages belong

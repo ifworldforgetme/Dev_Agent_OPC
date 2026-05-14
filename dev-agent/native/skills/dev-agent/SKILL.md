@@ -55,8 +55,8 @@ Then use `bin/dev-flow status <project-name>` and
 `bin/dev-flow manifest`, `bin/dev-flow command <flow-name>`, and
 `bin/dev-flow agent <role-name>` only when the brief or maintenance task calls
 for them.
-Installed runtime commands manage `work/<project-name>/` in the active
+Installed runtime commands manage `<project-name>/` in the active
 workspace/current shell directory, or in `DEV_FLOW_WORKSPACE_ROOT` when set.
 
 Do not copy project-specific work into the install directory. Project artifacts
-belong under `work/<project-name>/` in the active workspace.
+belong under `<project-name>/` in the active workspace.

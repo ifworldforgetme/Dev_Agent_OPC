@@ -24,10 +24,10 @@ QA. The output should feel intentionally designed, not template-generated.
 Do not start customer-facing UI implementation until these exist and pass for
 the current scope:
 
-- `work/<project-name>/design/DESIGN.md`
-- `work/<project-name>/design/VISUAL_SYSTEM.md`
-- `work/<project-name>/design/SCREEN_ACCEPTANCE.md`
-- `work/<project-name>/tasks/IMPLEMENTATION_TRACE.md`
+- `<project-name>/design/DESIGN.md`
+- `<project-name>/design/VISUAL_SYSTEM.md`
+- `<project-name>/design/SCREEN_ACCEPTANCE.md`
+- `<project-name>/tasks/IMPLEMENTATION_TRACE.md`
 - `bin/dev-flow design-check <project-name>`
 
 Also read these when applicable:

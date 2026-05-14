@@ -10,7 +10,7 @@ reusable components, or a more reliable visual QA baseline.
 2. Formalize selected screens in Figma when layout, component reuse, or future
    iteration matters.
 3. Export final Figma frames or component boards as PNG or PDF into
-   `work/<project-name>/design/approved/`.
+   `<project-name>/design/approved/`.
 4. Record Figma-backed rows in `DESIGN_ARTIFACTS.md` with Source type `figma` or
    `figma-mcp`.
 5. Record the Figma file/node and export mapping in `design/FIGMA_HANDOFF.md`.

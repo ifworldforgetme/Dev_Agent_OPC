@@ -36,8 +36,8 @@ Supported roles: `code-reviewer`, `product-designer`, `security-auditor`, `test-
 Runtime resolution:
 1. Prefer project-local `bin/dev-flow`.
 2. If unavailable, use an installed runtime at `.codex/dev-agent-runtime/bin/dev-flow`, `${CODEX_HOME:-$HOME/.codex}/dev-agent-runtime/bin/dev-flow`, `.claude/dev-agent-runtime/bin/dev-flow`, or the host adapter's `dev-agent-runtime/bin/dev-flow`.
-3. Installed runtime commands read and write `work/<project-name>/` under the active workspace/current shell directory, or under `DEV_FLOW_WORKSPACE_ROOT` when that env var is set.
+3. Installed runtime commands read and write `<project-name>/` under the active workspace/current shell directory, or under `DEV_FLOW_WORKSPACE_ROOT` when that env var is set.
 
 Do not create a new workflow. Load only the required context from the `next`
-brief, write outputs under `work/<project-name>/`, run the listed gate, then
+brief, write outputs under `<project-name>/`, run the listed gate, then
 record the next lifecycle phase with `phase` after the gate passes.

@@ -31,10 +31,10 @@ truth.
 ## Runtime Boundaries
 
 - Keep reusable workflow source under this directory.
-- Keep user project output under `work/<project-name>/`.
+- Keep user project output under `<project-name>/`.
 - Keep host SDKs, credentials, simulators, and shared services outside project runtime output.
 - Keep `dist/` as generated package output; regenerate it instead of hand-editing it.
-- Keep project-specific apps, packages, or servers inside the relevant `work/<project-name>/` folder unless the user explicitly asks for shared repo-level code.
+- Keep project-specific apps, packages, or servers inside the relevant `<project-name>/` folder unless the user explicitly asks for shared repo-level code.
 
 ## Skill Maintenance
 

@@ -15,4 +15,4 @@ Forward to the same actions as `/dev agent`:
 - `next <project-name>`
 - `check <gate-name> <project-name> [phase-or-options]`
 
-Resolve actions, flows, roles, and gates from `dev-agent/dev-agent.manifest.json`. Prefer project-local `bin/dev-flow`; otherwise use the installed `dev-agent-runtime/bin/dev-flow`. Installed runtime commands read/write `work/<project-name>/` under the active workspace/current shell directory, or `DEV_FLOW_WORKSPACE_ROOT` when set.
+Resolve actions, flows, roles, and gates from `dev-agent/dev-agent.manifest.json`. Prefer project-local `bin/dev-flow`; otherwise use the installed `dev-agent-runtime/bin/dev-flow`. Installed runtime commands read/write `<project-name>/` under the active workspace/current shell directory, or `DEV_FLOW_WORKSPACE_ROOT` when set.

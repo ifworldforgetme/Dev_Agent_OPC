@@ -59,9 +59,9 @@ Aliases:
 
 Applicability:
   Product, agent-contract, planning, testing, and review checks are folded into spec, build, qa, and ship.
-  Optional gates are controlled by work/<project-name>/.dev-flow/applicability.env.
+  Optional gates are controlled by <project-name>/.dev-flow/applicability.env.
   Set AGENT_CONTRACT, UI_FLOW, UI_REFERENCES, UI_DESIGN_ASSETS, UI_FIGMA_HANDOFF, AUTOMATED_QA, VISUAL_QA, or SHIP_FLOW to auto, required, delegated, or disabled.
-  Project type is recorded in work/<project-name>/.dev-flow/schema.env.
+  Project type is recorded in <project-name>/.dev-flow/schema.env.
 EOF
 }
 
@@ -79,7 +79,7 @@ project_workspace_root() {
   cwd="$(pwd -P)"
   base="$cwd"
   while :; do
-    if [[ -d "$base/work/$project" ]]; then
+    if [[ -d "$base/$project" || -d "$base/work/$project" ]]; then
       echo "$base"
       return
     fi
@@ -94,12 +94,33 @@ project_workspace_root() {
 
 project_path() {
   local name="${1:-}"
+  local workspace
   if [[ -z "$name" || "$name" == *"/"* || "$name" == "." || "$name" == ".." ]]; then
     echo "Invalid project name: ${name:-<missing>}" >&2
     echo "Use a simple folder name, for example: hotel-agent-workbench" >&2
     exit 1
   fi
-  echo "$(project_workspace_root "$name")/work/$name"
+  workspace="$(project_workspace_root "$name")"
+  if [[ -d "$workspace/$name" ]]; then
+    echo "$workspace/$name"
+    return
+  fi
+  if [[ -d "$workspace/work/$name" ]]; then
+    echo "$workspace/work/$name"
+    return
+  fi
+  echo "$workspace/$name"
+}
+
+project_display_root() {
+  local project="$1"
+  local dir workspace
+  dir="$(project_path "$project")"
+  workspace="$(project_workspace_root "$project")"
+  case "$dir" in
+    "$workspace"/*) echo "${dir#"$workspace"/}" ;;
+    *) echo "$dir" ;;
+  esac
 }
 
 state_path() {
@@ -225,12 +246,15 @@ write_if_missing() {
 
 ensure_project_dirs() {
   local dir="$1"
-  mkdir -p "$dir"/{ideas,product,agent,specs,design,tasks,reviews,ship,apps,packages,bin,.dev-flow}
+  mkdir -p "$dir"/{bin,.dev-flow}
+}
+
+ensure_design_dirs() {
+  local dir="$1"
   mkdir -p "$dir/design"/{references,drafts,mocks,screenshots,sources,approved,cut-assets}
   mkdir -p "$dir/design/sources"/{imagegen,gpt-image,figma,uploads,approved,design-system,html}
   mkdir -p "$dir/design/approved"/{screens,components,html}
   mkdir -p "$dir/design/cut-assets"/{icons,sprites,illustrations,backgrounds}
-  mkdir -p "$dir/reviews/visual-screenshots"
 }
 
 write_project_template() {
@@ -258,6 +282,14 @@ write_project_templates() {
   write_project_template "$dir" ".dev-flow/applicability.env" "$app_template" "$project" "$project_type"
   write_project_template "$dir" ".dev-flow/context.md" "context.md" "$project" "$project_type"
   write_project_template "$dir" ".dev-flow/HOST_REQUIREMENTS.md" "host-requirements.md" "$project" "$project_type"
+  write_project_template "$dir" "bin/check" "check.sh" "$project" "$project_type"
+  chmod +x "$dir/bin/check"
+}
+
+write_design_templates() {
+  local dir="$1"
+  local project="$2"
+  local project_type="$3"
   write_project_template "$dir" "design/reference-intake.md" "reference-intake.md" "$project" "$project_type"
   write_project_template "$dir" "design/reference-links.md" "reference-links.md" "$project" "$project_type"
   write_project_template "$dir" "design/REFERENCE_BOARD.md" "reference-board.md" "$project" "$project_type"
@@ -268,14 +300,62 @@ write_project_templates() {
   write_project_template "$dir" "design/DESIGN_ARTIFACTS.md" "design-artifacts.md" "$project" "$project_type"
   write_project_template "$dir" "design/DESIGN_IMAGE_DESCRIPTIONS.md" "design-image-descriptions.md" "$project" "$project_type"
   write_project_template "$dir" "design/cut-assets/ASSET_MANIFEST.md" "cut-assets-manifest.md" "$project" "$project_type"
+}
+
+write_build_templates() {
+  local dir="$1"
+  local project="$2"
+  local project_type="$3"
   write_project_template "$dir" "tasks/status.md" "status.md" "$project" "$project_type"
   write_project_template "$dir" "tasks/quality-gates.md" "quality-gates.md" "$project" "$project_type"
   write_project_template "$dir" "tasks/IMPLEMENTATION_TRACE.md" "implementation-trace.md" "$project" "$project_type"
+}
+
+write_qa_templates() {
+  local dir="$1"
+  local project="$2"
+  local project_type="$3"
   write_project_template "$dir" "reviews/FUNCTIONAL_TEST.md" "functional-test.md" "$project" "$project_type"
   write_project_template "$dir" "reviews/MONKEY_TEST.md" "monkey-test.md" "$project" "$project_type"
   write_project_template "$dir" "reviews/VISUAL_COMPARISON.md" "visual-comparison.md" "$project" "$project_type"
-  write_project_template "$dir" "bin/check" "check.sh" "$project" "$project_type"
-  chmod +x "$dir/bin/check"
+}
+
+ensure_status_artifacts() {
+  local dir="$1"
+  local project="$2"
+  local project_type="$3"
+  mkdir -p "$dir/tasks"
+  write_project_template "$dir" "tasks/status.md" "status.md" "$project" "$project_type"
+}
+
+ensure_phase_artifacts() {
+  local dir="$1"
+  local project="$2"
+  local project_type="$3"
+  local phase="$4"
+  case "$phase" in
+    idea)
+      mkdir -p "$dir/ideas"
+      ;;
+    spec)
+      mkdir -p "$dir"/{ideas,product,agent,specs}
+      ;;
+    design)
+      ensure_design_dirs "$dir"
+      write_design_templates "$dir" "$project" "$project_type"
+      ;;
+    build)
+      mkdir -p "$dir"/{tasks,reviews,apps,packages}
+      write_build_templates "$dir" "$project" "$project_type"
+      ;;
+    qa)
+      mkdir -p "$dir/reviews/visual-screenshots"
+      write_qa_templates "$dir" "$project" "$project_type"
+      ;;
+    ship)
+      mkdir -p "$dir"/{ship,reviews}
+      ;;
+  esac
 }
 
 phase_default_task() {
@@ -339,52 +419,54 @@ phase_skill_files() {
 phase_load_list() {
   local project="$1"
   local phase="$2"
-  echo "- work/$project/.dev-flow/context.md"
+  local project_root
+  project_root="$(project_display_root "$project")"
+  echo "- $project_root/.dev-flow/context.md"
   echo "- dev-agent/commands/$phase.md"
   phase_skill_files "$project" "$phase"
   case "$phase" in
     idea)
-      echo "- user request and existing work/$project/ideas/ notes"
+      echo "- user request and existing $project_root/ideas/ notes"
       ;;
     spec)
-      echo "- work/$project/ideas/idea-brief.md"
-      echo "- work/$project/product/ when existing product artifacts apply"
-      echo "- work/$project/agent/ legacy agent notes when present"
-      echo "- existing work/$project/apps/ and work/$project/packages/ when present"
+      echo "- $project_root/ideas/idea-brief.md"
+      echo "- $project_root/product/ when existing product artifacts apply"
+      echo "- $project_root/agent/ legacy agent notes when present"
+      echo "- existing $project_root/apps/ and $project_root/packages/ when present"
       ;;
     design)
-      echo "- work/$project/ideas/idea-brief.md"
-      echo "- work/$project/product/PRD.md, USER_STORIES.md, ACCEPTANCE.md, and METRICS.md when present"
-      echo "- work/$project/agent/ legacy agent artifacts when present"
-      echo "- work/$project/specs/SPEC.md"
-      echo "- work/$project/design/reference-intake.md"
-      echo "- work/$project/design/reference-links.md"
-      echo "- work/$project/design/references/ and design/screenshots/"
+      echo "- $project_root/ideas/idea-brief.md"
+      echo "- $project_root/product/PRD.md, USER_STORIES.md, ACCEPTANCE.md, and METRICS.md when present"
+      echo "- $project_root/agent/ legacy agent artifacts when present"
+      echo "- $project_root/specs/SPEC.md"
+      echo "- $project_root/design/reference-intake.md"
+      echo "- $project_root/design/reference-links.md"
+      echo "- $project_root/design/references/ and $project_root/design/screenshots/"
       echo "- dev-agent/references/design-artifacts.md"
       echo "- dev-agent/references/figma-handoff.md when Figma is used"
       ;;
     build)
-      echo "- work/$project/specs/SPEC.md"
-      echo "- work/$project/tasks/PLAN.md when present; otherwise derive a short build slice from SPEC/design"
-      echo "- work/$project/.dev-flow/HOST_REQUIREMENTS.md when the slice needs host SDKs/CLIs/services"
-      echo "- assigned task and nearby source/tests under work/$project/apps/ or packages/"
+      echo "- $project_root/specs/SPEC.md"
+      echo "- $project_root/tasks/PLAN.md when present; otherwise derive a short build slice from SPEC/design"
+      echo "- $project_root/.dev-flow/HOST_REQUIREMENTS.md when the slice needs host SDKs/CLIs/services"
+      echo "- assigned task and nearby source/tests under $project_root/apps/ or packages/"
       if phase_is_applicable "$project" design; then
-        echo "- work/$project/tasks/IMPLEMENTATION_TRACE.md"
+        echo "- $project_root/tasks/IMPLEMENTATION_TRACE.md"
         if design_assets_required "$project"; then
           echo "- required design contract inputs from dev-agent/references/design-artifacts.md"
           echo "- dev-agent/references/figma-handoff.md when Figma is used"
         else
-          echo "- work/$project/design/ acceptance docs"
+          echo "- $project_root/design/ acceptance docs"
         fi
       fi
       ;;
     qa)
       echo "- implemented source and existing tests"
-      echo "- work/$project/reviews/VERIFICATION.md or relevant command output"
-      echo "- work/$project/reviews/FUNCTIONAL_TEST.md, MONKEY_TEST.md, and VISUAL_COMPARISON.md when QA is required"
+      echo "- $project_root/reviews/VERIFICATION.md or relevant command output"
+      echo "- $project_root/reviews/FUNCTIONAL_TEST.md, MONKEY_TEST.md, and VISUAL_COMPARISON.md when QA is required"
       ;;
     ship)
-      echo "- work/$project/ship/ and work/$project/reviews/"
+      echo "- $project_root/ship/ and $project_root/reviews/"
       echo "- final build/test/package evidence"
       ;;
   esac
@@ -395,11 +477,16 @@ phase_required_outputs() {
   local phase="$2"
   case "$phase" in
     idea)
-      echo "- ideas/idea-brief.md"
+      echo "- ideas/idea-brief.md with lightweight requirement attribution"
       ;;
     spec)
       echo "- product/PRD.md"
       echo "- specs/SPEC.md"
+      load_project_applicability "$project"
+      if [[ "$PROJECT_TYPE" == "ui" ]]; then
+        echo "- product/PRD.md covers MVP scope, core flows/IA, acceptance criteria, and non-goals"
+        echo "- specs/SPEC.md covers stack, commands, data/domain model, testing, privacy/security, and open questions"
+      fi
       echo "- specs/SPEC.md Agent Runtime Contract section when agent automation is in scope"
       ;;
     design)
@@ -1883,6 +1970,36 @@ require_content_file() {
   fi
 }
 
+require_file_pattern() {
+  local dir="$1"
+  local rel="$2"
+  local label="$3"
+  local pattern="$4"
+  [[ -f "$dir/$rel" ]] || return 0
+  if ! grep -Eiq "$pattern" "$dir/$rel"; then
+    echo "Missing $label in $rel." >&2
+    return 1
+  fi
+}
+
+check_ui_spec_product_coverage() {
+  local dir="$1"
+  local failures=0
+  require_file_pattern "$dir" "product/PRD.md" "PRD coverage: MVP scope" 'MVP|Scope|范围|功能范围|必做功能' || failures=$((failures + 1))
+  require_file_pattern "$dir" "product/PRD.md" "PRD coverage: core flows or information architecture" '核心流程|关键流程|用户流程|信息架构|Core Flows?|User Flows?|Information Architecture' || failures=$((failures + 1))
+  require_file_pattern "$dir" "product/PRD.md" "PRD coverage: acceptance criteria" '验收|Acceptance Criteria|Acceptance' || failures=$((failures + 1))
+  require_file_pattern "$dir" "product/PRD.md" "PRD coverage: non-goals or out-of-scope items" '非目标|暂不做|不做|Non-Goals?|Out of Scope|Not Doing' || failures=$((failures + 1))
+
+  require_file_pattern "$dir" "specs/SPEC.md" "SPEC coverage: stack/platform constraints" 'Tech Stack|Platform And Stack|技术栈|平台|架构|Stack' || failures=$((failures + 1))
+  require_file_pattern "$dir" "specs/SPEC.md" "SPEC coverage: commands" '(^## +Commands)|命令|xcodebuild|npm run|cargo test|swift test|make ' || failures=$((failures + 1))
+  require_file_pattern "$dir" "specs/SPEC.md" "SPEC coverage: data/domain model" 'Data Model|Domain Model|数据模型|领域模型|Schema|Entity' || failures=$((failures + 1))
+  require_file_pattern "$dir" "specs/SPEC.md" "SPEC coverage: testing strategy" 'Testing Strategy|Test Strategy|测试|Tests?' || failures=$((failures + 1))
+  require_file_pattern "$dir" "specs/SPEC.md" "SPEC coverage: privacy/security" 'Privacy|Security|权限|隐私|安全|Keychain|permission' || failures=$((failures + 1))
+  require_file_pattern "$dir" "specs/SPEC.md" "SPEC coverage: open questions" 'Open Questions|待确认|未决|Questions' || failures=$((failures + 1))
+
+  [[ "$failures" -eq 0 ]]
+}
+
 require_any_file() {
   local dir="$1"
   local label="$2"
@@ -1926,6 +2043,10 @@ verify_phase_impl() {
     spec)
       require_content_file "$dir" "product/PRD.md" || failures=$((failures + 1))
       require_content_file "$dir" "specs/SPEC.md" || failures=$((failures + 1))
+      load_project_applicability "$project"
+      if [[ "$PROJECT_TYPE" == "ui" ]] && [[ -f "$dir/product/PRD.md" && -f "$dir/specs/SPEC.md" ]]; then
+        check_ui_spec_product_coverage "$dir" || failures=$((failures + 1))
+      fi
       if agent_contract_applies "$project"; then
         if ! grep -Eq '^## +Agent Runtime Contract' "$dir/specs/SPEC.md"; then
           echo "Missing Agent Runtime Contract section in specs/SPEC.md for agent automation scope." >&2
@@ -2172,7 +2293,7 @@ env_check_impl() {
     rows=$((rows + 1))
 
     if [[ "$(printf '%s' "$scope" | tr '[:upper:]' '[:lower:]')" == *work* || "$(printf '%s' "$scope" | tr '[:upper:]' '[:lower:]')" == project-runtime ]]; then
-      echo "Invalid host requirement scope for $capability: host SDKs/CLIs must not be scoped to work/<project> runtime output." >&2
+      echo "Invalid host requirement scope for $capability: host SDKs/CLIs must not be scoped to project runtime output." >&2
       failures=$((failures + 1))
     fi
 
@@ -2263,14 +2384,14 @@ doctor_check_impl() {
     fi
   fi
   local dir_name
-  for dir_name in ideas product agent specs design design/references design/drafts design/mocks design/screenshots design/sources design/sources/imagegen design/sources/gpt-image design/sources/figma design/sources/uploads design/sources/html design/approved design/approved/screens design/approved/components design/approved/html design/cut-assets design/cut-assets/icons design/cut-assets/sprites design/cut-assets/illustrations design/cut-assets/backgrounds tasks reviews reviews/visual-screenshots ship apps packages .dev-flow; do
+  for dir_name in .dev-flow bin; do
     if [[ ! -d "$dir/$dir_name" ]]; then
       echo "Missing template directory: $dir_name" >&2
       failures=$((failures + 1))
     fi
   done
   local file_name
-  for file_name in .dev-flow/state.env .dev-flow/applicability.env .dev-flow/context.md .dev-flow/HOST_REQUIREMENTS.md design/reference-intake.md design/reference-links.md design/REFERENCE_BOARD.md design/FIGMA_HANDOFF.md design/DESIGN_ARTIFACTS.md design/DESIGN_IMAGE_DESCRIPTIONS.md design/cut-assets/ASSET_MANIFEST.md tasks/status.md tasks/quality-gates.md tasks/IMPLEMENTATION_TRACE.md reviews/FUNCTIONAL_TEST.md reviews/MONKEY_TEST.md reviews/VISUAL_COMPARISON.md bin/check; do
+  for file_name in .dev-flow/state.env .dev-flow/applicability.env .dev-flow/context.md .dev-flow/HOST_REQUIREMENTS.md bin/check; do
     if [[ ! -f "$dir/$file_name" ]]; then
       echo "Missing template file: $file_name" >&2
       failures=$((failures + 1))
@@ -2280,7 +2401,7 @@ doctor_check_impl() {
     echo "Project check is not executable: bin/check" >&2
     failures=$((failures + 1))
   fi
-  tracked_runtime="$(git -C "$ROOT" ls-files "work/$project" "dist" ".codex" ".claude" ".gemini" ".openclaw" ".opencode" 2>/dev/null || true)"
+  tracked_runtime="$(git -C "$ROOT" ls-files "$project" "work/$project" "dist" ".codex" ".claude" ".gemini" ".openclaw" ".opencode" 2>/dev/null || true)"
   if [[ -n "$tracked_runtime" ]]; then
     echo "Tracked runtime/generated output found:" >&2
     printf '%s\n' "$tracked_runtime" >&2
@@ -2302,6 +2423,8 @@ migrate_project_impl() {
   ensure_project_dirs "$dir"
   write_project_templates "$dir" "$project" "$project_type"
   write_project_schema_file "$project" "$project_type"
+  load_project_state "$project"
+  ensure_phase_artifacts "$dir" "$project" "$project_type" "$CURRENT_PHASE"
   echo "Migrated $project to schema v$DEV_FLOW_PROJECT_SCHEMA_VERSION ($project_type)."
 }
 
@@ -2895,297 +3018,6 @@ case "$cmd" in
     dir="$(project_path "$project")"
     ensure_project_dirs "$dir"
     write_project_templates "$dir" "$project" "$project_type"
-    write_if_missing "$dir/.dev-flow/state.env" "PROJECT_NAME=\"$project\"
-CURRENT_PHASE=\"idea\"
-CURRENT_TASK=\"Refine the initial idea\"
-BLOCKERS=\"none\"
-LAST_VERIFICATION=\"not run\""
-    write_if_missing "$dir/.dev-flow/applicability.env" "# Phase applicability for $project
-# Values: auto, required, delegated, disabled
-#
-# auto: validate this phase only after matching artifacts exist
-# required: treat this phase as part of phase transitions and ship-check
-# delegated: treat visual direction as user-delegated when used with UI_REFERENCES
-# disabled: skip this phase in phase transitions and ship-check
-AGENT_CONTRACT=\"auto\"
-UI_FLOW=\"required\"
-UI_REFERENCES=\"required\"
-UI_DESIGN_ASSETS=\"auto\"
-UI_FIGMA_HANDOFF=\"auto\"
-UI_MOCKUPS=\"auto\"
-AUTOMATED_QA=\"auto\"
-VISUAL_QA=\"auto\"
-SHIP_FLOW=\"auto\"
-GIT_CHECKPOINTS=\"auto\""
-    write_if_missing "$dir/.dev-flow/context.md" "# Context Loading: $project
-
-Load only the files needed for the current phase.
-
-- Idea: read \`ideas/\` and relevant user notes.
-- Spec: read the idea brief, existing product notes, relevant agent notes, and existing app files if present. Produce PRD + SPEC together, including an Agent Runtime Contract section when agent automation is in scope.
-- Design: read \`ideas/idea-brief.md\`, product artifacts when applicable, agent artifacts when applicable, \`specs/SPEC.md\`, \`design/reference-intake.md\`, \`design/DESIGN_ARTIFACTS.md\`, \`design/DESIGN_IMAGE_DESCRIPTIONS.md\`, \`design/FIGMA_HANDOFF.md\`, user-provided references, existing screens, and platform constraints.
-- Build: think through clarity, architecture, environment needs, and design readiness first; then read the current build slice, approved design docs, implementation trace, nearby source files, and tests.
-- QA: optional unless AUTOMATED_QA or VISUAL_QA is required; read verification, functional/monkey logs, visual comparison, and exception screenshots only when needed.
-- Ship: optional; read QA evidence, verification evidence, risks, rollback, and launch notes.
-
-Do not bulk-load \`dev-agent/\` or unrelated project folders."
-    write_if_missing "$dir/design/reference-intake.md" "# Reference Intake: $project
-
-Use this before customer-facing UI design or visual polish.
-
-## Reference Assets
-- Put screenshots, reference images, Figma exports, mood boards, or product captures in:
-  - \`design/references/\`
-  - \`design/screenshots/\`
-
-## Draft Assets
-- Put exploratory or low-fidelity design inputs under \`design/drafts/\` or \`design/mocks/\`.
-
-## Approved Design Assets
-- Satisfy \`dev-agent/references/design-artifacts.md\` and run
-  \`bin/dev-flow design-check $project\` before build.
-
-## Figma Handoff
-- When Figma is used, satisfy \`dev-agent/references/figma-handoff.md\` and run
-  \`bin/dev-flow figma-check $project\`.
-
-## Reference Software
-- Put product names, app store links, websites, Figma links, or competitor notes in \`design/reference-links.md\`.
-
-## Decision
-- If reference assets or software are provided, extract visual patterns before designing: layout density, navigation model, component style, spacing, typography, color, motion, and tone.
-- If this is customer-facing UI and no reference is provided, ask the user for examples unless the user has explicitly delegated visual direction.
-- If the user delegates visual direction, create a short reference board first and save it under \`design/\` before UI build."
-    write_if_missing "$dir/design/DESIGN.md" "# Design: $project
-
-## UX Problem
-
-## Recommended Direction
-
-## Alternatives Considered
-
-## Information Architecture
-
-## Interaction Model
-
-## Visual System
-
-## Design Artifacts
-
-## Build Implications
-"
-    write_if_missing "$dir/design/VISUAL_SYSTEM.md" "# Visual System: $project
-
-## Reference Influence
-
-## Palette
-
-## Typography
-
-## Spacing and Layout
-
-## Components and Motion
-
-## Forbidden Patterns
-"
-    write_if_missing "$dir/design/SCREEN_ACCEPTANCE.md" "# Screen Acceptance: $project
-
-## [Screen Name]
-- Requirement source:
-- Required content:
-- Required states:
-- Breakpoints:
-- Required design assets:
-- Visual acceptance:
-- Accessibility acceptance:
-"
-write_if_missing "$dir/design/DESIGN_ARTIFACTS.md" "# Design Artifacts: $project
-
-Satisfy \`dev-agent/references/design-artifacts.md\` and run
-\`bin/dev-flow design-check $project\` before build.
-
-## Required Coverage
-- Derive the canonical screen list from the idea, PRD, user stories, acceptance criteria, spec, design, and interaction model.
-- Record every required screen or global surface as a \`##\` section in \`SCREEN_ACCEPTANCE.md\` with a \`Requirement source:\` line.
-- Produce or collect formal layout/state assets only when the reference requires them.
-- Add Screen Coverage rows for exact \`SCREEN_ACCEPTANCE.md\` headings when formal assets are required or already present.
-
-## Screen Coverage
-| Screen | State | Source type | Source reference | Approved asset path | Resolution / export | Status | Implementation notes |
-|---|---|---|---|---|---|---|---|
-"
-    write_if_missing "$dir/design/DESIGN_IMAGE_DESCRIPTIONS.md" "# Design Image HTML Descriptions: $project
-
-Use this when \`dev-agent/references/design-artifacts.md\` requires an AI design
-image description.
-
-## Rules
-- Satisfy \`dev-agent/references/design-artifacts.md\`.
-- Keep provider/source originals under \`design/sources/html/\` when useful.
-
-## Description Coverage
-| Screen | State | Source image | HTML description | Status | Notes |
-|---|---|---|---|---|---|
-"
-write_if_missing "$dir/design/cut-assets/ASSET_MANIFEST.md" "# Cut Assets: $project
-
-List runtime visual assets when implementation needs them.
-If no cut assets are required, record \`CUT_ASSETS_REQUIRED: no\` with a short rationale.
-Satisfy \`dev-agent/references/design-artifacts.md\`.
-
-## Decision
-- CUT_ASSETS_REQUIRED: TBD
-
-## Asset Manifest
-| Asset | Source approved asset | Source region / frame | Output path | Format | Alpha | Runtime path | Usage | Notes |
-|---|---|---|---|---|---|---|---|---|
-
-## Runtime Notes
-- Record enough source, output, runtime path, and usage detail for implementation.
-- Follow \`dev-agent/references/design-artifacts.md\` for hard validation rules.
-"
-    write_if_missing "$dir/design/reference-links.md" "# Reference Links: $project
-
-Add user-provided reference apps, websites, Figma links, screenshots descriptions, or competitor notes below.
-
-	## References"
-    write_if_missing "$dir/design/FIGMA_HANDOFF.md" "# Figma Handoff: $project
-
-Use this when Figma is part of the design handoff. Satisfy
-\`dev-agent/references/figma-handoff.md\` and run
-\`bin/dev-flow figma-check $project\`.
-
-## Decision
-- FIGMA_HANDOFF_REQUIRED: auto
-- Library required: no
-- Rationale:
-
-## Figma Sources
-| Screen | Figma source | Approved export | Role | Status | Notes |
-|---|---|---|---|---|---|
-
-## Source Inputs
-| Input | Source path or URL | Used for | Notes |
-|---|---|---|---|
-
-## Export Rules
-- Follow \`dev-agent/references/figma-handoff.md\`.
-- Confirm \`bin/dev-flow figma-check $project\` before build when required."
-    write_if_missing "$dir/tasks/status.md" "# Project Status: $project
-
-## Current State
-- Phase: idea
-- Current task: Refine the initial idea
-- Blockers: none
-- Last verification: not run
-
-## Phase Checklist
-- [ ] Idea approved
-- [ ] Spec approved
-- [ ] Design approved, when UI applies
-- [ ] Build complete
-- [ ] QA complete, when required
-- [ ] Ship package ready, when requested
-
-## Human Review Gates
-- Requirement confirmation
-- Customer-facing visual direction when no reference image/software is provided
-- High-risk architecture decisions
-- Security, payment, permissions, or data deletion behavior
-- Production launch approval"
-    write_if_missing "$dir/tasks/quality-gates.md" "# Quality Gates: $project
-
-Project-specific verification belongs here. Keep commands runnable from this project
-folder and mirror them in \`bin/check\` when they become stable.
-
-## Default Gate
-- [ ] Required workflow folders exist
-- [ ] Status ledger exists
-- [ ] Context loading guidance exists
-- [ ] Reference intake exists for customer-facing UI work
-- [ ] \`dev-agent/references/design-artifacts.md\` is satisfied when formal visual assets are required
-- [ ] \`dev-agent/references/figma-handoff.md\` is satisfied when Figma is used
-- [ ] \`bin/dev-flow design-check $project\` passes before UI implementation, when UI applies
-- [ ] \`tasks/IMPLEMENTATION_TRACE.md\` maps required UI screens to implementation targets and evidence, when UI applies
-
-## Add When The Project Has Code
-- [ ] Lint
-- [ ] Type check
-- [ ] Unit tests
-- [ ] Build
-- [ ] Browser or device smoke test, when user-facing
-- [ ] Functional flow test, when AUTOMATED_QA is required
-- [ ] Monkey or exploratory stress test, when AUTOMATED_QA is required
-- [ ] Visual comparison score is at least 90/100 against required design contract inputs, when VISUAL_QA is required
-- [ ] \`bin/dev-flow design-check $project\` before UI build, when UI applies
-- [ ] \`bin/dev-flow qa-check $project\` before delivery only when QA is required"
-    write_if_missing "$dir/reviews/FUNCTIONAL_TEST.md" "# Functional Test: $project
-
-Record normal happy-path and critical user-flow verification here after implementation.
-
-## Commands / Devices
-
-## Flows Checked
-
-## Result
-"
-    write_if_missing "$dir/reviews/MONKEY_TEST.md" "# Monkey Test: $project
-
-Record random, exploratory, stress, or resilience testing here after implementation.
-
-## Scope
-
-## Events / Inputs
-
-## Result
-"
-    write_if_missing "$dir/reviews/VISUAL_COMPARISON.md" "# Visual Comparison: $project
-
-Compare the implemented UI with required design contract inputs.
-
-Overall score: 0/100
-
-## Compared Inputs
-- Approved design assets:
-- Cut assets:
-- Runtime UI surfaces:
-- Exception screenshots, only if a flow was blocked:
-
-## Screen Fidelity Matrix
-| Screen | Approved asset path | Runtime surface | Fidelity score | Notes |
-|---|---|---|---|---|
-
-## Score Breakdown
-- Layout and hierarchy:
-- Component fidelity:
-- State coverage:
-- Responsiveness:
-- Polish:
-
-## Differences
--
-
-## Decision
-"
-    write_if_missing "$dir/bin/check" "#!/usr/bin/env bash
-set -euo pipefail
-
-ROOT=\"\$(cd \"\$(dirname \"\${BASH_SOURCE[0]}\")/..\" && pwd)\"
-
-required_dirs=(ideas product agent specs design design/references design/drafts design/mocks design/screenshots design/sources design/sources/imagegen design/sources/gpt-image design/sources/figma design/sources/uploads design/sources/html design/approved design/approved/screens design/approved/components design/approved/html design/cut-assets tasks reviews reviews/visual-screenshots ship apps packages .dev-flow)
-for d in \"\${required_dirs[@]}\"; do
-  [[ -d \"\$ROOT/\$d\" ]] || { echo \"Missing directory: \$d\" >&2; exit 1; }
-done
-
-required_files=(.dev-flow/state.env .dev-flow/schema.env .dev-flow/context.md .dev-flow/HOST_REQUIREMENTS.md design/reference-intake.md design/reference-links.md design/REFERENCE_BOARD.md design/FIGMA_HANDOFF.md design/DESIGN_ARTIFACTS.md design/DESIGN_IMAGE_DESCRIPTIONS.md design/cut-assets/ASSET_MANIFEST.md tasks/status.md tasks/quality-gates.md tasks/IMPLEMENTATION_TRACE.md reviews/FUNCTIONAL_TEST.md reviews/MONKEY_TEST.md reviews/VISUAL_COMPARISON.md)
-for f in \"\${required_files[@]}\"; do
-  [[ -f \"\$ROOT/\$f\" ]] || { echo \"Missing file: \$f\" >&2; exit 1; }
-done
-
-[[ -f \"\$ROOT/.dev-flow/applicability.env\" ]] || { echo \"Missing file: .dev-flow/applicability.env\" >&2; exit 1; }
-
-echo \"Default workflow gate passed for \$(basename \"\$ROOT\").\""
-    chmod +x "$dir/bin/check"
     echo "Initialized $dir"
     echo "Next: bin/dev-flow next $project"
     ;;
@@ -3234,11 +3066,14 @@ echo \"Default workflow gate passed for \$(basename \"\$ROOT\").\""
       verify_prior_applicable_phases "$project" "$phase"
     fi
     load_project_state "$project"
+    load_project_schema "$project"
     if [[ -z "$task" ]]; then
       task="$CURRENT_TASK"
     fi
     write_project_state "$project" "$phase" "$task" "$BLOCKERS" "$LAST_VERIFICATION"
     dir="$(project_path "$project")"
+    ensure_phase_artifacts "$dir" "$project" "$PROJECT_TYPE" "$phase"
+    ensure_status_artifacts "$dir" "$project" "$PROJECT_TYPE"
     {
       echo
       echo "## Update $(date -u '+%Y-%m-%dT%H:%M:%SZ')"
@@ -3253,6 +3088,8 @@ echo \"Default workflow gate passed for \$(basename \"\$ROOT\").\""
     require_project "$project"
     load_project_state "$project"
     load_project_schema "$project"
+    dir="$(project_path "$project")"
+    ensure_phase_artifacts "$dir" "$project" "$PROJECT_TYPE" "$CURRENT_PHASE"
     echo "Project: $project"
     echo "Type: $PROJECT_TYPE"
     echo "Current phase: $CURRENT_PHASE"
@@ -3315,7 +3152,7 @@ echo \"Default workflow gate passed for \$(basename \"\$ROOT\").\""
     fi
     echo "No reference assets or reference software found."
     echo "For customer-facing UI, ask the user for reference images, screenshots, Figma links, app names, or websites before design."
-    echo "If the user delegates visual direction, create a reference board under work/$project/design/ before UI build."
+    echo "If the user delegates visual direction, create a reference board under $(project_display_root "$project")/design/ before UI build."
     if [[ "$mode" == "--required" ]]; then
       exit 1
     fi
@@ -3454,7 +3291,7 @@ Install the generated folders into the target agent surface. There are two layer
 
 Agent personas are included under each adapter's `agents/` directory when the platform supports persona/sub-agent files. Shared references are embedded into each packaged skill so standalone skill installation keeps reference files available.
 
-The `runtime/` folder is a self-contained workflow-pack checkout surface. Copy or clone it when a platform user needs the same machine-checkable gates used by this repository. It intentionally excludes `work/`, checked-in `dist/`, local host adapter installs, and host-level SDKs. Host SDKs and permissions belong in each project's `.dev-flow/HOST_REQUIREMENTS.md` contract, not inside `work/<project>/`.
+The `runtime/` folder is a self-contained workflow-pack checkout surface. Copy or clone it when a platform user needs the same machine-checkable gates used by this repository. It intentionally excludes project runtime folders, checked-in `dist/`, local host adapter installs, and host-level SDKs. Host SDKs and permissions belong in each project's `.dev-flow/HOST_REQUIREMENTS.md` contract, not inside the project runtime folder.
 
 The helper can also install directly:
 

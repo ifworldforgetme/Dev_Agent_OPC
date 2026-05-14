@@ -44,7 +44,7 @@ When `Source type` is `figma` or `figma-mcp`, satisfy
 
 ## Output Rules
 
-- Approved assets must live under `work/<project-name>/design/approved/`.
+- Approved assets must live under `<project-name>/design/approved/`.
 - Approved assets must be real non-empty raster image or PDF files.
 - AI-generated approved images must have semantic HTML companions that describe layout hierarchy, content, components, states, colors, spacing, typography, interactions, and implementation notes.
 - SVG, Mermaid, Markdown, and code-native files can be drafts or precise diagrams, but they do not satisfy the approved asset gate by themselves.

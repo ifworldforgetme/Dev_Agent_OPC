@@ -3,11 +3,11 @@
 Project-specific verification belongs here. Keep commands runnable from this project folder and mirror them in `bin/check` when they become stable.
 
 ## Default Gate
-- [ ] Required workflow folders exist
+- [ ] Required workflow folders exist only after their phase needs them
 - [ ] Schema and status ledgers exist
 - [ ] Context loading guidance exists
 - [ ] Host SDKs, CLIs, services, credentials, and permissions are recorded in `.dev-flow/HOST_REQUIREMENTS.md` when known
-- [ ] Shared host SDKs are not downloaded into `work/{{PROJECT}}/`
+- [ ] Shared host SDKs are not downloaded into the `{{PROJECT}}/` runtime folder
 - [ ] `bin/dev-flow env-check {{PROJECT}}` passes before the current build slice or ship scope uses host capabilities
 - [ ] Reference intake exists for customer-facing UI work
 - [ ] `dev-agent/references/design-artifacts.md` is satisfied when formal visual assets are required
