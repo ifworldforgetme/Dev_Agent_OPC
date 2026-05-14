@@ -14,6 +14,11 @@ stories, acceptance criteria, useful metrics, technical constraints, and any
 AI-agent runtime contract in one pass. Do not create separate PM or agent
 phases. The required outputs are `product/PRD.md` and `specs/SPEC.md`.
 
+Keep the split crisp: `PRD.md` owns users, scope, flows, product rules,
+acceptance, metrics, and non-goals. `SPEC.md` owns architecture, data,
+interfaces, commands, tests, privacy/security boundaries, risks, and open
+technical decisions.
+
 In Dev Agent projects, this skill owns `<project-name>/specs/SPEC.md`.
 Do not create implementation artifacts from this skill; hand off to
 `design-flow` for customer-facing UI and then `incremental-implementation`.
@@ -46,6 +51,15 @@ If product artifacts already exist, reuse them. Otherwise write the minimum PRD:
 objective, target user, MVP scope, acceptance criteria, non-goals, and metrics
 only when they affect build or QA decisions. Flag conflicts instead of silently
 changing product scope.
+
+If external references are provided, absorb them structurally:
+
+- Extract reusable decisions into PRD/SPEC sections.
+- Reject or flag unsafe anti-patterns, such as floating-point money, overlarge
+  P0 scope, silent financial deletion, automatic posting without confirmation,
+  or paywalling platform-provided system capability as if it were proprietary.
+- Record conflicts and source differences instead of pasting long reference
+  text into the spec.
 
 **Surface assumptions immediately.** Before writing any spec content, list what you're assuming:
 
@@ -101,6 +115,12 @@ Don't silently fill in ambiguous requirements. The spec's entire purpose is to s
    - **Ask first:** Database schema changes, adding dependencies, changing CI config, high-risk architecture, security/payment/permission/data-deletion behavior, production launch approval
    - **Never do:** Commit secrets, edit vendor directories, remove failing tests without approval
 
+For customer-facing products, also cover product-domain depth where applicable:
+information architecture, onboarding, default data, feature field matrices,
+states/errors, permissions/privacy copy, monetization/paywall rules, analytics
+events, non-functional requirements, and version boundaries. Keep it lean, but
+make design/build-ready decisions visible.
+
 **Minimum PRD template:**
 
 ```markdown
@@ -111,6 +131,8 @@ Don't silently fill in ambiguous requirements. The spec's entire purpose is to s
 ## Users And Jobs
 
 ## MVP Scope
+
+## Core Flows / Information Architecture
 
 ## Acceptance Criteria
 
@@ -133,6 +155,12 @@ Don't silently fill in ambiguous requirements. The spec's entire purpose is to s
 ## Commands
 [Build, test, lint, dev — full commands]
 
+## Data / Domain Model
+[Entities, fields, invariants, persistence and sync-sensitive states]
+
+## Interfaces / Integrations
+[Public APIs, SDKs, permissions, auth providers, payments, background jobs]
+
 ## Project Structure
 [Directory layout with descriptions]
 
@@ -141,6 +169,9 @@ Don't silently fill in ambiguous requirements. The spec's entire purpose is to s
 
 ## Testing Strategy
 [Framework, test locations, coverage requirements, test levels]
+
+## Privacy / Security
+[Data handling, permissions, deletion, secrets, compliance-sensitive choices]
 
 ## Agent Runtime Contract
 [Only when agent automation is in scope: job, tools/permissions, approval
@@ -221,7 +252,10 @@ The spec is a living document, not a one-time artifact:
 Before proceeding to implementation, confirm:
 
 - [ ] `product/PRD.md` exists with MVP scope and acceptance criteria
+- [ ] UI/customer-facing PRDs cover core flows or IA, acceptance criteria, and non-goals
 - [ ] `specs/SPEC.md` covers all core technical areas
+- [ ] UI/customer-facing specs cover stack, commands, data/domain model, testing, privacy/security, and open questions
+- [ ] External references were converted into structured decisions and unsafe reference patterns were flagged
 - [ ] The human has reviewed and approved the spec, or workspace instructions explicitly delegate defaults and no human review gate is open
 - [ ] Success criteria are specific and testable
 - [ ] Boundaries (Always/Ask First/Never) are defined

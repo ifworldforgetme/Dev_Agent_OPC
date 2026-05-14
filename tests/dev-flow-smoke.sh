@@ -6,6 +6,7 @@ RUN_ID="smoke_$$"
 LAZY_PROJECT="$ROOT/__${RUN_ID}_lazy"
 UI_BLOCK="$ROOT/__${RUN_ID}_ui_block"
 LIGHT_UI="$ROOT/__${RUN_ID}_light_ui"
+SPEC_GAP="$ROOT/__${RUN_ID}_spec_gap"
 DELEGATED="$ROOT/__${RUN_ID}_delegated"
 INVALID="$ROOT/__${RUN_ID}_invalid"
 SVG_ONLY="$ROOT/__${RUN_ID}_svg_only"
@@ -32,6 +33,7 @@ INSTALL_DEST="/private/tmp/dev-agent-${RUN_ID}-install"
 INSTALL_WORKSPACE="/private/tmp/dev-agent-${RUN_ID}-workspace"
 UI_BLOCK_OUT="/private/tmp/dev-flow-${RUN_ID}-ui-block.out"
 LIGHT_UI_NEXT_OUT="/private/tmp/dev-flow-${RUN_ID}-light-ui-next.out"
+SPEC_GAP_OUT="/private/tmp/dev-flow-${RUN_ID}-spec-gap.out"
 INVALID_OUT="/private/tmp/dev-flow-${RUN_ID}-invalid.out"
 EXCEPTION_OUT="/private/tmp/dev-flow-${RUN_ID}-exception.out"
 SVG_ONLY_OUT="/private/tmp/dev-flow-${RUN_ID}-svg-only.out"
@@ -65,7 +67,7 @@ cleanup_path() {
 }
 
 cleanup() {
-  cleanup_path "$LAZY_PROJECT" "$UI_BLOCK" "$LIGHT_UI" "$DELEGATED" "$INVALID" "$SVG_ONLY" "$SVG_LEAK" "$SVG_CUT_ALLOWED" "$SELF_RENDERED_PNG" "$MISSING_COVERAGE" "$SCREENSHOT_SWAP" "$DRAFT_PATH" "$NO_CUTS" "$AI_MISSING_HTML" "$FIGMA_GOOD" "$FIGMA_SECTION_BOUNDARY" "$FIGMA_MISSING_SOURCE" "$FIGMA_BAD_EXPORT" "$API_PROJECT" "$AGENT_PROJECT" "$ENV_PROJECT" "$BAD_ENV" "$LEGACY_PROJECT" "$BAD_VISUAL" "$ADAPTER_OUT" "$INSTALL_DEST" "$INSTALL_WORKSPACE" "$UI_BLOCK_OUT" "$LIGHT_UI_NEXT_OUT" "$INVALID_OUT" "$EXCEPTION_OUT" "$SVG_ONLY_OUT" "$SVG_LEAK_OUT" "$SVG_CUT_ALLOWED_OUT" "$SELF_RENDERED_PNG_OUT" "$MISSING_COVERAGE_OUT" "$SCREENSHOT_SWAP_OUT" "$DRAFT_PATH_OUT" "$AI_MISSING_HTML_OUT" "$FIGMA_MISSING_SOURCE_OUT" "$FIGMA_BAD_EXPORT_OUT" "$API_OUT" "$AGENT_OUT" "$ENV_OUT" "$BAD_ENV_OUT" "$DOCTOR_OUT" "$BAD_VISUAL_OUT" "$TRACE_MISSING_HTML_OUT" "$NEXT_UI_OUT"
+  cleanup_path "$LAZY_PROJECT" "$UI_BLOCK" "$LIGHT_UI" "$SPEC_GAP" "$DELEGATED" "$INVALID" "$SVG_ONLY" "$SVG_LEAK" "$SVG_CUT_ALLOWED" "$SELF_RENDERED_PNG" "$MISSING_COVERAGE" "$SCREENSHOT_SWAP" "$DRAFT_PATH" "$NO_CUTS" "$AI_MISSING_HTML" "$FIGMA_GOOD" "$FIGMA_SECTION_BOUNDARY" "$FIGMA_MISSING_SOURCE" "$FIGMA_BAD_EXPORT" "$API_PROJECT" "$AGENT_PROJECT" "$ENV_PROJECT" "$BAD_ENV" "$LEGACY_PROJECT" "$BAD_VISUAL" "$ADAPTER_OUT" "$INSTALL_DEST" "$INSTALL_WORKSPACE" "$UI_BLOCK_OUT" "$LIGHT_UI_NEXT_OUT" "$SPEC_GAP_OUT" "$INVALID_OUT" "$EXCEPTION_OUT" "$SVG_ONLY_OUT" "$SVG_LEAK_OUT" "$SVG_CUT_ALLOWED_OUT" "$SELF_RENDERED_PNG_OUT" "$MISSING_COVERAGE_OUT" "$SCREENSHOT_SWAP_OUT" "$DRAFT_PATH_OUT" "$AI_MISSING_HTML_OUT" "$FIGMA_MISSING_SOURCE_OUT" "$FIGMA_BAD_EXPORT_OUT" "$API_OUT" "$AGENT_OUT" "$ENV_OUT" "$BAD_ENV_OUT" "$DOCTOR_OUT" "$BAD_VISUAL_OUT" "$TRACE_MISSING_HTML_OUT" "$NEXT_UI_OUT"
 }
 trap cleanup EXIT
 
@@ -262,6 +264,51 @@ write_file "$AGENT_PROJECT/specs/SPEC.md" \
   "# Spec" "" "Build an agent automation." "## Agent Runtime Contract" "Job: process the requested workflow." "Tools and permissions: read project files; ask before external writes." "Failure recovery and escalation: record blockers and ask the user when the tool or permission boundary is unclear."
 bin/dev-flow verify-phase "$(basename "$AGENT_PROJECT")" spec >"$AGENT_OUT" 2>&1
 
+bin/dev-flow init "$(basename "$SPEC_GAP")" --type ui >/dev/null
+write_file "$SPEC_GAP/ideas/idea-brief.md" \
+  "# Idea Brief" "" \
+  "Build a customer-facing iOS finance app." \
+  "## Requirement Attribution" \
+  "| Source | Decision | Status |" \
+  "|---|---|---|" \
+  "| User | Local-first bookkeeping without login | accepted |"
+write_file "$SPEC_GAP/product/PRD.md" \
+  "# PRD" "" \
+  "## Objective" "Build a customer-facing iOS finance app." \
+  "## MVP Scope" "Manual entry and account overview." \
+  "## Acceptance Criteria" "A user can create one transaction." \
+  "## Non-Goals" "No bank aggregation."
+write_file "$SPEC_GAP/specs/SPEC.md" \
+  "# Spec" "" \
+  "## Tech Stack" "SwiftUI." \
+  "## Commands" "xcodebuild build." \
+  "## Testing Strategy" "Unit tests cover transaction validation." \
+  "## Open Questions" "Which sync backend?"
+if bin/dev-flow verify-phase "$(basename "$SPEC_GAP")" spec >"$SPEC_GAP_OUT" 2>&1; then
+  cat "$SPEC_GAP_OUT" >&2
+  echo "Expected UI spec verification to fail when product/domain coverage is missing." >&2
+  exit 1
+fi
+grep -q "Missing PRD coverage: core flows or information architecture" "$SPEC_GAP_OUT"
+grep -q "Missing SPEC coverage: data/domain model" "$SPEC_GAP_OUT"
+grep -q "Missing SPEC coverage: privacy/security" "$SPEC_GAP_OUT"
+write_file "$SPEC_GAP/product/PRD.md" \
+  "# PRD" "" \
+  "## Objective" "Build a customer-facing iOS finance app." \
+  "## MVP Scope" "Manual entry and account overview." \
+  "## Core Flows" "Open without login, create a transaction, review account balance." \
+  "## Acceptance Criteria" "A user can create one transaction and see the updated balance." \
+  "## Non-Goals" "No bank aggregation."
+write_file "$SPEC_GAP/specs/SPEC.md" \
+  "# Spec" "" \
+  "## Tech Stack" "SwiftUI." \
+  "## Commands" "xcodebuild build." \
+  "## Data Model" "Transaction and Account records use integer minor units for money." \
+  "## Testing Strategy" "Unit tests cover transaction validation." \
+  "## Privacy / Security" "Local financial data stays on device unless sync is explicitly enabled." \
+  "## Open Questions" "Which sync backend?"
+bin/dev-flow verify-phase "$(basename "$SPEC_GAP")" spec >/dev/null
+
 bin/dev-flow init "$(basename "$ENV_PROJECT")" --type api >/dev/null
 test -f "$ENV_PROJECT/.dev-flow/HOST_REQUIREMENTS.md"
 bin/dev-flow env-check "$(basename "$ENV_PROJECT")" >"$ENV_OUT" 2>&1
@@ -327,7 +374,12 @@ write_file "$UI_BLOCK/ideas/idea-brief.md" \
   "The UI must be polished and responsive." \
   "The workflow must block build before design exists."
 write_file "$UI_BLOCK/product/PRD.md" \
-  "# PRD" "" "Build a customer-facing dashboard app." "The product must feel trustworthy." "Build must wait for design."
+  "# PRD" "" \
+  "## Objective" "Build a customer-facing dashboard app. The product must feel trustworthy." \
+  "## MVP Scope" "Dashboard with navigation, cards, and empty state." \
+  "## Core Flows" "Open dashboard, understand state, recover from empty state, use primary CTA." \
+  "## Acceptance Criteria" "Dashboard requirements and empty states are documented before build." \
+  "## Non-Goals" "No implementation before design."
 write_file "$UI_BLOCK/product/USER_STORIES.md" \
   "# User Stories" "" "- As a user, I can understand my dashboard quickly." "- As a user, I can recover from empty states." "- As a user, I can act from the primary CTA."
 write_file "$UI_BLOCK/product/ACCEPTANCE.md" \
@@ -337,9 +389,12 @@ write_file "$UI_BLOCK/product/METRICS.md" \
 write_file "$UI_BLOCK/specs/SPEC.md" \
   "# Spec" \
   "" \
-  "Create a browser dashboard with navigation, cards, and empty state." \
-  "Implementation will live under apps/web." \
-  "The workflow should require design and approved design assets first."
+  "## Tech Stack" "Browser UI under apps/web." \
+  "## Commands" "Static source inspection for the fixture." \
+  "## Data Model" "Dashboard state includes cards, empty state, and primary action." \
+  "## Testing Strategy" "Design gate blocks build before implementation." \
+  "## Privacy / Security" "No user data or secrets in this fixture." \
+  "## Open Questions" "Which approved design source should drive final build?"
 if bin/dev-flow phase "$(basename "$UI_BLOCK")" build "Attempt build without design" >"$UI_BLOCK_OUT" 2>&1; then
   cat "$UI_BLOCK_OUT" >&2
   echo "Expected UI project build to fail before design." >&2
@@ -351,9 +406,20 @@ bin/dev-flow init "$(basename "$LIGHT_UI")" >/dev/null
 write_file "$LIGHT_UI/ideas/idea-brief.md" \
   "# Idea Brief" "" "Build a simple customer-facing status page." "Use delegated visual direction." "Formal design boards are not required for this fixture."
 write_file "$LIGHT_UI/product/PRD.md" \
-  "# PRD" "" "Build a compact status page." "MVP scope is one page with an empty state." "No visual QA or formal asset handoff is required."
+  "# PRD" "" \
+  "## Objective" "Build a compact status page." \
+  "## MVP Scope" "One page with an empty state." \
+  "## Core Flows" "Open status page, read status, use one action." \
+  "## Acceptance Criteria" "The page renders clear status content and an accessible primary action." \
+  "## Non-Goals" "No visual QA or formal asset handoff is required."
 write_file "$LIGHT_UI/specs/SPEC.md" \
-  "# Spec" "" "Create a static status page under apps/web." "Use DESIGN.md, VISUAL_SYSTEM.md, and SCREEN_ACCEPTANCE.md." "Formal assets may be none."
+  "# Spec" "" \
+  "## Tech Stack" "Static HTML under apps/web." \
+  "## Commands" "Static source inspection for the fixture." \
+  "## Data Model" "Status page state includes title, badge, empty state, and primary action." \
+  "## Testing Strategy" "Verify source exists and build gate passes without formal assets." \
+  "## Privacy / Security" "No user data or secrets in this fixture." \
+  "## Open Questions" "None for the fixture."
 write_file "$LIGHT_UI/design/DESIGN.md" \
   "# Design" "" "## UX Problem" "Users need a clear status page." "## Recommended Direction" "Use a simple one-page layout." "## Alternatives Considered" "- Full dashboard: too much." "## Information Architecture" "Status page only." "## Interaction Model" "Read status and use one action." "## Visual System" "Neutral product surface." "## Design Artifacts" "No formal assets required for this lightweight scope." "## Build Implications" "Build from acceptance and visual system."
 write_file "$LIGHT_UI/design/VISUAL_SYSTEM.md" \
@@ -646,7 +712,12 @@ bin/dev-flow init "$(basename "$DELEGATED")" >/dev/null
 write_file "$DELEGATED/ideas/idea-brief.md" \
   "# Idea Brief" "" "Build a habit tracker." "The user delegated visual direction." "The app needs onboarding and dashboard screens."
 write_file "$DELEGATED/product/PRD.md" \
-  "# PRD" "" "Build a habit tracker." "Onboarding and dashboard are in MVP." "Visual direction is delegated to the agent."
+  "# PRD" "" \
+  "## Objective" "Build a habit tracker." \
+  "## MVP Scope" "Onboarding and dashboard are in MVP." \
+  "## Core Flows" "Complete onboarding, review habit progress, recover from empty and error states." \
+  "## Acceptance Criteria" "Onboarding and dashboard states are documented and traceable to implementation." \
+  "## Non-Goals" "Visual direction is delegated to the agent; no unrelated product areas."
 write_file "$DELEGATED/product/USER_STORIES.md" \
   "# User Stories" "" "- As a user, I can complete onboarding." "- As a user, I can review habit progress." "- As a user, I can recover from empty and error states."
 write_file "$DELEGATED/product/ACCEPTANCE.md" \
@@ -654,7 +725,13 @@ write_file "$DELEGATED/product/ACCEPTANCE.md" \
 write_file "$DELEGATED/product/METRICS.md" \
   "# Metrics" "" "- Setup completion." "- Dashboard engagement." "- Visual comparison score."
 write_file "$DELEGATED/specs/SPEC.md" \
-  "# Spec" "" "Create onboarding and dashboard screens." "Support default, empty, loading, error, and success states." "Use approved design assets before implementation."
+  "# Spec" "" \
+  "## Tech Stack" "Browser UI under apps/web." \
+  "## Commands" "Static source inspection for the fixture." \
+  "## Data Model" "Habit progress state supports default, empty, loading, error, and success states." \
+  "## Testing Strategy" "Implementation trace maps screens to design assets and test evidence." \
+  "## Privacy / Security" "No user data or secrets in this fixture." \
+  "## Open Questions" "None for the delegated fixture."
 write_file "$DELEGATED/design/DESIGN.md" \
   "# Design" "" "## UX Problem" "Users need quick setup and trusted progress." "## Recommended Direction" "Use approved design assets as the visual target." "## Alternatives Considered" "- Text-only UI: too weak." "## Information Architecture" "Onboarding and dashboard." "## Interaction Model" "Primary setup flow and dashboard review." "## Visual System" "Neutral surfaces with one action color." "## Design Artifacts" "- design/approved/onboarding-default.png" "- design/approved/dashboard-empty.png" "## Build Implications" "Use SCREEN_ACCEPTANCE.md and approved design assets during implementation."
 write_file "$DELEGATED/design/VISUAL_SYSTEM.md" \

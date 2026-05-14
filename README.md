@@ -18,7 +18,7 @@
 </p>
 
 <p align="center">
-  <a href="#发布日志"><img alt="Version" src="https://img.shields.io/badge/version-v0.6-blue.svg"></a>
+  <a href="#发布日志"><img alt="Version" src="https://img.shields.io/badge/version-v0.7-blue.svg"></a>
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-green.svg"></a>
   <a href="DEV_FLOW.md"><img alt="Dev Agent Runtime" src="https://img.shields.io/badge/dev--agent-runtime-111827.svg"></a>
   <img alt="Lean Flow" src="https://img.shields.io/badge/lean-flow-f97316.svg">
@@ -107,12 +107,15 @@ bin/dev-flow install claude-code --scope user
 
 - **主阶段**：idea、spec、design、build、qa、ship。
 - **精简职责**：产品/PRD 与 agent contract 归入 Spec；轻量计划和 proof-first 归入 Build；测试与 review 归入 QA/Ship。
+- **Idea 归因**：idea brief 记录用户明确需求、agent 推断、产品决策和待确认项，避免后续 spec 混淆来源。
+- **Spec 门禁**：UI 项目的 PRD 需覆盖 MVP、核心流程/IA、验收和非目标；SPEC 需覆盖技术栈、命令、数据/领域模型、测试、隐私/安全和未决问题。
 - **设计门禁**：customer-facing UI 在 build 前运行 `design-check`；没有参考时需用户委托视觉方向或提供参考。
 - **环境边界**：宿主机 SDK、模拟器、MCP、凭证和系统服务记录在 `HOST_REQUIREMENTS.md`，不混入项目 runtime。
 - **QA 开关**：`AUTOMATED_QA="required"` 开启功能/monkey QA；`VISUAL_QA="required"` 开启视觉 QA。
 
 ### 发布日志
 
+- `v0.7`：强化 idea/spec 工作流；idea brief 增加需求归因表；Spec 明确 PRD 与 SPEC 分工、产品域展开清单、外部参考吸收规则，并为 UI 项目增加最小 spec 覆盖门禁。
 - `v0.6`：收敛为 `idea → spec → design → build → QA → ship`；Spec 合并 PRD 和 agent contract；Build 合并轻量计划与 proof-first；QA/Ship 默认可选；移除默认 PDCA 支流。
 - `v0.5`：支持 native 安装，并可在对话中通过 `/dev agent` 直接调用 Dev Agent；稳定 ID 为 `dev-agent`，保留 `/dev-agent` 作为兼容别名。
 - `v0.4`：增加 schema v4、可选 QA/Ship、正式设计资产按需门禁，以及 `AGENT_CONTRACT`。
@@ -196,12 +199,15 @@ bin/dev-flow install claude-code --scope user
 
 - **Primary phases**: idea, spec, design, build, qa, ship.
 - **Lean responsibilities**: product/PRD and agent contracts live in Spec; micro-planning and proof-first checks live in Build; testing and review live in QA/Ship.
+- **Idea attribution**: idea briefs record user-stated needs, agent inferences, product decisions, and open confirmations so later specs do not blur source boundaries.
+- **Spec gate**: UI project PRDs must cover MVP, core flows/IA, acceptance, and non-goals; SPEC files must cover stack, commands, data/domain model, testing, privacy/security, and open questions.
 - **Design gate**: customer-facing UI runs `design-check` before build; missing references require user input or delegated visual direction.
 - **Environment boundary**: host SDKs, simulators, MCP servers, credentials, and services are recorded in `HOST_REQUIREMENTS.md` instead of project runtime output.
 - **QA switches**: `AUTOMATED_QA="required"` enables functional/monkey QA; `VISUAL_QA="required"` enables visual QA.
 
 ### Release Notes
 
+- `v0.7`: Strengthens the idea/spec workflow; adds requirement attribution to idea briefs; clarifies PRD/SPEC ownership, product-domain expansion, external-reference absorption, and minimum UI spec coverage gates.
 - `v0.6`: Collapses the lifecycle to `idea → spec → design → build → QA → ship`; folds PRD and agent contracts into Spec; folds micro-planning and proof-first checks into Build; makes QA/Ship optional by default; removes the default PDCA branch.
 - `v0.5`: Adds native installation and conversation-level invocation through `/dev agent`; the stable ID is `dev-agent`, with `/dev-agent` kept as a compatibility alias.
 - `v0.4`: Adds schema v4, optional QA/Ship gates, demand-driven formal design assets, and `AGENT_CONTRACT`.

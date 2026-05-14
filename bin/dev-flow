@@ -477,11 +477,16 @@ phase_required_outputs() {
   local phase="$2"
   case "$phase" in
     idea)
-      echo "- ideas/idea-brief.md"
+      echo "- ideas/idea-brief.md with lightweight requirement attribution"
       ;;
     spec)
       echo "- product/PRD.md"
       echo "- specs/SPEC.md"
+      load_project_applicability "$project"
+      if [[ "$PROJECT_TYPE" == "ui" ]]; then
+        echo "- product/PRD.md covers MVP scope, core flows/IA, acceptance criteria, and non-goals"
+        echo "- specs/SPEC.md covers stack, commands, data/domain model, testing, privacy/security, and open questions"
+      fi
       echo "- specs/SPEC.md Agent Runtime Contract section when agent automation is in scope"
       ;;
     design)
@@ -1965,6 +1970,36 @@ require_content_file() {
   fi
 }
 
+require_file_pattern() {
+  local dir="$1"
+  local rel="$2"
+  local label="$3"
+  local pattern="$4"
+  [[ -f "$dir/$rel" ]] || return 0
+  if ! grep -Eiq "$pattern" "$dir/$rel"; then
+    echo "Missing $label in $rel." >&2
+    return 1
+  fi
+}
+
+check_ui_spec_product_coverage() {
+  local dir="$1"
+  local failures=0
+  require_file_pattern "$dir" "product/PRD.md" "PRD coverage: MVP scope" 'MVP|Scope|范围|功能范围|必做功能' || failures=$((failures + 1))
+  require_file_pattern "$dir" "product/PRD.md" "PRD coverage: core flows or information architecture" '核心流程|关键流程|用户流程|信息架构|Core Flows?|User Flows?|Information Architecture' || failures=$((failures + 1))
+  require_file_pattern "$dir" "product/PRD.md" "PRD coverage: acceptance criteria" '验收|Acceptance Criteria|Acceptance' || failures=$((failures + 1))
+  require_file_pattern "$dir" "product/PRD.md" "PRD coverage: non-goals or out-of-scope items" '非目标|暂不做|不做|Non-Goals?|Out of Scope|Not Doing' || failures=$((failures + 1))
+
+  require_file_pattern "$dir" "specs/SPEC.md" "SPEC coverage: stack/platform constraints" 'Tech Stack|Platform And Stack|技术栈|平台|架构|Stack' || failures=$((failures + 1))
+  require_file_pattern "$dir" "specs/SPEC.md" "SPEC coverage: commands" '(^## +Commands)|命令|xcodebuild|npm run|cargo test|swift test|make ' || failures=$((failures + 1))
+  require_file_pattern "$dir" "specs/SPEC.md" "SPEC coverage: data/domain model" 'Data Model|Domain Model|数据模型|领域模型|Schema|Entity' || failures=$((failures + 1))
+  require_file_pattern "$dir" "specs/SPEC.md" "SPEC coverage: testing strategy" 'Testing Strategy|Test Strategy|测试|Tests?' || failures=$((failures + 1))
+  require_file_pattern "$dir" "specs/SPEC.md" "SPEC coverage: privacy/security" 'Privacy|Security|权限|隐私|安全|Keychain|permission' || failures=$((failures + 1))
+  require_file_pattern "$dir" "specs/SPEC.md" "SPEC coverage: open questions" 'Open Questions|待确认|未决|Questions' || failures=$((failures + 1))
+
+  [[ "$failures" -eq 0 ]]
+}
+
 require_any_file() {
   local dir="$1"
   local label="$2"
@@ -2008,6 +2043,10 @@ verify_phase_impl() {
     spec)
       require_content_file "$dir" "product/PRD.md" || failures=$((failures + 1))
       require_content_file "$dir" "specs/SPEC.md" || failures=$((failures + 1))
+      load_project_applicability "$project"
+      if [[ "$PROJECT_TYPE" == "ui" ]] && [[ -f "$dir/product/PRD.md" && -f "$dir/specs/SPEC.md" ]]; then
+        check_ui_spec_product_coverage "$dir" || failures=$((failures + 1))
+      fi
       if agent_contract_applies "$project"; then
         if ! grep -Eq '^## +Agent Runtime Contract' "$dir/specs/SPEC.md"; then
           echo "Missing Agent Runtime Contract section in specs/SPEC.md for agent automation scope." >&2
