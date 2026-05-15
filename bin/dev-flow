@@ -135,6 +135,15 @@ project_has_new_layout() {
   [[ -d "$dir/$NEW_CONTROL_DIR" ]]
 }
 
+project_has_legacy_process_dirs_from_dir() {
+  local dir="$1"
+  local rel
+  for rel in ideas product specs agent design tasks reviews ship; do
+    [[ -d "$dir/$rel" ]] && return 0
+  done
+  return 1
+}
+
 project_control_path() {
   local dir
   dir="$(project_path "${1:-}")"
@@ -169,7 +178,25 @@ project_process_root() {
     echo "$dir/$NEW_CONTROL_DIR"
     return
   fi
-  echo "$dir"
+  if [[ -d "$dir/$LEGACY_CONTROL_DIR" ]] || project_has_legacy_process_dirs_from_dir "$dir"; then
+    echo "$dir"
+    return
+  fi
+  echo "$dir/$NEW_CONTROL_DIR"
+}
+
+ensure_control_for_uninitialized_project() {
+  local project="$1"
+  local dir project_type
+  dir="$(project_path "$project")"
+  [[ -d "$dir/$NEW_CONTROL_DIR" || -d "$dir/$LEGACY_CONTROL_DIR" ]] && return 0
+  project_has_legacy_process_dirs_from_dir "$dir" && return 0
+  project_type="${DEV_FLOW_DEFAULT_PROJECT_TYPE:-ui}"
+  if ! dev_flow_valid_project_type "$project_type"; then
+    project_type="ui"
+  fi
+  ensure_project_dirs "$dir"
+  write_project_templates "$dir" "$project" "$project_type"
 }
 
 project_process_root_from_dir() {
@@ -178,7 +205,11 @@ project_process_root_from_dir() {
     echo "$dir/$NEW_CONTROL_DIR"
     return
   fi
-  echo "$dir"
+  if [[ -d "$dir/$LEGACY_CONTROL_DIR" ]] || project_has_legacy_process_dirs_from_dir "$dir"; then
+    echo "$dir"
+    return
+  fi
+  echo "$dir/$NEW_CONTROL_DIR"
 }
 
 source_root_for_process_dir() {
@@ -208,7 +239,7 @@ project_control_display_root() {
 
 project_process_display_root() {
   local project="$1"
-  if project_has_new_layout "$project"; then
+  if [[ "$(project_process_root "$project")" == "$(project_path "$project")/$NEW_CONTROL_DIR" ]]; then
     project_control_display_root "$project"
     return
   fi
@@ -3823,6 +3854,7 @@ case "$cmd" in
       esac
     done
     require_project "$project"
+    ensure_control_for_uninitialized_project "$project"
     if ! is_valid_phase "$phase"; then
       echo "Invalid phase: ${phase:-<missing>}" >&2
       echo "Valid phases: idea, spec, design, build, qa, ship" >&2
@@ -3855,6 +3887,7 @@ case "$cmd" in
   next)
     project="${2:-}"
     require_project "$project"
+    ensure_control_for_uninitialized_project "$project"
     load_project_state "$project"
     load_project_schema "$project"
     dir="$(project_process_root "$project")"
