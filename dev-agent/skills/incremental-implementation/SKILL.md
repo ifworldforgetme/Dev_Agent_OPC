@@ -49,16 +49,19 @@ For each slice:
 1. **Implement** the smallest complete piece of functionality
 2. **Test** — run the test suite (or write a test if none exists)
 3. **Verify** — confirm the slice works as expected (tests pass, build succeeds, manual check)
-4. **Commit or checkpoint** -- when inside a git repo and the user/workspace has authorized commits, save progress with a descriptive commit. Otherwise, record a checkpoint in `<project-name>/tasks/status.md` with changed files and verification evidence.
-5. **Record evidence** -- update `tasks/status.md` and `reviews/VERIFICATION.md`
-   or `reviews/BLOCKED_BUILD.md` with changed areas, commands, and blockers.
+4. **Commit or checkpoint** -- when inside a git repo and the user/workspace has authorized commits, save progress with a descriptive commit. Otherwise, record a checkpoint in `<project-name>/.dev-agent/tasks/status.md` with changed files and verification evidence.
+5. **Record evidence** -- update `.dev-agent/tasks/status.md` and
+   `.dev-agent/reviews/VERIFICATION.md` or `.dev-agent/reviews/BLOCKED_BUILD.md`
+   with changed areas, commands, and blockers.
 6. **Move to the next slice** — carry forward, don't restart
 
 Use the project-local workspace layout for all implementation work:
 
-- Read tasks from `<project-name>/tasks/`
-- Edit app/source files under `<project-name>/apps/` or another `<project-name>/...` source directory
-- Run commands from the project-local app directory, for example `<project-name>/apps/mobile`
+- Read tasks from `<project-name>/.dev-agent/tasks/`
+- Edit app/source files under the project root, such as `<project-name>/src/`,
+  `<project-name>/app/`, `<project-name>/apps/`, or `<project-name>/packages/`
+- Run commands from the project root or stack-local source directory, for
+  example `<project-name>` or `<project-name>/apps/mobile`
 - Do not create project-specific source directories outside the project folder
 
 ## Slicing Strategies
@@ -111,9 +114,10 @@ If Slice 1 fails, you discover it before investing in Slices 2 and 3.
 ### Rule -2: Build Micro-Plan
 
 Before coding, write a compact slice note in the working response,
-`tasks/status.md`, or `tasks/PLAN.md` only when the slice is too large to hold
-in the spec/status. Include the goal, target files, source boundary, proof
-command, and blocker/escalation path. This replaces a separate planning phase.
+`.dev-agent/tasks/status.md`, or `.dev-agent/tasks/PLAN.md` only when the slice
+is too large to hold in the spec/status. Include the goal, target files, source
+boundary, proof command, and blocker/escalation path. This replaces a separate
+planning phase.
 
 For behavior changes, prefer a failing test or executable proof first. If that
 is not practical, record why and use the smallest manual or smoke proof that
@@ -131,8 +135,8 @@ Return the issue to its owner instead of hard-working around it:
 - reproduced failure with unknown cause -> debugging-and-error-recovery
 - security/payment/permission/data deletion risk -> security-and-hardening or user decision
 
-If no flow can resolve it, record the blocker in `reviews/BLOCKED_BUILD.md` and
-ask the user for the decision.
+If no flow can resolve it, record the blocker in
+`.dev-agent/reviews/BLOCKED_BUILD.md` and ask the user for the decision.
 
 ### Rule 0: Simplicity First
 
@@ -254,8 +258,8 @@ After each increment, verify:
 - [ ] Type checking passes (`npx tsc --noEmit`)
 - [ ] Linting passes (`npm run lint`)
 - [ ] The new functionality works as expected
-- [ ] The change is committed with a descriptive message, or checkpointed in `tasks/status.md` when commits are unavailable or not authorized
-- [ ] `tasks/status.md` and `reviews/VERIFICATION.md` or `reviews/BLOCKED_BUILD.md` record changed areas, commands, and blockers
+- [ ] The change is committed with a descriptive message, or checkpointed in `.dev-agent/tasks/status.md` when commits are unavailable or not authorized
+- [ ] `.dev-agent/tasks/status.md` and `.dev-agent/reviews/VERIFICATION.md` or `.dev-agent/reviews/BLOCKED_BUILD.md` record changed areas, commands, and blockers
 
 **Note:** Run each verification command after a change that could affect it. After a successful run, don't repeat the same command unless the code has changed since — re-running on unchanged code adds no information.
 

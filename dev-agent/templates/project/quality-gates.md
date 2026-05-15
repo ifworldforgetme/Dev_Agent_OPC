@@ -6,7 +6,7 @@ Project-specific verification belongs here. Keep commands runnable from this pro
 - [ ] Required workflow folders exist only after their phase needs them
 - [ ] Schema and status ledgers exist
 - [ ] Context loading guidance exists
-- [ ] Host SDKs, CLIs, services, credentials, and permissions are recorded in `.dev-flow/HOST_REQUIREMENTS.md` when known
+- [ ] Host SDKs, CLIs, services, credentials, and permissions are recorded in `.dev-agent/HOST_REQUIREMENTS.md` when known
 - [ ] Shared host SDKs are not downloaded into the `{{PROJECT}}/` runtime folder
 - [ ] `bin/dev-flow env-check {{PROJECT}}` passes before the current build slice or ship scope uses host capabilities
 - [ ] Reference intake exists for customer-facing UI work
@@ -21,6 +21,8 @@ Project-specific verification belongs here. Keep commands runnable from this pro
 - [ ] Unit tests
 - [ ] Build
 - [ ] Browser or device smoke test, when user-facing
+- [ ] `bin/dev-flow ui-polish {{PROJECT}}` recorded if a runtime visual pass was used
+- [ ] P2/P3 UI polish is recorded in `reviews/UI_DEBT.md` and does not block the current build task
 - [ ] Functional flow test, when `AUTOMATED_QA` is required
 - [ ] Monkey or exploratory stress test, when `AUTOMATED_QA` is required
 - [ ] Visual comparison score is at least 90/100 against required design contract inputs, when `VISUAL_QA` is required

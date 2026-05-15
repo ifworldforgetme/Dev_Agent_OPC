@@ -6,9 +6,10 @@ description: Use when a spec needs customer-facing UX, visual direction, screen 
 # Design Flow
 
 Turn an approved spec into a build-ready design package. Use after
-`spec-driven-development` and before build for screens,
-apps, websites, dashboards, games, and any user-facing workflow where visual or
-interaction quality affects delivery.
+`spec-driven-development` and before build when the spec says the work touches
+UI, visual direction, brand/KV, interaction states, motion, or any
+customer-facing workflow where visual quality affects delivery. Skip design only
+when the spec or project applicability clearly marks UI/design as not needed.
 
 ## Operating Rules
 
@@ -16,14 +17,22 @@ interaction quality affects delivery.
   trade-offs before choosing a direction.
 - Keep it simple: produce only the artifacts needed for the current product
   scope, but do not skip required design gates.
-- Modify precisely: keep artifacts project-local under `<project-name>/`.
+- Modify precisely: keep process artifacts under `<project-name>/.dev-agent/`
+  and source output under the project root.
 - Work toward a verifiable target: every key screen must have acceptance
   criteria before build. Delegate formal visual-source rules to the design
   artifact reference and executable gates.
+- Drafts, sketches, low-fidelity prototypes, and runtime screenshots are input
+  evidence only. They cannot be the build target.
+- Prefer high-fidelity HTML/CSS design packages for implementation handoff.
+  Use JS or Lottie assets when motion must be reproduced.
+- Generate new logo, app-icon, brand/KV, and high-quality bitmap assets only
+  through the `imagegen` skill or an explicit Codex CLI image-generation path.
+  Do not author SVG/HTML/canvas locally and render PNG for final identity assets.
 
 ## Outputs
 
-Save design artifacts under `<project-name>/design/`:
+Save design artifacts under `<project-name>/.dev-agent/design/`:
 
 - `DESIGN.md`
 - `VISUAL_SYSTEM.md`
@@ -32,7 +41,9 @@ Save design artifacts under `<project-name>/design/`:
 - `DESIGN_IMAGE_DESCRIPTIONS.md` when required by the design artifact contract
 - `FIGMA_HANDOFF.md` when required by the Figma handoff contract
 - `REFERENCE_BOARD.md` when visual direction is delegated
-- formal visual assets and runtime element assets when required
+- approved HTML/CSS design packages under `design/approved/html/`
+- formal visual assets, brand/KV assets, logos/icons, and runtime element
+  assets when required
 - references, drafts, and mocks under their matching non-approved folders
 
 Use `dev-agent/templates/project/` for file templates. Use
@@ -77,7 +88,8 @@ Use `dev-agent/templates/project/` for file templates. Use
 6. **Specify platform and visual system**
    - Load `references/platform-ux-principles.md` when platform behavior matters.
    - Define palette, typography, spacing, icon direction, component rules,
-     density, motion, accessibility, and forbidden visual patterns.
+     density, motion, accessibility, CSS token strategy, and forbidden visual
+     patterns.
    - Avoid generic AI aesthetics: purple-heavy gradients, decorative blobs,
      nested card stacks, and oversized hero layouts in utility products.
 
@@ -93,22 +105,42 @@ Use `dev-agent/templates/project/` for file templates. Use
      and narrow-screen states when applicable.
 
 8. **Decide whether formal design assets are needed**
-   - Ask whether the user has references. If not, either use explicit delegated
-     visual direction or raise a design blocker.
+   - Decide whether user-provided resources are build-ready: they need enough
+     HTML/CSS, visual-system, state, asset, and motion detail for a model or
+     engineer to reproduce the UI without guessing.
+   - If resources are insufficient, list the missing resources and route them
+     to generation: visual-system and brand/KV direction, required screen
+     images, HTML/CSS packages, CSS/JS or Lottie motion files when needed, and
+     logo/app-icon sizes when product identity is in scope.
+   - For logo, app-icon, brand/KV, and high-quality bitmap asset generation,
+     load `imagegen` or use the Codex CLI image-generation path explicitly. Save
+     the resulting raster assets and record `imagegen://`, `gpt-image://`, or
+     `gpt-image-2://` provenance.
    - Do not create sketches or prototypes just to satisfy process.
    - Satisfy `dev-agent/references/design-artifacts.md` when formal assets,
      AI-image design, runtime cut assets, or visual QA are in scope.
    - When Figma is used, satisfy `dev-agent/references/figma-handoff.md` and
      run `bin/dev-flow figma-check <project-name>`.
 
-9. **Record artifact coverage**
+9. **Produce design packages**
+    - For each accepted screen and important state, create or collect a separate
+      HTML file under `.dev-agent/design/approved/html/` with CSS resources that encode the
+      visual system and responsive layout. Add JS or Lottie files only when
+      motion is part of acceptance.
+    - Use generated or uploaded images as visual targets and asset sources, but
+      keep the HTML/CSS package as the implementation-readable handoff.
+    - When identity assets are required, provide logo or app-icon variants sized
+      for the target platform from Image Gen/GPT Image outputs. Local SVG
+      renders are drafts only and must not be treated as final PNG assets.
+
+10. **Record artifact coverage**
     - Update `DESIGN_ARTIFACTS.md`, `DESIGN_IMAGE_DESCRIPTIONS.md`,
       `FIGMA_HANDOFF.md`, and `ASSET_MANIFEST.md` only when the referenced
       contracts require them.
-    - Keep `tasks/IMPLEMENTATION_TRACE.md` aligned with the screens and states
+    - Keep `.dev-agent/tasks/IMPLEMENTATION_TRACE.md` aligned with the screens and states
       that build will implement.
 
-10. **Gate before build**
+11. **Gate before build**
     - Update the spec if design changes product scope.
     - Load `references/design-rubric.md` for design self-review when useful.
     - Run `bin/dev-flow design-check <project-name>` before build.
@@ -119,6 +151,7 @@ Use `dev-agent/templates/project/` for file templates. Use
 - `DESIGN.md`, `VISUAL_SYSTEM.md`, and `SCREEN_ACCEPTANCE.md` exist.
 - Every `SCREEN_ACCEPTANCE.md` section names its upstream requirement source.
 - Formal design artifacts satisfy `dev-agent/references/design-artifacts.md`.
+- Required screen/state HTML/CSS packages exist and are mapped before build.
 - Figma handoff satisfies `dev-agent/references/figma-handoff.md` when used.
 - Interaction alternatives, recommendation, platform rules, accessibility, key
   screens, and states are explicit.

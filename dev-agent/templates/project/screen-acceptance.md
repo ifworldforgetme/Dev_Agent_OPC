@@ -5,6 +5,6 @@
 - Required content:
 - Required states:
 - Breakpoints:
-- Design assets / visual source:
+- Design package / visual source:
 - Visual acceptance:
 - Accessibility acceptance:

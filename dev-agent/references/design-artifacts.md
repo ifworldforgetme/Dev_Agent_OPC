@@ -1,22 +1,43 @@
 # Design Artifacts
 
-Customer-facing UI must have approved design assets before high-fidelity UI build. The gate is provider-neutral but provenance is strict: only formal producers can qualify.
+Customer-facing UI must have approved design packages before high-fidelity UI
+build. The gate is provider-neutral but provenance is strict: only formal
+producers can qualify, and build-ready handoff must include HTML/CSS that a
+model or engineer can read without guessing.
+
+All relative paths in this contract, such as `design/approved/...`,
+`tasks/IMPLEMENTATION_TRACE.md`, and `reviews/visual-screenshots/...`, are
+relative to `<project-name>/.dev-agent/`. Implementation targets such as
+`apps/web/index.html` remain relative to the project root.
 
 ## Asset Classes
 
-- References: external screenshots, apps, websites, Figma links, and competitor notes. Save under `design/references/`, `design/screenshots/`, or `design/reference-links.md`.
-- Drafts: sketches, SVG/Mermaid/Markdown wireframes, low-fidelity prototypes, local HTML/CSS mock screenshots, and files named draft/sketch/prototype. Save under `design/drafts/` or `design/mocks/`.
-- Approved assets: implementation-ready raster/PDF boards and state images from formal producers. Save under `design/approved/`.
-- AI image HTML companions: when imagegen, GPT Image, or another AI image model generates an approved asset, save a semantic HTML description under `design/approved/html/` and record the mapping in `design/DESIGN_IMAGE_DESCRIPTIONS.md`.
+- References: external screenshots, apps, websites, Figma links, and competitor notes. Save under `.dev-agent/design/references/`, `.dev-agent/design/screenshots/`, or `.dev-agent/design/reference-links.md`.
+- Drafts: sketches, SVG/Mermaid/Markdown wireframes, low-fidelity prototypes,
+  rough local HTML/CSS mockups, screenshots, and files named
+  draft/sketch/prototype. Save under `.dev-agent/design/drafts/` or `.dev-agent/design/mocks/`.
+- Approved visual assets: implementation-ready raster/PDF boards and state
+  images from formal producers. Save under `.dev-agent/design/approved/`.
+- Approved HTML/CSS packages: high-fidelity HTML files under
+  `design/approved/html/`, with CSS resources under the same folder and optional
+  JS/Lottie resources when motion is part of acceptance.
+- AI image HTML packages: when imagegen, GPT Image, or another AI image model
+  generates an approved visual asset, save the matching high-fidelity HTML/CSS
+  package under `design/approved/html/` and record the mapping in
+  `design/DESIGN_IMAGE_DESCRIPTIONS.md`.
 - Figma handoff: when Figma is used, satisfy `dev-agent/references/figma-handoff.md`.
-- Verification assets: browser screenshots, simulator captures, Playwright/Chrome captures, and runtime output. Save under `reviews/visual-screenshots/` only when an exception or blocked flow needs evidence.
-- Delegated reference board: when the user delegates visual direction and no external reference is provided, save the generated reference direction in `design/REFERENCE_BOARD.md`.
+- Verification assets: browser screenshots, simulator captures, Playwright/Chrome captures, and runtime output. Save under `.dev-agent/reviews/visual-screenshots/` only when an exception or blocked flow needs evidence.
+- Delegated reference board: when the user delegates visual direction and no external reference is provided, save the generated reference direction in `.dev-agent/design/REFERENCE_BOARD.md`.
 
 Drafts and verification assets are forbidden as implementation targets. Use them only as inputs to create a formal approved asset.
 
 ## Coverage Contract
 
-Derive required screens from the idea brief, PRD, user stories, acceptance criteria, spec, design, and interaction model. Record each screen or global UI surface as a `##` heading in `SCREEN_ACCEPTANCE.md` with `Requirement source:`, then add at least one `DESIGN_ARTIFACTS.md` Screen Coverage row for each exact heading:
+Derive required screens from the idea brief, PRD, user stories, acceptance
+criteria, spec, design, and interaction model. Record each screen or global UI
+surface as a `##` heading in `SCREEN_ACCEPTANCE.md` with `Requirement source:`,
+then add at least one `DESIGN_ARTIFACTS.md` Screen Coverage row for each exact
+heading:
 
 | Screen | State | Source type | Source reference | Approved asset path | Resolution / export | Status | Implementation notes |
 |---|---|---|---|---|---|---|---|
@@ -31,10 +52,30 @@ Allowed `Source type` values and producers:
 | `designer-upload` / `uploaded-approved` | Human/designer uploaded PNG/JPG/WebP/HEIC/PDF export | `upload://...`, `designer-upload://...`, or `design/sources/uploads/...` |
 | `design-system` | Established design-system board export | `design-system://...`, `component-library://...`, `token://...`, or `design/sources/design-system/...` |
 | `external-design` | External design tool export with source evidence | `external-design://...`, `approved://...`, or `design/sources/approved/...` |
+| `html-design` | High-fidelity HTML/CSS package accepted as design handoff | `html-design://...`, `design/sources/html/...`, `upload://...`, or `design/sources/uploads/...` |
 
-Do not use `manual-design`, `local-approved`, SVG/HTML renders, browser captures, screenshots, canvas captures, runtime app output, or prototype exports as formal source provenance.
+Do not use `manual-design`, `local-approved`, browser captures, screenshots,
+canvas captures, runtime app output, self-rendered SVG exports, or prototype
+exports as formal source provenance.
 
-When `Source type` is `imagegen`, `gpt-image`, or `gpt-image-2`, `Implementation notes` must include a semantic HTML companion path such as `HTML: design/approved/html/dashboard.html`. The companion must be a real non-empty `.html` file under `design/approved/html/`, and `design/DESIGN_IMAGE_DESCRIPTIONS.md` must map the approved image to the HTML description.
+Generated logo, app-icon, brand mark, brand/KV, and high-quality bitmap asset
+rows must use `imagegen`, `gpt-image`, or `gpt-image-2` provenance. Do not
+create SVG, HTML, or canvas locally and render it to PNG for final identity
+assets. If the user supplies existing final brand assets, record them as
+user-provided inputs and do not claim they were generated by the workflow.
+
+Each Screen Coverage row must identify an HTML/CSS design package. If the
+`Approved asset path` is a raster/PDF board, `Implementation notes` must include
+`HTML: design/approved/html/<screen-state>.html` and, when not discoverable from
+the HTML file, `CSS: design/approved/html/<path>.css`. If the approved asset path
+itself is the HTML package, it must be under `design/approved/html/`. The HTML
+package must be non-empty, include real document structure, and include linked
+or inline CSS. Optional motion resources should be recorded as `JS:` or
+`Lottie:` paths under `design/approved/html/` or `design/cut-assets/`.
+
+When `Source type` is `imagegen`, `gpt-image`, or `gpt-image-2`,
+`design/DESIGN_IMAGE_DESCRIPTIONS.md` must map the approved image to the
+HTML/CSS package.
 
 ## Figma Handoff
 
@@ -44,15 +85,27 @@ When `Source type` is `figma` or `figma-mcp`, satisfy
 
 ## Output Rules
 
-- Approved assets must live under `<project-name>/design/approved/`.
-- Approved assets must be real non-empty raster image or PDF files.
-- AI-generated approved images must have semantic HTML companions that describe layout hierarchy, content, components, states, colors, spacing, typography, interactions, and implementation notes.
+- Approved packages must live under `<project-name>/.dev-agent/design/approved/`.
+- Approved visual assets must be real non-empty raster image or PDF files.
+- Approved HTML packages must be real non-empty `.html` files under
+  `design/approved/html/` with CSS. Use one package per screen/state when visual
+  differences matter.
+- AI-generated approved images must have HTML/CSS packages that encode layout
+  hierarchy, content, components, states, colors, spacing, typography,
+  interactions, motion, responsive behavior, and implementation notes.
 - SVG, Mermaid, Markdown, and code-native files can be drafts or precise diagrams, but they do not satisfy the approved asset gate by themselves.
 - SVG/XML sketches must not be stored under `design/approved/`. SVG files may be stored under `design/cut-assets/` only as manifested element/runtime assets, not as screen layout references.
-- Browser, Playwright, Chrome, simulator, local HTML/CSS, and running-app screenshots must not be used as approved assets.
+- Browser, Playwright, Chrome, simulator, and running-app screenshots must not be
+  used as approved packages.
 - If SVG icons, bitmap icons, illustrations, backgrounds, UI cutouts, icon matrices, spritesheets, or animation frames are needed, save them under `design/cut-assets/` and list each item in `design/cut-assets/ASSET_MANIFEST.md`.
+- If brand identity is in scope, include brand/KV rules and logo or app-icon
+  sizes required by the target platform, with Image Gen/GPT Image provenance
+  for generated identity assets.
 - If no cut assets are required, record `CUT_ASSETS_REQUIRED: no` with rationale.
-- `tasks/IMPLEMENTATION_TRACE.md` must map each accepted screen to implementation target, approved asset, design source reference, HTML companion when applicable, cut asset decision, test evidence, and status before UI build starts.
+- `tasks/IMPLEMENTATION_TRACE.md` must map each accepted screen to
+  implementation target, approved visual asset or HTML package, design source
+  reference, HTML package path, cut asset decision, test evidence, and status
+  before UI build starts.
 
 ## Cut Asset Rules
 
@@ -60,4 +113,7 @@ When `Source type` is `figma` or `figma-mcp`, satisfy
 
 ## Implementation Use
 
-Use approved assets to extract layout hierarchy, responsive density, spacing, typography, colors, component states, icon style, and motion direction. Do not implement from a draft or screenshot and then treat the runtime screenshot as the design source.
+Use approved packages to extract layout hierarchy, responsive density, spacing,
+typography, colors, component states, icon style, and motion direction. Do not
+implement from a draft or screenshot and then treat the runtime screenshot as
+the design source.

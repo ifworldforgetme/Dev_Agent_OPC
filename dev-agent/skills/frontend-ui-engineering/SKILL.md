@@ -24,17 +24,17 @@ QA. The output should feel intentionally designed, not template-generated.
 Do not start customer-facing UI implementation until these exist and pass for
 the current scope:
 
-- `<project-name>/design/DESIGN.md`
-- `<project-name>/design/VISUAL_SYSTEM.md`
-- `<project-name>/design/SCREEN_ACCEPTANCE.md`
-- `<project-name>/tasks/IMPLEMENTATION_TRACE.md`
+- `<project-name>/.dev-agent/design/DESIGN.md`
+- `<project-name>/.dev-agent/design/VISUAL_SYSTEM.md`
+- `<project-name>/.dev-agent/design/SCREEN_ACCEPTANCE.md`
+- `<project-name>/.dev-agent/tasks/IMPLEMENTATION_TRACE.md`
 - `bin/dev-flow design-check <project-name>`
 
 Also read these when applicable:
 
 - `DESIGN_ARTIFACTS.md`, `DESIGN_IMAGE_DESCRIPTIONS.md`, `FIGMA_HANDOFF.md`,
-  and `design/cut-assets/ASSET_MANIFEST.md` when required by the design
-  contract
+  `design/approved/html/`, and `design/cut-assets/ASSET_MANIFEST.md` when
+  required by the design contract
 
 Satisfy `dev-agent/references/design-artifacts.md` and run
 `bin/dev-flow design-check <project-name>`. When Figma is used, satisfy
@@ -45,7 +45,8 @@ confirmed, stop and return to design instead of implementing around a guess.
 ## Design Contract Boundary
 
 - Implement from `DESIGN.md`, `VISUAL_SYSTEM.md`, and `SCREEN_ACCEPTANCE.md`.
-  Use formal assets only through the design artifact contract.
+  Use formal assets and HTML/CSS design packages only through the design
+  artifact contract.
 - If a needed visual source, runtime asset, or acceptance decision is missing,
   return to design instead of guessing.
 
@@ -53,12 +54,15 @@ confirmed, stop and return to design instead of implementing around a guess.
 
 1. **Create a screen checklist**
    - Map each current `SCREEN_ACCEPTANCE.md` screen/state to implementation
-     files, design contract inputs, and test evidence.
+    files, design contract inputs, and test evidence.
    - Keep `tasks/IMPLEMENTATION_TRACE.md` current as work progresses.
 
 2. **Translate design into primitives**
    - Extract layout grid, breakpoints, spacing, typography, colors, component
      variants, icon/illustration usage, motion, and state rules.
+   - Use approved HTML/CSS design packages as the clearest source for tokens,
+     layout, responsive behavior, states, and motion. Adapt to the app stack
+     deliberately instead of copying brittle static markup wholesale.
    - Preserve hierarchy first: navigation, primary action, grouping, density,
      responsive behavior, and required empty/loading/error/success states.
    - Adapt intentionally when platform conventions require it, and record the
@@ -91,6 +95,10 @@ confirmed, stop and return to design instead of implementing around a guess.
      runtime screenshot capture wait until the batch is implemented.
    - Mid-batch screenshots are only for blocked flows, exception evidence,
      regressions that need proof, or explicit user request.
+   - Runtime visual inspection has a default one-pass budget. Record it with
+     `bin/dev-flow ui-polish <project-name>` when it happens.
+   - After that pass, only P0/P1 defects block the current task. Record P2/P3
+     polish in `reviews/UI_DEBT.md` and advance to the next implementation task.
 
 ## UI Standards
 
@@ -132,8 +140,8 @@ Use `references/accessibility-checklist.md` for detail. Minimum bar:
 ## QA Gate
 
 QA is optional unless `AUTOMATED_QA` or `VISUAL_QA` is required by
-`.dev-flow/applicability.env` or the user asks for it. After implementing the
-current customer-facing UI batch:
+`.dev-agent/state/applicability.env` or the user asks for it. After implementing the
+overall requested customer-facing UI scope:
 
 1. Confirm every screen/state in the batch is implemented or marked blocked in
    `tasks/IMPLEMENTATION_TRACE.md`.
@@ -156,6 +164,9 @@ current customer-facing UI batch:
    blocked flow, or when the user explicitly asks for screenshots.
 9. Run `bin/dev-flow qa-check <project-name>` when QA is required.
 
+Do not enter QA automatically after each build slice. Keep building until the
+requested implementation is complete, then run QA only when required or requested.
+
 Use `references/visual-qa-rubric.md` for detailed scoring.
 
 ## Red Flags
@@ -167,6 +178,8 @@ Use `references/visual-qa-rubric.md` for detailed scoring.
 - Keyboard or screen-reader access is broken.
 - UI ignores approved asset hierarchy, imagery, or icon direction.
 - Visual comparison misses screens or scores below 90/100 for high-fidelity work.
+- The agent keeps taking screenshots or using device/simulator time to tune P2/P3
+  details after the UI polish budget is used.
 
 ## Verification
 

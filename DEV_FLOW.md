@@ -11,7 +11,8 @@ adapter installation.
 - `dev-agent/dev-agent.manifest.json`: native flow, role, and gate index used by `/dev agent` and `/dev-agent`.
 - `AGENTS.md`: local instruction layer telling agents how to use the pack here.
 - `bin/dev-flow`: helper script for listing workflows, managing project state, checking host requirements, enforcing gates, packaging adapters, and installing adapters.
-- `<project-name>/`: project-local specs, source roots, reviews, and launch artifacts created directly in the active workspace; stage folders are created only when the current phase needs them.
+- `<project-name>/`: the runnable project root; development output and source files live here.
+- `<project-name>/.dev-agent/`: process-management artifacts, gates, specs, design handoff, reviews, and launch notes.
 
 ## Lifecycle Commands
 
@@ -52,10 +53,13 @@ should start with:
 ```bash
 bin/dev-flow status <project-name>
 bin/dev-flow next <project-name>
+bin/dev-flow autonomy <project-name>
+bin/dev-flow delegate <project-name>
 ```
 
 `next` returns the current phase, command, skill files, minimal context, required
-outputs, blockers, gate, and phase-record command. Load only that named context
+outputs, blockers, gate, phase-record command, autonomy recommendation, and
+parallelizable subagent work when available. Load only that named context
 instead of reading the workflow pack broadly.
 
 ## Project Lifecycle
@@ -66,6 +70,8 @@ Create one self-contained project folder before starting real work:
 bin/dev-flow init <project-name> [--type ui|agent|api|library|docs]
 bin/dev-flow status <project-name>
 bin/dev-flow next <project-name>
+bin/dev-flow autonomy <project-name>
+bin/dev-flow delegate <project-name>
 bin/dev-flow phase <project-name> spec "Write PRD and SPEC"
 bin/dev-flow verify-phase <project-name> spec
 bin/dev-flow design-check <project-name>
@@ -75,20 +81,33 @@ bin/dev-flow qa-check <project-name>      # only when QA is required
 bin/dev-flow ship-check <project-name>    # only when shipping
 ```
 
-`init` creates only the control layer under `<project-name>/`:
+`init` creates only the control layer under `<project-name>/.dev-agent/`:
 
-- `.dev-flow/state.env`: current phase, active task, blockers, last verification
-- `.dev-flow/schema.env`: project schema version and project type
-- `.dev-flow/applicability.env`: optional gates such as `UI_FLOW`, `UI_REFERENCES`, `UI_DESIGN_ASSETS`, `AUTOMATED_QA`, `VISUAL_QA`, and `SHIP_FLOW`
-- `.dev-flow/context.md`: minimal context loading guidance
-- `.dev-flow/HOST_REQUIREMENTS.md`: host SDKs, CLIs, services, credentials, and permissions
-Phase folders are created later by `bin/dev-flow next` or `bin/dev-flow phase`
-when that phase becomes current: `ideas/`, `product/`, `specs/`, `design/`,
-`tasks/`, `reviews/`, `ship/`, `apps/`, and `packages/`.
+- `.dev-agent/state/state.env`: current phase, active task, blockers, last verification
+- `.dev-agent/state/schema.env`: project schema version and project type
+- `.dev-agent/state/applicability.env`: optional gates such as `UI_FLOW`, `UI_REFERENCES`, `UI_DESIGN_ASSETS`, `AUTOMATED_QA`, `VISUAL_QA`, `SHIP_FLOW`, `AUTONOMY_LOOP`, and `SUBAGENTS`
+- `.dev-agent/context.md`: minimal context loading guidance
+- `.dev-agent/HOST_REQUIREMENTS.md`: host SDKs, CLIs, services, credentials, and permissions
+- `.dev-agent/state/autonomy.env`: lightweight counters and last-result state for autonomous continuation
+- `.dev-agent/bin/check`: project gate wrapper
+Process folders are created later by `bin/dev-flow next` or `bin/dev-flow phase`
+when that phase becomes current: `.dev-agent/ideas/`, `.dev-agent/product/`,
+`.dev-agent/specs/`, `.dev-agent/design/`, `.dev-agent/tasks/`,
+`.dev-agent/reviews/`, and `.dev-agent/ship/`. Source folders such as `src/`,
+`app/`, `apps/`, or `packages/` stay in the project root.
 
 `bin/dev-flow phase` only records state. By default it verifies all prior
 applicable lifecycle phases before moving forward. Use `--force` only when you
 intentionally record early state and will complete missing artifacts later.
+
+`bin/dev-flow autonomy <project-name>` is the standalone continuation decision.
+It tells a host whether to continue now, suggest a heartbeat interval, or stop
+for a blocker/approval. `bin/dev-flow delegate <project-name>` is the standalone
+subagent planner. It emits optional task packets for host clients that support
+parallel agents; the main host remains responsible for integration and gates.
+For UI build work, `bin/dev-flow ui-polish <project-name>` records the single
+runtime visual pass budget. After that pass, P2/P3 polish is debt and only P0/P1
+defects block the current task.
 
 ## Host Environment Contract
 
@@ -97,7 +116,7 @@ not install shared SDKs such as Xcode, Android SDK, Java/JDK, Docker,
 Playwright browsers, Figma MCP, simulators, or package-manager caches inside
 `<project-name>/`.
 
-Record those requirements in `.dev-flow/HOST_REQUIREMENTS.md`. Run
+Record those requirements in `.dev-agent/HOST_REQUIREMENTS.md`. Run
 `bin/dev-flow env-check <project-name>` only before a build slice or ship scope
 actually uses the host capability. Slow or permission-heavy setup should be a
 separate environment-prep pass that audits the host and asks before installing or
@@ -108,12 +127,13 @@ starting shared services.
 For customer-facing apps, ask whether the user has references: screenshots,
 reference images, Figma exports, apps, websites, or competitors. If no reference
 exists and the user has not delegated visual direction, ask for examples before
-UI build. If the user delegates visual direction, create `design/REFERENCE_BOARD.md`
+UI build. If the user delegates visual direction, create `.dev-agent/design/REFERENCE_BOARD.md`
 and use `bin/dev-flow design-check <project-name> --allow-no-reference`.
 
 Do not require sketches or prototypes. The design flow produces only what the
-current build needs. Satisfy `dev-agent/references/design-artifacts.md` and run
-`bin/dev-flow design-check <project-name>`. When Figma is used, satisfy
+current build needs. Satisfy `dev-agent/references/design-artifacts.md` as the
+current HTML/CSS design-package contract, and run `bin/dev-flow design-check
+<project-name>`. When Figma is used, satisfy
 `dev-agent/references/figma-handoff.md` and run
 `bin/dev-flow figma-check <project-name>`.
 
@@ -121,6 +141,9 @@ Before UI build, run `bin/dev-flow design-check <project-name>`. During build,
 think before coding: confirm the spec is clear, choose the simplest source
 architecture, check design readiness, record host needs, and route blockers back
 to spec/design/debug/security instead of coding around missing decisions.
+Runtime visual inspection is a one-pass budget by default. Use it to catch P0/P1
+issues, then record remaining P2/P3 details in `.dev-agent/reviews/UI_DEBT.md` and advance
+to the next implementation task.
 
 ## QA And Ship
 
@@ -131,11 +154,15 @@ AUTOMATED_QA="required"
 VISUAL_QA="required"
 ```
 
-in `<project-name>/.dev-flow/applicability.env`, or run it when the user
-asks. Automated QA records `reviews/FUNCTIONAL_TEST.md` and
-`reviews/MONKEY_TEST.md`; visual QA records `reviews/VISUAL_COMPARISON.md` with
+in `<project-name>/.dev-agent/state/applicability.env`, or run it when the user
+asks. Automated QA records `.dev-agent/reviews/FUNCTIONAL_TEST.md` and
+`.dev-agent/reviews/MONKEY_TEST.md`; visual QA records `.dev-agent/reviews/VISUAL_COMPARISON.md` with
 `Overall score: N/100`. Runtime screenshots are required only for exceptions,
 blocked flows, or explicit user requests.
+
+Do not enter QA automatically after each build slice. Run QA after the overall
+requested implementation is complete, when these flags require it, or when the
+user explicitly asks for QA evidence.
 
 Ship is optional and centered on launch evidence, rollback, and go/no-go.
 
@@ -143,12 +170,12 @@ Ship is optional and centered on launch evidence, rollback, and go/no-go.
 
 | Phase | Required output |
 |---|---|
-| Idea | `ideas/idea-brief.md` |
-| Spec | `product/PRD.md`, `specs/SPEC.md` |
-| Design, when UI applies | `design/DESIGN.md`, `VISUAL_SYSTEM.md`, `SCREEN_ACCEPTANCE.md`, `DESIGN_ARTIFACTS.md`, design contract inputs when required |
-| Build | source under `apps/` or `packages/`, `reviews/VERIFICATION.md` or `reviews/BLOCKED_BUILD.md`, UI implementation trace when UI applies |
-| QA, when required | `reviews/FUNCTIONAL_TEST.md`, `MONKEY_TEST.md`, `VISUAL_COMPARISON.md` as applicable |
-| Ship, when requested | `ship/LAUNCH.md` with risk, rollback, and GO/NO-GO |
+| Idea | `.dev-agent/ideas/idea-brief.md` |
+| Spec | `.dev-agent/product/PRD.md`, `.dev-agent/specs/SPEC.md` |
+| Design, when UI applies | `.dev-agent/design/DESIGN.md`, `VISUAL_SYSTEM.md`, `SCREEN_ACCEPTANCE.md`, `DESIGN_ARTIFACTS.md`, design contract inputs when required |
+| Build | source under the project root, `.dev-agent/reviews/VERIFICATION.md` or `.dev-agent/reviews/BLOCKED_BUILD.md`, UI implementation trace when UI applies, optional autonomy/delegation logs, `.dev-agent/reviews/UI_DEBT.md` when polish remains |
+| QA, when required | `.dev-agent/reviews/FUNCTIONAL_TEST.md`, `MONKEY_TEST.md`, `VISUAL_COMPARISON.md` as applicable |
+| Ship, when requested | `.dev-agent/ship/LAUNCH.md` with risk, rollback, and GO/NO-GO |
 
 Only stop for human review at requirement confirmation, customer-facing visual
 direction when no reference is available, high-risk architecture choices,
