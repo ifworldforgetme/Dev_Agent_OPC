@@ -18,7 +18,9 @@ bin/dev-flow next <project-name>
 ```
 
 Treat `next` as the execution brief and load only the command, skill,
-references, and project files it names.
+references, and project files it names. Use `bin/dev-flow autonomy <project-name>`
+for the standalone heartbeat/continue decision and
+`bin/dev-flow delegate <project-name>` for optional host subagent task packets.
 
 Prefer the visible entry:
 

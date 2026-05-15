@@ -36,6 +36,8 @@ Usage:
   bin/dev-flow ship-check <project-name>
   bin/dev-flow doctor <project-name>
   bin/dev-flow migrate <project-name> [--type ui|agent|api|library|docs]
+  bin/dev-flow autonomy <project-name>
+  bin/dev-flow delegate <project-name>
   bin/dev-flow reference-check <project-name> [--required|--delegated]
   bin/dev-flow asset-check <project-name>
   bin/dev-flow figma-check <project-name>
@@ -60,7 +62,7 @@ Aliases:
 Applicability:
   Product, agent-contract, planning, testing, and review checks are folded into spec, build, qa, and ship.
   Optional gates are controlled by <project-name>/.dev-flow/applicability.env.
-  Set AGENT_CONTRACT, UI_FLOW, UI_REFERENCES, UI_DESIGN_ASSETS, UI_FIGMA_HANDOFF, AUTOMATED_QA, VISUAL_QA, or SHIP_FLOW to auto, required, delegated, or disabled.
+  Set AGENT_CONTRACT, UI_FLOW, UI_REFERENCES, UI_DESIGN_ASSETS, UI_FIGMA_HANDOFF, AUTOMATED_QA, VISUAL_QA, SHIP_FLOW, AUTONOMY_LOOP, or SUBAGENTS to auto, required, delegated, suggest, enabled, or disabled as supported.
   Project type is recorded in <project-name>/.dev-flow/schema.env.
 EOF
 }
@@ -133,6 +135,10 @@ schema_path() {
 
 applicability_path() {
   echo "$(project_path "${1:-}")/.dev-flow/applicability.env"
+}
+
+autonomy_path() {
+  echo "$(project_path "${1:-}")/.dev-flow/autonomy.env"
 }
 
 require_project() {
@@ -282,6 +288,7 @@ write_project_templates() {
   write_project_template "$dir" ".dev-flow/applicability.env" "$app_template" "$project" "$project_type"
   write_project_template "$dir" ".dev-flow/context.md" "context.md" "$project" "$project_type"
   write_project_template "$dir" ".dev-flow/HOST_REQUIREMENTS.md" "host-requirements.md" "$project" "$project_type"
+  write_project_template "$dir" ".dev-flow/autonomy.env" "autonomy.env" "$project" "$project_type"
   write_project_template "$dir" "bin/check" "check.sh" "$project" "$project_type"
   chmod +x "$dir/bin/check"
 }
@@ -309,6 +316,9 @@ write_build_templates() {
   write_project_template "$dir" "tasks/status.md" "status.md" "$project" "$project_type"
   write_project_template "$dir" "tasks/quality-gates.md" "quality-gates.md" "$project" "$project_type"
   write_project_template "$dir" "tasks/IMPLEMENTATION_TRACE.md" "implementation-trace.md" "$project" "$project_type"
+  write_project_template "$dir" "tasks/AUTONOMY.md" "autonomy.md" "$project" "$project_type"
+  write_project_template "$dir" "tasks/DELEGATION.md" "delegation.md" "$project" "$project_type"
+  write_project_template "$dir" "tasks/subagents/TEMPLATE.md" "subagent-task.md" "$project" "$project_type"
 }
 
 write_qa_templates() {
@@ -485,7 +495,7 @@ phase_required_outputs() {
       load_project_applicability "$project"
       if [[ "$PROJECT_TYPE" == "ui" ]]; then
         echo "- product/PRD.md covers MVP scope, core flows/IA, acceptance criteria, and non-goals"
-        echo "- specs/SPEC.md covers stack, commands, data/domain model, testing, privacy/security, and open questions"
+        echo "- specs/SPEC.md covers stack, commands, data/domain model, testing, UI/design applicability, privacy/security, and open questions"
       fi
       echo "- specs/SPEC.md Agent Runtime Contract section when agent automation is in scope"
       ;;
@@ -494,7 +504,7 @@ phase_required_outputs() {
       echo "- design/VISUAL_SYSTEM.md"
       echo "- design/SCREEN_ACCEPTANCE.md with Requirement source for every screen"
       if design_assets_required "$project"; then
-        echo "- design artifacts required by dev-agent/references/design-artifacts.md"
+        echo "- design artifacts and HTML/CSS packages required by dev-agent/references/design-artifacts.md"
         echo "- Figma handoff required by dev-agent/references/figma-handoff.md when Figma is used"
       else
         echo "- design/DESIGN_ARTIFACTS.md only when formal assets are required or already present"
@@ -593,6 +603,207 @@ phase_blockers() {
   esac
 }
 
+load_autonomy_state() {
+  local path
+  path="$(autonomy_path "${1:-}")"
+  AUTONOMY_CYCLE_COUNT="${AUTONOMY_CYCLE_COUNT:-0}"
+  AUTONOMY_IDLE_CYCLES="${AUTONOMY_IDLE_CYCLES:-0}"
+  AUTONOMY_LAST_PHASE="${AUTONOMY_LAST_PHASE:-none}"
+  AUTONOMY_LAST_ACTION="${AUTONOMY_LAST_ACTION:-none}"
+  AUTONOMY_LAST_RESULT="${AUTONOMY_LAST_RESULT:-none}"
+  AUTONOMY_LAST_PROGRESS_AT="${AUTONOMY_LAST_PROGRESS_AT:-none}"
+  if [[ -f "$path" ]]; then
+    # shellcheck disable=SC1090
+    source "$path"
+  fi
+}
+
+phase_verified_loaded() {
+  local phase="$1"
+  case "${LAST_VERIFICATION:-}" in
+    *"verify-phase:$phase passed"*|*"${phase}-check passed"*) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+current_task_is_high_risk_loaded() {
+  local lower_task
+  lower_task="$(printf '%s' "${CURRENT_TASK:-}" | tr '[:upper:]' '[:lower:]')"
+  case "$lower_task" in
+    *payment*|*billing*|*security*|*permission*|*credential*|*secret*|*privacy*|*delete*|*destructive*|*production*|*launch*|*ship*)
+      return 0
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
+autonomy_stop_reason_loaded() {
+  local project="$1"
+  local phase="$2"
+  local dir assets links next_phase
+  dir="$(project_path "$project")"
+  if setting_disabled "$AUTONOMY_LOOP"; then
+    echo "autonomy disabled"
+    return 0
+  fi
+  if [[ -n "${BLOCKERS:-}" && "${BLOCKERS:-none}" != "none" ]]; then
+    echo "blocker recorded"
+    return 0
+  fi
+  if current_task_is_high_risk_loaded; then
+    echo "approval required for high-risk action"
+    return 0
+  fi
+  case "$phase" in
+    design)
+      if references_required_loaded; then
+        assets="$(count_reference_assets "$dir")"
+        links="$(count_reference_links "$dir")"
+        if [[ $((assets + links)) -eq 0 ]]; then
+          echo "design references missing"
+          return 0
+        fi
+      fi
+      if setting_delegated "$UI_REFERENCES" && ! delegated_reference_board_present "$dir"; then
+        echo "delegated reference board missing"
+        return 0
+      fi
+      ;;
+  esac
+  next_phase="$(next_applicable_phase_after "$project" "$phase")"
+  if [[ -z "$next_phase" ]] && phase_verified_loaded "$phase"; then
+    echo "final applicable phase already verified"
+    return 0
+  fi
+  return 1
+}
+
+autonomy_heartbeat_label_loaded() {
+  if setting_enabled "$AUTONOMY_LOOP"; then
+    echo "enabled"
+    return 0
+  fi
+  case "${AUTONOMY_LOOP:-}" in
+    suggest|suggested|auto)
+      echo "suggested"
+      ;;
+    *)
+      echo "no"
+      ;;
+  esac
+}
+
+autonomy_next_action_for_phase() {
+  case "${1:-}" in
+    idea)
+      echo "refine ideas/idea-brief.md, capture assumptions, then run verify-phase idea"
+      ;;
+    spec)
+      echo "complete PRD and SPEC.md coverage, then run verify-phase spec"
+      ;;
+    design)
+      echo "complete design handoff and visual system, then run design-check"
+      ;;
+    build)
+      echo "implement the next build slice, update verification evidence, then run verify-phase build and check"
+      ;;
+    qa)
+      echo "run required QA evidence, then run verify-phase qa and qa-check when applicable"
+      ;;
+    ship)
+      echo "prepare launch evidence and wait for production go/no-go approval"
+      ;;
+    *)
+      echo "continue the current workflow phase"
+      ;;
+  esac
+}
+
+autonomy_decision_for_phase() {
+  local project="$1"
+  local phase="${2:-idea}"
+  local reason continue heartbeat approval action
+  load_project_state "$project"
+  load_project_applicability "$project"
+  load_autonomy_state "$project"
+  reason=""
+  if reason="$(autonomy_stop_reason_loaded "$project" "$phase")"; then
+    continue="no"
+    heartbeat="no"
+  else
+    continue="yes"
+    heartbeat="$(autonomy_heartbeat_label_loaded)"
+    reason="current gate can continue without human input"
+  fi
+  approval="no"
+  case "$reason" in
+    approval*) approval="yes" ;;
+  esac
+  action="$(autonomy_next_action_for_phase "$phase")"
+  echo "Autonomy:"
+  echo "- Mode: $AUTONOMY_LOOP"
+  echo "- Continue: $continue"
+  echo "- Heartbeat: $heartbeat"
+  echo "- Interval: $HEARTBEAT_INTERVAL"
+  echo "- Max cycles: $AUTONOMY_MAX_CYCLES"
+  echo "- Max idle cycles: $AUTONOMY_MAX_IDLE_CYCLES"
+  echo "- Stop on: $AUTONOMY_STOP_ON"
+  echo "- Cycle count: $AUTONOMY_CYCLE_COUNT"
+  echo "- Next autonomous action: $action"
+  echo "- Requires user approval: $approval"
+  echo "- Reason: $reason"
+}
+
+delegation_recommendation_for_phase() {
+  local project="$1"
+  local phase="${2:-idea}"
+  load_project_applicability "$project"
+  echo "Parallelizable work:"
+  if setting_disabled "$SUBAGENTS"; then
+    echo "- Status: disabled"
+    echo "- Reason: SUBAGENTS=$SUBAGENTS"
+    return 0
+  fi
+  echo "- Status: available"
+  echo "- Mode: $SUBAGENT_MODE"
+  echo "- Max parallel subagents: $MAX_PARALLEL_SUBAGENTS"
+  echo "- Host support required: yes"
+  echo "- Task packet template: tasks/subagents/TEMPLATE.md"
+  echo "- Suggested task packets:"
+  case "$phase" in
+    idea)
+      echo "  - explorer: collect comparable products, constraints, and unanswered requirements without editing"
+      echo "  - reviewer: challenge scope, assumptions, and acceptance criteria before spec"
+      ;;
+    spec)
+      echo "  - explorer: inspect existing source, dependencies, and host constraints for SPEC.md inputs"
+      echo "  - reviewer: check PRD/SPEC coverage and unresolved product risks"
+      ;;
+    design)
+      echo "  - explorer: inspect references, prior design assets, and visual-system constraints"
+      echo "  - reviewer: review DESIGN.md, VISUAL_SYSTEM.md, and SCREEN_ACCEPTANCE.md against the artifact contract"
+      ;;
+    build)
+      echo "  - explorer: inspect nearby source, tests, and dependency patterns for the current slice"
+      echo "  - worker: implement an isolated task packet with explicit write scope"
+      echo "  - verifier: run gates and report command evidence after implementation"
+      ;;
+    qa)
+      echo "  - verifier: run functional, monkey, or visual checks in parallel with fix preparation"
+      echo "  - reviewer: inspect failures and isolate regressions without changing code"
+      ;;
+    ship)
+      echo "  - verifier: gather release evidence, rollback checks, and residual risks"
+      echo "  - reviewer: review go/no-go notes without making production changes"
+      ;;
+    *)
+      echo "  - explorer: inspect context and return a bounded task packet recommendation"
+      ;;
+  esac
+}
+
 next_prompt_for_phase() {
   local project="$1"
   local phase="${2:-idea}"
@@ -627,6 +838,10 @@ next_prompt_for_phase() {
   else
     echo "- Workflow is at the final applicable phase; keep verification evidence and blockers current."
   fi
+  echo
+  autonomy_decision_for_phase "$project" "$phase"
+  echo
+  delegation_recommendation_for_phase "$project" "$phase"
 }
 
 mime_type_for_file() {
@@ -768,7 +983,28 @@ count_approved_design_artifacts() {
   count_supported_artifacts image "$dir/design/approved"
 }
 
-is_formal_design_artifact() {
+count_approved_html_design_packages() {
+  local dir="$1"
+  local existing=()
+  local candidate
+  for candidate in "$dir/design/approved/html"; do
+    [[ -d "$candidate" ]] && existing+=("$candidate")
+  done
+  if [[ "${#existing[@]}" -eq 0 ]]; then
+    echo 0
+    return
+  fi
+  find "${existing[@]}" -type f -iname '*.html' -print0 2>/dev/null \
+    | while IFS= read -r -d '' path; do
+        if is_formal_html_design_package "$dir" "$path"; then
+          printf '.\n'
+        fi
+      done \
+    | wc -l \
+    | tr -d ' '
+}
+
+is_formal_visual_design_artifact() {
   local path="$1"
   local mime
   [[ -s "$path" ]] || return 1
@@ -784,6 +1020,29 @@ is_formal_design_artifact() {
     *.[Pp][Nn][Gg]|*.[Jj][Pp][Gg]|*.[Jj][Pp][Ee][Gg]|*.[Ww][Ee][Bb][Pp]|*.[Gg][Ii][Ff]|*.[Hh][Ee][Ii][Cc]|*.[Pp][Dd][Ff]) return 0 ;;
   esac
   return 1
+}
+
+is_formal_html_design_package() {
+  local dir="$1"
+  local path="$2"
+  local lower
+  [[ -s "$path" ]] || return 1
+  lower="$(printf '%s' "$path" | tr '[:upper:]' '[:lower:]')"
+  case "$lower" in
+    *prototype*|*wireframe*|*sketch*|*draft*|*草图*|*原型*) return 1 ;;
+  esac
+  [[ "$path" == "$dir/design/approved/html/"*.html ]] || return 1
+  grep -Eiq '<html|<main|<body' "$path" || return 1
+  design_html_package_has_css "$dir" "$path"
+}
+
+is_formal_design_artifact() {
+  local path="$1"
+  local dir="${2:-}"
+  if [[ -n "$dir" ]] && is_formal_html_design_package "$dir" "$path"; then
+    return 0
+  fi
+  is_formal_visual_design_artifact "$path"
 }
 
 count_final_design_artifacts() {
@@ -974,7 +1233,7 @@ is_allowed_design_source_type() {
   local lower
   lower="$(printf '%s' "$raw" | tr '[:upper:]' '[:lower:]')"
   case "$lower" in
-    imagegen|gpt-image-2|gpt-image|figma|figma-mcp|designer-upload|uploaded-approved|design-system|external-design)
+    imagegen|gpt-image-2|gpt-image|figma|figma-mcp|designer-upload|uploaded-approved|design-system|external-design|html-design)
       return 0
       ;;
     *screenshot*|*screencap*|*capture*|*playwright*|*puppeteer*|*chrome*|*browser*|*simulator*|*runtime*|*render*|*rasteriz*|*html*|*canvas*|*svg*|*draft*|*prototype*|*wireframe*|*sketch*|*manual*|*local*|*草图*|*原型*|*截图*|*渲染*)
@@ -1006,6 +1265,9 @@ is_valid_formal_design_source_ref() {
       ;;
     external-design)
       [[ "$lower_ref" == external-design://* || "$lower_ref" == approved://* || "$lower_ref" == design/sources/approved/* || "$lower_ref" == ./design/sources/approved/* ]]
+      ;;
+    html-design)
+      [[ "$lower_ref" == html-design://* || "$lower_ref" == design/sources/html/* || "$lower_ref" == ./design/sources/html/* || "$lower_ref" == upload://* || "$lower_ref" == designer-upload://* || "$lower_ref" == design/sources/uploads/* || "$lower_ref" == ./design/sources/uploads/* ]]
       ;;
     *) return 1 ;;
   esac
@@ -1056,6 +1318,20 @@ html_description_path_from_notes() {
     | sed 's#^\./##'
 }
 
+css_design_package_paths_from_notes() {
+  local raw="$1"
+  printf '%s\n' "$raw" \
+    | grep -Eo '(\./)?design/approved/html/[^[:space:]|,;)]*\.css' \
+    | sed 's#^\./##'
+}
+
+optional_design_resource_paths_from_notes() {
+  local raw="$1"
+  printf '%s\n' "$raw" \
+    | grep -Eo '(\./)?design/(approved/html|cut-assets)/[^[:space:]|,;)]*\.(js|json)' \
+    | sed 's#^\./##'
+}
+
 is_project_html_description_path() {
   local dir="$1"
   local saved_path="$2"
@@ -1071,6 +1347,85 @@ is_project_html_description_path() {
       return 1
       ;;
   esac
+}
+
+is_project_approved_html_design_path() {
+  local dir="$1"
+  local saved_path="$2"
+  local full_path="$3"
+  is_project_html_description_path "$dir" "$saved_path" "$full_path" || return 1
+  is_formal_html_design_package "$dir" "$full_path"
+}
+
+resolve_design_relative_path() {
+  local dir="$1"
+  local base_file="$2"
+  local raw="$3"
+  local base_dir
+  raw="${raw%%\?*}"
+  raw="${raw%%#*}"
+  [[ -n "$raw" ]] || return 1
+  case "$raw" in
+    http://*|https://*|data:*|mailto:*|tel:*|javascript:*) return 1 ;;
+    /*) printf '%s\n' "$raw" ;;
+    design/*|./design/*) printf '%s/%s\n' "$dir" "${raw#./}" ;;
+    *)
+      base_dir="$(dirname "$base_file")"
+      printf '%s/%s\n' "$base_dir" "$raw"
+      ;;
+  esac
+}
+
+design_html_package_has_css() {
+  local dir="$1"
+  local html_file="$2"
+  local css_ref css_path found
+  [[ -s "$html_file" ]] || return 1
+  found=0
+  while IFS= read -r css_ref; do
+    [[ -n "$css_ref" ]] || continue
+    css_path="$(resolve_design_relative_path "$dir" "$html_file" "$css_ref" || true)"
+    [[ -n "$css_path" && -s "$css_path" ]] && found=1
+  done < <(grep -Eio 'href=["'\''][^"'\'']+\.css([^"'\'']*)?["'\'']' "$html_file" 2>/dev/null | sed -E 's/^href=["'\'']([^"'\'']+)["'\'']$/\1/')
+  [[ "$found" -eq 1 ]] && return 0
+  grep -Eiq '<style[[:space:]>]' "$html_file"
+}
+
+validate_design_package_resources() {
+  local dir="$1"
+  local screen="$2"
+  local html_path="$3"
+  local html_full_path="$4"
+  local notes="$5"
+  local failures=0
+  local css_path css_full_path resource_path resource_full_path
+  if ! is_project_approved_html_design_path "$dir" "$html_path" "$html_full_path"; then
+    echo "Invalid HTML/CSS design package for screen: $screen (HTML must be a non-empty design package under design/approved/html/ with CSS, not a draft/prototype)." >&2
+    failures=$((failures + 1))
+  fi
+  while IFS= read -r css_path; do
+    [[ -n "$css_path" ]] || continue
+    case "$css_path" in
+      /*) css_full_path="$css_path" ;;
+      *) css_full_path="$dir/$css_path" ;;
+    esac
+    if [[ "$css_full_path" != "$dir/design/approved/html/"*.css || ! -s "$css_full_path" ]]; then
+      echo "Invalid CSS design package resource for screen: $screen (CSS must be a real file under design/approved/html/)." >&2
+      failures=$((failures + 1))
+    fi
+  done < <(css_design_package_paths_from_notes "$notes" || true)
+  while IFS= read -r resource_path; do
+    [[ -n "$resource_path" ]] || continue
+    case "$resource_path" in
+      /*) resource_full_path="$resource_path" ;;
+      *) resource_full_path="$dir/$resource_path" ;;
+    esac
+    if [[ "$resource_full_path" != "$dir/design/approved/html/"*.js && "$resource_full_path" != "$dir/design/approved/html/"*.json && "$resource_full_path" != "$dir/design/cut-assets/"*.json ]] || [[ ! -s "$resource_full_path" ]]; then
+      echo "Invalid motion design resource for screen: $screen (JS/Lottie resources must be real files under design/approved/html/ or design/cut-assets/)." >&2
+      failures=$((failures + 1))
+    fi
+  done < <(optional_design_resource_paths_from_notes "$notes" || true)
+  [[ "$failures" -eq 0 ]]
 }
 
 image_html_description_mentions() {
@@ -1140,10 +1495,15 @@ design_artifact_row_field_for_screen_asset() {
       source_type) printf '%s\n' "$source_type" ;;
       source_ref) printf '%s\n' "$source_ref" ;;
       html)
-        if is_ai_generated_design_source_type "$source_type"; then
-          html_path="$(html_description_path_from_notes "$notes" || true)"
-          printf '%s\n' "$html_path"
+        html_path="$(html_description_path_from_notes "$notes" || true)"
+        if [[ -z "$html_path" ]]; then
+          case "$asset_path" in
+            design/approved/html/*.html|./design/approved/html/*.html)
+              html_path="${asset_path#./}"
+              ;;
+          esac
         fi
+        printf '%s\n' "$html_path"
         ;;
       *) return 1 ;;
     esac
@@ -1234,7 +1594,7 @@ check_design_artifact_contract() {
   local path
   local line in_coverage rows failures
   local screen_cell state_cell source_type_cell source_ref_cell asset_cell resolution_cell status_cell notes_cell
-  local screen source_type source_ref asset_path asset_full_path resolution status notes html_path html_full_path
+  local screen source_type source_ref asset_path asset_full_path resolution status notes html_path html_full_path asset_is_html
   path="$(design_artifact_ledger_path "$dir")"
   [[ -f "$path" ]] || return 1
   failures=0
@@ -1266,11 +1626,11 @@ check_design_artifact_contract() {
     [[ -n "$screen" ]] || continue
     rows=$((rows + 1))
     if ! is_allowed_design_source_type "$source_type"; then
-      echo "Invalid formal design source for screen: $screen (Source type must be a formal producer: imagegen, gpt-image, gpt-image-2, figma, figma-mcp, designer-upload, uploaded-approved, design-system, or external-design. Manual/local/rendered/screenshot sources are forbidden)." >&2
+      echo "Invalid formal design source for screen: $screen (Source type must be a formal producer: imagegen, gpt-image, gpt-image-2, figma, figma-mcp, designer-upload, uploaded-approved, design-system, external-design, or html-design. Manual/local/rendered/screenshot sources are forbidden)." >&2
       failures=$((failures + 1))
     fi
     if ! is_valid_formal_design_source_ref "$source_type" "$source_ref"; then
-      echo "Invalid design source reference for screen: $screen (record a formal producer reference such as imagegen://, gpt-image-2://, figma:// or Figma URL, upload://, designer-upload://, design-system://, external-design://, or design/sources/approved/. Do not use SVG/HTML renders, screenshots, browser captures, simulator captures, local app output, or prototype paths as development-ready design sources)." >&2
+      echo "Invalid design source reference for screen: $screen (record a formal producer reference such as imagegen://, gpt-image-2://, figma:// or Figma URL, upload://, designer-upload://, design-system://, external-design://, html-design://, design/sources/html/, or design/sources/approved/. Do not use SVG renders, screenshots, browser captures, simulator captures, local app output, or prototype paths as development-ready design sources)." >&2
       failures=$((failures + 1))
     fi
     if [[ ! "$status" =~ [Aa]pproved|[Ff]inal|正式|批准|通过 ]]; then
@@ -1285,20 +1645,39 @@ check_design_artifact_contract() {
       /*) asset_full_path="$asset_path" ;;
       *) asset_full_path="$dir/$asset_path" ;;
     esac
-    if ! is_forbidden_design_source "$asset_path" || ! is_project_approved_design_path "$dir" "$asset_path" "$asset_full_path" || ! is_formal_design_artifact "$asset_full_path"; then
-      echo "Invalid approved design asset for screen: $screen (Approved asset path must be a real raster/PDF under design/approved/, not a draft, screenshot, prototype, or runtime capture)." >&2
+    asset_is_html=false
+    case "$asset_path" in
+      design/approved/html/*.html|./design/approved/html/*.html|/*)
+        if [[ "$asset_full_path" == "$dir/design/approved/html/"*.html ]]; then
+          asset_is_html=true
+        fi
+        ;;
+    esac
+    if ! is_forbidden_design_source "$asset_path" || ! is_project_approved_design_path "$dir" "$asset_path" "$asset_full_path" || ! is_formal_design_artifact "$asset_full_path" "$dir"; then
+      echo "Invalid approved design asset for screen: $screen (Approved asset path must be a real raster/PDF or HTML/CSS design package under design/approved/, not a draft, screenshot, prototype, or runtime capture)." >&2
       failures=$((failures + 1))
     fi
+    html_path="$(html_description_path_from_notes "$notes" || true)"
+    if [[ "$asset_is_html" == true && -z "$html_path" ]]; then
+      html_path="$asset_path"
+    fi
+    if [[ -z "$html_path" ]]; then
+      echo "Missing HTML/CSS design package for screen: $screen (Implementation notes must include a path such as 'HTML: design/approved/html/${screen}.html' and its CSS resources)." >&2
+      failures=$((failures + 1))
+    else
+      case "$html_path" in
+        /*) html_full_path="$html_path" ;;
+        *) html_full_path="$dir/$html_path" ;;
+      esac
+      if ! validate_design_package_resources "$dir" "$screen" "$html_path" "$html_full_path" "$notes"; then
+        failures=$((failures + 1))
+      fi
+    fi
     if is_ai_generated_design_source_type "$source_type"; then
-      html_path="$(html_description_path_from_notes "$notes" || true)"
       if [[ -z "$html_path" ]]; then
         echo "Missing AI design HTML description for screen: $screen (Implementation notes must include a path such as 'HTML: design/approved/html/${screen}.html')." >&2
         failures=$((failures + 1))
       else
-        case "$html_path" in
-          /*) html_full_path="$html_path" ;;
-          *) html_full_path="$dir/$html_path" ;;
-        esac
         if ! is_project_html_description_path "$dir" "$html_path" "$html_full_path"; then
           echo "Invalid AI design HTML description for screen: $screen (HTML companion must be a real non-empty .html file under design/approved/html/)." >&2
           failures=$((failures + 1))
@@ -1337,7 +1716,7 @@ screen_has_approved_design_asset() {
       /*) full_path="$saved_path" ;;
       *) full_path="$dir/$saved_path" ;;
     esac
-    if is_project_approved_design_path "$dir" "$saved_path" "$full_path" && is_formal_design_artifact "$full_path"; then
+    if is_project_approved_design_path "$dir" "$saved_path" "$full_path" && is_formal_design_artifact "$full_path" "$dir"; then
       return 0
     fi
   done < "$ledger"
@@ -1481,8 +1860,8 @@ check_implementation_trace_coverage() {
         /*) asset_full_path="$asset_path" ;;
         *) asset_full_path="$dir/$asset_path" ;;
       esac
-      if ! is_project_approved_design_path "$dir" "$asset_path" "$asset_full_path" || ! is_formal_design_artifact "$asset_full_path"; then
-        echo "Invalid implementation trace approved asset for screen: $screen (Approved asset must be a real raster/PDF under design/approved/)." >&2
+      if ! is_project_approved_design_path "$dir" "$asset_path" "$asset_full_path" || ! is_formal_design_artifact "$asset_full_path" "$dir"; then
+        echo "Invalid implementation trace approved asset for screen: $screen (Approved asset must be a real raster/PDF or HTML/CSS design package under design/approved/)." >&2
         missing=$((missing + 1))
       fi
       expected_source_type="$(design_artifact_row_field_for_screen_asset "$dir" "$screen" "$asset_path" source_type || true)"
@@ -1499,19 +1878,17 @@ check_implementation_trace_coverage() {
         echo "Missing implementation trace Figma source for screen: $screen (Design source must be a figma://... reference or Figma URL)." >&2
         missing=$((missing + 1))
       fi
-      if is_ai_generated_design_source_type "$expected_source_type"; then
-        if [[ -z "$expected_html" || "$html_companion" != *"$expected_html"* ]]; then
-          echo "Missing implementation trace HTML companion for screen: $screen (HTML companion must reference ${expected_html:-the HTML path from design/DESIGN_ARTIFACTS.md})." >&2
+      if [[ -z "$expected_html" || "$html_companion" != *"$expected_html"* ]]; then
+        echo "Missing implementation trace HTML companion for screen: $screen (HTML companion must reference ${expected_html:-the HTML path from design/DESIGN_ARTIFACTS.md})." >&2
+        missing=$((missing + 1))
+      else
+        case "$expected_html" in
+          /*) html_full_path="$expected_html" ;;
+          *) html_full_path="$dir/$expected_html" ;;
+        esac
+        if ! is_project_html_description_path "$dir" "$expected_html" "$html_full_path"; then
+          echo "Invalid implementation trace HTML companion for screen: $screen (HTML companion must be a real non-empty .html file under design/approved/html/)." >&2
           missing=$((missing + 1))
-        else
-          case "$expected_html" in
-            /*) html_full_path="$expected_html" ;;
-            *) html_full_path="$dir/$expected_html" ;;
-          esac
-          if ! is_project_html_description_path "$dir" "$expected_html" "$html_full_path"; then
-            echo "Invalid implementation trace HTML companion for screen: $screen (HTML companion must be a real non-empty .html file under design/approved/html/)." >&2
-            missing=$((missing + 1))
-          fi
         fi
       fi
       found=1
@@ -1553,7 +1930,7 @@ check_visual_comparison_contract() {
         /*) full_path="$asset_cell" ;;
         *) full_path="$dir/$asset_cell" ;;
       esac
-      if [[ -z "$runtime_cell" || "$runtime_cell" == "-" || "$runtime_cell" == "TBD" || "$runtime_cell" == "TODO" || -z "$decision_cell" || "$decision_cell" == "-" || "$decision_cell" == "TBD" || "$decision_cell" == "TODO" || ! "$score_cell" =~ ^[0-9]+(/[0-9]+)?$ ]] || ! is_project_approved_design_path "$dir" "$asset_cell" "$full_path" || ! is_formal_design_artifact "$full_path"; then
+      if [[ -z "$runtime_cell" || "$runtime_cell" == "-" || "$runtime_cell" == "TBD" || "$runtime_cell" == "TODO" || -z "$decision_cell" || "$decision_cell" == "-" || "$decision_cell" == "TBD" || "$decision_cell" == "TODO" || ! "$score_cell" =~ ^[0-9]+(/[0-9]+)?$ ]] || ! is_project_approved_design_path "$dir" "$asset_cell" "$full_path" || ! is_formal_design_artifact "$full_path" "$dir"; then
         echo "Incomplete visual comparison row for screen: $screen" >&2
         missing=$((missing + 1))
       fi
@@ -1570,7 +1947,7 @@ check_visual_comparison_contract() {
 
 asset_check_impl() {
   local project="$1"
-  local dir failures design_assets final_design_assets cut_assets cut_manifest_entries forbidden_design_svgs
+  local dir failures design_assets html_packages approved_packages final_design_assets cut_assets cut_manifest_entries forbidden_design_svgs
   require_project "$project"
   dir="$(project_path "$project")"
   failures=0
@@ -1580,6 +1957,8 @@ asset_check_impl() {
     return 0
   fi
   design_assets="$(count_approved_design_artifacts "$dir")"
+  html_packages="$(count_approved_html_design_packages "$dir")"
+  approved_packages=$((design_assets + html_packages))
   final_design_assets="$(count_final_design_artifacts "$dir")"
   forbidden_design_svgs="$(count_forbidden_svg_artifacts "$dir/design/approved")"
   if ! has_content "$dir/design/DESIGN_ARTIFACTS.md"; then
@@ -1597,12 +1976,12 @@ asset_check_impl() {
     echo "Invalid approved design artifact(s): files under design/approved/ must be real non-empty image/PDF files, not text placeholders." >&2
     failures=$((failures + 1))
   fi
-  if [[ "$design_assets" -eq 0 ]]; then
-    echo "Missing approved design assets: save 1-N formal layout/state images per UI screen under design/approved/ before high-fidelity UI build." >&2
+  if [[ "$approved_packages" -eq 0 ]]; then
+    echo "Missing approved design packages: save 1-N formal layout/state raster/PDF assets or HTML/CSS design packages under design/approved/ before high-fidelity UI build." >&2
     failures=$((failures + 1))
   fi
-  if [[ "$final_design_assets" -eq 0 ]]; then
-    echo "Missing final approved design asset: SVG/Mermaid/code-native drafts are structure drafts only, not implementation targets; design/approved/ must include at least one formal raster image or PDF." >&2
+  if [[ "$final_design_assets" -eq 0 && "$html_packages" -eq 0 ]]; then
+    echo "Missing final approved design package: SVG/Mermaid/code-native drafts are structure drafts only, not implementation targets; design/approved/ must include at least one formal raster/PDF asset or HTML/CSS design package." >&2
     failures=$((failures + 1))
   fi
   if ! check_design_screen_coverage "$dir"; then
@@ -1623,7 +2002,7 @@ asset_check_impl() {
     echo "Asset check failed for $project." >&2
     return 1
   fi
-  echo "Asset check passed for $project with $design_assets approved design asset(s), including $final_design_assets final raster/PDF board(s)."
+  echo "Asset check passed for $project with $design_assets approved visual asset(s) and $html_packages approved HTML/CSS design package(s)."
 }
 
 figma_check_impl() {
@@ -1687,7 +2066,7 @@ figma_check_impl() {
       /*) asset_full_path="$asset_path" ;;
       *) asset_full_path="$dir/$asset_path" ;;
     esac
-    if ! is_project_approved_design_path "$dir" "$asset_path" "$asset_full_path" || ! is_formal_design_artifact "$asset_full_path"; then
+    if ! is_project_approved_design_path "$dir" "$asset_path" "$asset_full_path" || ! is_formal_visual_design_artifact "$asset_full_path"; then
       echo "Invalid Figma approved export for screen: $screen (export must be a real raster/PDF under design/approved/)." >&2
       failures=$((failures + 1))
     fi
@@ -1740,6 +2119,14 @@ load_project_applicability() {
   AUTOMATED_QA="auto"
   VISUAL_QA="auto"
   SHIP_FLOW="auto"
+  AUTONOMY_LOOP="suggest"
+  HEARTBEAT_INTERVAL="1m"
+  AUTONOMY_MAX_CYCLES="10"
+  AUTONOMY_MAX_IDLE_CYCLES="2"
+  AUTONOMY_STOP_ON="complete,blocked,approval-required,no-progress,gate-failed"
+  SUBAGENTS="auto"
+  MAX_PARALLEL_SUBAGENTS="3"
+  SUBAGENT_MODE="sidecar"
   case "$PROJECT_TYPE" in
     agent)
       AGENT_CONTRACT="required"
@@ -1836,6 +2223,7 @@ design_assets_required() {
   setting_enabled "$UI_FIGMA_HANDOFF" && return 0
   dir="$(project_path "$project")"
   [[ "$(count_approved_design_artifacts "$dir")" -gt 0 ]] && return 0
+  [[ "$(count_approved_html_design_packages "$dir")" -gt 0 ]] && return 0
   [[ "$(count_design_artifact_rows "$dir")" -gt 0 ]] && return 0
   [[ "$(count_figma_design_artifact_rows "$dir")" -gt 0 ]] && return 0
   return 1
@@ -1870,7 +2258,7 @@ has_phase_artifact() {
       ;;
     design)
       [[ -s "$dir/design/DESIGN.md" || -s "$dir/design/VISUAL_SYSTEM.md" || -s "$dir/design/SCREEN_ACCEPTANCE.md" ]] && return 0
-      [[ "$(count_reference_assets "$dir")" -gt 0 || "$(count_reference_links "$dir")" -gt 0 || "$(count_design_mockups "$dir")" -gt 0 || "$(count_approved_design_artifacts "$dir")" -gt 0 ]]
+      [[ "$(count_reference_assets "$dir")" -gt 0 || "$(count_reference_links "$dir")" -gt 0 || "$(count_design_mockups "$dir")" -gt 0 || "$(count_approved_design_artifacts "$dir")" -gt 0 || "$(count_approved_html_design_packages "$dir")" -gt 0 ]]
       ;;
     *)
       return 1
@@ -1994,6 +2382,7 @@ check_ui_spec_product_coverage() {
   require_file_pattern "$dir" "specs/SPEC.md" "SPEC coverage: commands" '(^## +Commands)|命令|xcodebuild|npm run|cargo test|swift test|make ' || failures=$((failures + 1))
   require_file_pattern "$dir" "specs/SPEC.md" "SPEC coverage: data/domain model" 'Data Model|Domain Model|数据模型|领域模型|Schema|Entity' || failures=$((failures + 1))
   require_file_pattern "$dir" "specs/SPEC.md" "SPEC coverage: testing strategy" 'Testing Strategy|Test Strategy|测试|Tests?' || failures=$((failures + 1))
+  require_file_pattern "$dir" "specs/SPEC.md" "SPEC coverage: UI/design applicability" 'UI / Design Applicability|Design Applicability|UI_FLOW|UI_DESIGN_ASSETS|设计适用|设计流程' || failures=$((failures + 1))
   require_file_pattern "$dir" "specs/SPEC.md" "SPEC coverage: privacy/security" 'Privacy|Security|权限|隐私|安全|Keychain|permission' || failures=$((failures + 1))
   require_file_pattern "$dir" "specs/SPEC.md" "SPEC coverage: open questions" 'Open Questions|待确认|未决|Questions' || failures=$((failures + 1))
 
@@ -2144,12 +2533,13 @@ verify_phase_impl() {
 
 qa_check_impl() {
   local project="$1"
-  local dir failures mockups design_assets final_design_assets screenshots score cut_assets cut_manifest_entries
+  local dir failures mockups design_assets html_packages final_design_assets screenshots score cut_assets cut_manifest_entries
   require_project "$project"
   dir="$(project_path "$project")"
   failures=0
   mockups="$(count_design_mockups "$dir")"
   design_assets="$(count_approved_design_artifacts "$dir")"
+  html_packages="$(count_approved_html_design_packages "$dir")"
   screenshots="$(count_visual_screenshots "$dir")"
   load_project_applicability "$project"
   if ! qa_required "$project"; then
@@ -2217,7 +2607,7 @@ qa_check_impl() {
     echo "QA check failed for $project." >&2
     return 1
   fi
-  echo "QA check passed for $project with automated QA=${AUTOMATED_QA}, visual QA=${VISUAL_QA}, approved design assets=$design_assets, visual score ${score:-n/a}/100."
+  echo "QA check passed for $project with automated QA=${AUTOMATED_QA}, visual QA=${VISUAL_QA}, approved visual assets=$design_assets, HTML/CSS design packages=$html_packages, visual score ${score:-n/a}/100."
   if [[ "$screenshots" -eq 0 ]]; then
     echo "No exception or blocked flow recorded; runtime screenshots were not required."
   else
@@ -3124,6 +3514,18 @@ case "$cmd" in
     project_type="$(project_type_from_options "$@")"
     migrate_project_impl "$project" "$project_type"
     ;;
+  autonomy)
+    project="${2:-}"
+    require_project "$project"
+    load_project_state "$project"
+    autonomy_decision_for_phase "$project" "$CURRENT_PHASE"
+    ;;
+  delegate)
+    project="${2:-}"
+    require_project "$project"
+    load_project_state "$project"
+    delegation_recommendation_for_phase "$project" "$CURRENT_PHASE"
+    ;;
   reference-check)
     project="${2:-}"
     mode="${3:-}"
@@ -3174,6 +3576,7 @@ case "$cmd" in
     dir="$(project_path "$project")"
     failures=0
     design_assets="$(count_approved_design_artifacts "$dir")"
+    html_packages="$(count_approved_html_design_packages "$dir")"
     final_design_assets="$(count_final_design_artifacts "$dir")"
     load_project_applicability "$project"
     if [[ "$mode" == "--allow-no-reference" ]]; then
@@ -3212,7 +3615,7 @@ case "$cmd" in
       exit 1
     fi
     if design_assets_required "$project"; then
-      echo "Design check passed for $project with $design_assets approved design asset(s), including $final_design_assets final raster/PDF board(s), covering every SCREEN_ACCEPTANCE screen."
+      echo "Design check passed for $project with $design_assets approved visual asset(s) and $html_packages approved HTML/CSS design package(s), covering every SCREEN_ACCEPTANCE screen."
     else
       echo "Design check passed for $project with lightweight design acceptance; formal approved assets are not required for this scope."
     fi

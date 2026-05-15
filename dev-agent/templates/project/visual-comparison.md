@@ -5,7 +5,7 @@ Compare the implemented UI with required design contract inputs.
 Overall score: 0/100
 
 ## Compared Inputs
-- Approved design assets:
+- Approved design assets/packages:
 - Cut assets:
 - Runtime UI surfaces:
 - Exception screenshots, only if a flow was blocked:

@@ -78,6 +78,8 @@ bin/dev-flow next <project-name>
 bin/dev-flow init <project-name> --type ui
 bin/dev-flow status <project-name>
 bin/dev-flow next <project-name>
+bin/dev-flow autonomy <project-name>
+bin/dev-flow delegate <project-name>
 bin/dev-flow phase <project-name> spec "Write PRD and SPEC"
 bin/dev-flow phase <project-name> build "Build the first slice"
 ```
@@ -108,9 +110,11 @@ bin/dev-flow install claude-code --scope user
 - **主阶段**：idea、spec、design、build、qa、ship。
 - **精简职责**：产品/PRD 与 agent contract 归入 Spec；轻量计划和 proof-first 归入 Build；测试与 review 归入 QA/Ship。
 - **Idea 归因**：idea brief 记录用户明确需求、agent 推断、产品决策和待确认项，避免后续 spec 混淆来源。
-- **Spec 门禁**：UI 项目的 PRD 需覆盖 MVP、核心流程/IA、验收和非目标；SPEC 需覆盖技术栈、命令、数据/领域模型、测试、隐私/安全和未决问题。
-- **设计门禁**：customer-facing UI 在 build 前运行 `design-check`；没有参考时需用户委托视觉方向或提供参考。
+- **Spec 门禁**：UI 项目的 PRD 需覆盖 MVP、核心流程/IA、验收和非目标；SPEC 需覆盖技术栈、命令、数据/领域模型、测试、UI/design 适用性、隐私/安全和未决问题。
+- **设计门禁**：customer-facing UI 在 build 前运行 `design-check`；没有参考时需用户委托视觉方向或提供参考；正式设计交付以 `design-artifacts` 中的 HTML/CSS design package 合同为准。
 - **环境边界**：宿主机 SDK、模拟器、MCP、凭证和系统服务记录在 `HOST_REQUIREMENTS.md`，不混入项目 runtime。
+- **自主循环**：`AUTONOMY_LOOP` 默认给出 heartbeat 建议；遇到 blocker、高风险审批或最终阶段已验证时停止。
+- **Subagent 并行**：`SUBAGENTS` 默认给出可并行任务包；host 支持时可把 explorer、worker、verifier 等侧线任务交给子 agent。
 - **QA 开关**：`AUTOMATED_QA="required"` 开启功能/monkey QA；`VISUAL_QA="required"` 开启视觉 QA。
 
 ### 发布日志
@@ -170,6 +174,8 @@ Local commands:
 bin/dev-flow init <project-name> --type ui
 bin/dev-flow status <project-name>
 bin/dev-flow next <project-name>
+bin/dev-flow autonomy <project-name>
+bin/dev-flow delegate <project-name>
 bin/dev-flow phase <project-name> spec "Write PRD and SPEC"
 bin/dev-flow phase <project-name> build "Build the first slice"
 ```
@@ -200,9 +206,11 @@ bin/dev-flow install claude-code --scope user
 - **Primary phases**: idea, spec, design, build, qa, ship.
 - **Lean responsibilities**: product/PRD and agent contracts live in Spec; micro-planning and proof-first checks live in Build; testing and review live in QA/Ship.
 - **Idea attribution**: idea briefs record user-stated needs, agent inferences, product decisions, and open confirmations so later specs do not blur source boundaries.
-- **Spec gate**: UI project PRDs must cover MVP, core flows/IA, acceptance, and non-goals; SPEC files must cover stack, commands, data/domain model, testing, privacy/security, and open questions.
-- **Design gate**: customer-facing UI runs `design-check` before build; missing references require user input or delegated visual direction.
+- **Spec gate**: UI project PRDs must cover MVP, core flows/IA, acceptance, and non-goals; SPEC files must cover stack, commands, data/domain model, testing, UI/design applicability, privacy/security, and open questions.
+- **Design gate**: customer-facing UI runs `design-check` before build; missing references require user input or delegated visual direction; formal design handoff follows the HTML/CSS design-package contract in `design-artifacts`.
 - **Environment boundary**: host SDKs, simulators, MCP servers, credentials, and services are recorded in `HOST_REQUIREMENTS.md` instead of project runtime output.
+- **Autonomy loop**: `AUTONOMY_LOOP` suggests heartbeat continuation by default, and stops on blockers, high-risk approval, or verified final phases.
+- **Subagent parallelism**: `SUBAGENTS` suggests optional task packets so host clients can delegate explorer, worker, and verifier work when supported.
 - **QA switches**: `AUTOMATED_QA="required"` enables functional/monkey QA; `VISUAL_QA="required"` enables visual QA.
 
 ### Release Notes

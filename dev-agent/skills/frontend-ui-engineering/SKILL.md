@@ -33,8 +33,8 @@ the current scope:
 Also read these when applicable:
 
 - `DESIGN_ARTIFACTS.md`, `DESIGN_IMAGE_DESCRIPTIONS.md`, `FIGMA_HANDOFF.md`,
-  and `design/cut-assets/ASSET_MANIFEST.md` when required by the design
-  contract
+  `design/approved/html/`, and `design/cut-assets/ASSET_MANIFEST.md` when
+  required by the design contract
 
 Satisfy `dev-agent/references/design-artifacts.md` and run
 `bin/dev-flow design-check <project-name>`. When Figma is used, satisfy
@@ -45,7 +45,8 @@ confirmed, stop and return to design instead of implementing around a guess.
 ## Design Contract Boundary
 
 - Implement from `DESIGN.md`, `VISUAL_SYSTEM.md`, and `SCREEN_ACCEPTANCE.md`.
-  Use formal assets only through the design artifact contract.
+  Use formal assets and HTML/CSS design packages only through the design
+  artifact contract.
 - If a needed visual source, runtime asset, or acceptance decision is missing,
   return to design instead of guessing.
 
@@ -53,12 +54,15 @@ confirmed, stop and return to design instead of implementing around a guess.
 
 1. **Create a screen checklist**
    - Map each current `SCREEN_ACCEPTANCE.md` screen/state to implementation
-     files, design contract inputs, and test evidence.
+    files, design contract inputs, and test evidence.
    - Keep `tasks/IMPLEMENTATION_TRACE.md` current as work progresses.
 
 2. **Translate design into primitives**
    - Extract layout grid, breakpoints, spacing, typography, colors, component
      variants, icon/illustration usage, motion, and state rules.
+   - Use approved HTML/CSS design packages as the clearest source for tokens,
+     layout, responsive behavior, states, and motion. Adapt to the app stack
+     deliberately instead of copying brittle static markup wholesale.
    - Preserve hierarchy first: navigation, primary action, grouping, density,
      responsive behavior, and required empty/loading/error/success states.
    - Adapt intentionally when platform conventions require it, and record the

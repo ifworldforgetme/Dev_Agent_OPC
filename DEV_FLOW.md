@@ -52,10 +52,13 @@ should start with:
 ```bash
 bin/dev-flow status <project-name>
 bin/dev-flow next <project-name>
+bin/dev-flow autonomy <project-name>
+bin/dev-flow delegate <project-name>
 ```
 
 `next` returns the current phase, command, skill files, minimal context, required
-outputs, blockers, gate, and phase-record command. Load only that named context
+outputs, blockers, gate, phase-record command, autonomy recommendation, and
+parallelizable subagent work when available. Load only that named context
 instead of reading the workflow pack broadly.
 
 ## Project Lifecycle
@@ -66,6 +69,8 @@ Create one self-contained project folder before starting real work:
 bin/dev-flow init <project-name> [--type ui|agent|api|library|docs]
 bin/dev-flow status <project-name>
 bin/dev-flow next <project-name>
+bin/dev-flow autonomy <project-name>
+bin/dev-flow delegate <project-name>
 bin/dev-flow phase <project-name> spec "Write PRD and SPEC"
 bin/dev-flow verify-phase <project-name> spec
 bin/dev-flow design-check <project-name>
@@ -79,9 +84,10 @@ bin/dev-flow ship-check <project-name>    # only when shipping
 
 - `.dev-flow/state.env`: current phase, active task, blockers, last verification
 - `.dev-flow/schema.env`: project schema version and project type
-- `.dev-flow/applicability.env`: optional gates such as `UI_FLOW`, `UI_REFERENCES`, `UI_DESIGN_ASSETS`, `AUTOMATED_QA`, `VISUAL_QA`, and `SHIP_FLOW`
+- `.dev-flow/applicability.env`: optional gates such as `UI_FLOW`, `UI_REFERENCES`, `UI_DESIGN_ASSETS`, `AUTOMATED_QA`, `VISUAL_QA`, `SHIP_FLOW`, `AUTONOMY_LOOP`, and `SUBAGENTS`
 - `.dev-flow/context.md`: minimal context loading guidance
 - `.dev-flow/HOST_REQUIREMENTS.md`: host SDKs, CLIs, services, credentials, and permissions
+- `.dev-flow/autonomy.env`: lightweight counters and last-result state for autonomous continuation
 Phase folders are created later by `bin/dev-flow next` or `bin/dev-flow phase`
 when that phase becomes current: `ideas/`, `product/`, `specs/`, `design/`,
 `tasks/`, `reviews/`, `ship/`, `apps/`, and `packages/`.
@@ -89,6 +95,12 @@ when that phase becomes current: `ideas/`, `product/`, `specs/`, `design/`,
 `bin/dev-flow phase` only records state. By default it verifies all prior
 applicable lifecycle phases before moving forward. Use `--force` only when you
 intentionally record early state and will complete missing artifacts later.
+
+`bin/dev-flow autonomy <project-name>` is the standalone continuation decision.
+It tells a host whether to continue now, suggest a heartbeat interval, or stop
+for a blocker/approval. `bin/dev-flow delegate <project-name>` is the standalone
+subagent planner. It emits optional task packets for host clients that support
+parallel agents; the main host remains responsible for integration and gates.
 
 ## Host Environment Contract
 
@@ -112,8 +124,9 @@ UI build. If the user delegates visual direction, create `design/REFERENCE_BOARD
 and use `bin/dev-flow design-check <project-name> --allow-no-reference`.
 
 Do not require sketches or prototypes. The design flow produces only what the
-current build needs. Satisfy `dev-agent/references/design-artifacts.md` and run
-`bin/dev-flow design-check <project-name>`. When Figma is used, satisfy
+current build needs. Satisfy `dev-agent/references/design-artifacts.md` as the
+current HTML/CSS design-package contract, and run `bin/dev-flow design-check
+<project-name>`. When Figma is used, satisfy
 `dev-agent/references/figma-handoff.md` and run
 `bin/dev-flow figma-check <project-name>`.
 
@@ -146,7 +159,7 @@ Ship is optional and centered on launch evidence, rollback, and go/no-go.
 | Idea | `ideas/idea-brief.md` |
 | Spec | `product/PRD.md`, `specs/SPEC.md` |
 | Design, when UI applies | `design/DESIGN.md`, `VISUAL_SYSTEM.md`, `SCREEN_ACCEPTANCE.md`, `DESIGN_ARTIFACTS.md`, design contract inputs when required |
-| Build | source under `apps/` or `packages/`, `reviews/VERIFICATION.md` or `reviews/BLOCKED_BUILD.md`, UI implementation trace when UI applies |
+| Build | source under `apps/` or `packages/`, `reviews/VERIFICATION.md` or `reviews/BLOCKED_BUILD.md`, UI implementation trace when UI applies, optional autonomy/delegation logs |
 | QA, when required | `reviews/FUNCTIONAL_TEST.md`, `MONKEY_TEST.md`, `VISUAL_COMPARISON.md` as applicable |
 | Ship, when requested | `ship/LAUNCH.md` with risk, rollback, and GO/NO-GO |
 

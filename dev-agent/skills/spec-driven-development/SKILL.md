@@ -121,6 +121,13 @@ states/errors, permissions/privacy copy, monetization/paywall rules, analytics
 events, non-functional requirements, and version boundaries. Keep it lean, but
 make design/build-ready decisions visible.
 
+Also decide design applicability. If the work touches UI, visual direction,
+brand/KV, screen states, or motion, mark design as required and hand off to
+`design-flow`. If the work has no user-facing UI or design is already complete
+and build-ready, record why design can be skipped or considered complete. When
+the decision changes lifecycle behavior, update `.dev-flow/applicability.env`
+instead of leaving build to guess.
+
 **Minimum PRD template:**
 
 ```markdown
@@ -169,6 +176,10 @@ make design/build-ready decisions visible.
 
 ## Testing Strategy
 [Framework, test locations, coverage requirements, test levels]
+
+## UI / Design Applicability
+[Whether UI/design applies, whether formal HTML/CSS design packages are
+required, and whether existing design resources are build-ready.]
 
 ## Privacy / Security
 [Data handling, permissions, deletion, secrets, compliance-sensitive choices]
@@ -255,6 +266,7 @@ Before proceeding to implementation, confirm:
 - [ ] UI/customer-facing PRDs cover core flows or IA, acceptance criteria, and non-goals
 - [ ] `specs/SPEC.md` covers all core technical areas
 - [ ] UI/customer-facing specs cover stack, commands, data/domain model, testing, privacy/security, and open questions
+- [ ] Specs decide whether UI/design applies and whether design assets/packages are required or already build-ready
 - [ ] External references were converted into structured decisions and unsafe reference patterns were flagged
 - [ ] The human has reviewed and approved the spec, or workspace instructions explicitly delegate defaults and no human review gate is open
 - [ ] Success criteria are specific and testable

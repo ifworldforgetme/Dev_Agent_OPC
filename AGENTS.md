@@ -55,6 +55,8 @@ bin/dev-flow refs
 bin/dev-flow init <project-name> [--type ui|agent|api|library|docs]
 bin/dev-flow status <project-name>
 bin/dev-flow next <project-name>
+bin/dev-flow autonomy <project-name>
+bin/dev-flow delegate <project-name>
 bin/dev-flow phase <project-name> <idea|spec|design|build|qa|ship> [task] [--force]
 bin/dev-flow verify-phase <project-name> <idea|spec|design|build|qa|ship>
 bin/dev-flow env-check <project-name>
@@ -82,6 +84,12 @@ truth for what to read and what to run. `bin/dev-flow phase` records state only;
 it does not execute skill work. Use `--force` only to intentionally record early
 state, then complete missing artifacts before delivery.
 
+`bin/dev-flow autonomy <project-name>` reports whether the host should continue
+autonomously or schedule a heartbeat; `bin/dev-flow delegate <project-name>`
+reports optional subagent task packets. These modules are independent, but the
+Autonomy section in `next` may surface parallelizable work when host subagents
+are available.
+
 Host SDKs, CLIs, simulators, MCP servers, credentials, and system services are
 host-machine capabilities, not project runtime files. Record them in
 `<project-name>/.dev-flow/HOST_REQUIREMENTS.md`. Run `env-check` only before
@@ -99,8 +107,9 @@ ask for examples before UI build. If visual direction is delegated, create
 Do not require sketches or prototypes. The design phase should produce the
 minimum build-ready handoff: `DESIGN.md`, `VISUAL_SYSTEM.md`,
 `SCREEN_ACCEPTANCE.md`, and `DESIGN_ARTIFACTS.md` when formal visual assets are
-needed. Satisfy `dev-agent/references/design-artifacts.md` and run
-`bin/dev-flow design-check <project-name>`. When Figma is used, satisfy
+needed. Satisfy `dev-agent/references/design-artifacts.md` as the current
+HTML/CSS design-package contract, and run `bin/dev-flow design-check
+<project-name>`. When Figma is used, satisfy
 `dev-agent/references/figma-handoff.md` and run
 `bin/dev-flow figma-check <project-name>`.
 
@@ -130,12 +139,12 @@ workspace root.
 `init` creates only the control layer; lifecycle folders below are created when
 `next`, `phase`, or a gate needs that phase.
 
-- State: `.dev-flow/state.env`, `.dev-flow/schema.env`, `.dev-flow/context.md`, `.dev-flow/HOST_REQUIREMENTS.md`
+- State: `.dev-flow/state.env`, `.dev-flow/schema.env`, `.dev-flow/context.md`, `.dev-flow/HOST_REQUIREMENTS.md`, `.dev-flow/autonomy.env`
 - Ideas: `ideas/idea-brief.md`
 - Product/spec: `product/PRD.md`, `specs/SPEC.md`
 - Optional agent notes: `agent/` for legacy/imported material; canonical agent runtime contract belongs in `specs/SPEC.md`
 - Design: `design/DESIGN.md`, `VISUAL_SYSTEM.md`, `SCREEN_ACCEPTANCE.md`, `DESIGN_ARTIFACTS.md`, `DESIGN_IMAGE_DESCRIPTIONS.md`, `FIGMA_HANDOFF.md`, `design/approved/`, `design/cut-assets/`
-- Build planning/evidence: `tasks/status.md`, `tasks/quality-gates.md`, `tasks/IMPLEMENTATION_TRACE.md`, `reviews/VERIFICATION.md`, `reviews/BLOCKED_BUILD.md`
+- Build planning/evidence: `tasks/status.md`, `tasks/quality-gates.md`, `tasks/IMPLEMENTATION_TRACE.md`, `tasks/AUTONOMY.md`, `tasks/DELEGATION.md`, `tasks/subagents/TEMPLATE.md`, `reviews/VERIFICATION.md`, `reviews/BLOCKED_BUILD.md`
 - Optional QA: `reviews/FUNCTIONAL_TEST.md`, `reviews/MONKEY_TEST.md`, `reviews/VISUAL_COMPARISON.md`, `reviews/visual-screenshots/`
 - Optional ship: `ship/LAUNCH.md`
 - Source roots: `apps/`, `packages/`, or another project-local source directory
