@@ -38,6 +38,7 @@ Usage:
   bin/dev-flow migrate <project-name> [--type ui|agent|api|library|docs]
   bin/dev-flow autonomy <project-name>
   bin/dev-flow delegate <project-name>
+  bin/dev-flow ui-polish <project-name>
   bin/dev-flow reference-check <project-name> [--required|--delegated]
   bin/dev-flow asset-check <project-name>
   bin/dev-flow figma-check <project-name>
@@ -319,6 +320,7 @@ write_build_templates() {
   write_project_template "$dir" "tasks/AUTONOMY.md" "autonomy.md" "$project" "$project_type"
   write_project_template "$dir" "tasks/DELEGATION.md" "delegation.md" "$project" "$project_type"
   write_project_template "$dir" "tasks/subagents/TEMPLATE.md" "subagent-task.md" "$project" "$project_type"
+  write_project_template "$dir" "reviews/UI_DEBT.md" "ui-debt.md" "$project" "$project_type"
 }
 
 write_qa_templates() {
@@ -606,16 +608,37 @@ phase_blockers() {
 load_autonomy_state() {
   local path
   path="$(autonomy_path "${1:-}")"
-  AUTONOMY_CYCLE_COUNT="${AUTONOMY_CYCLE_COUNT:-0}"
-  AUTONOMY_IDLE_CYCLES="${AUTONOMY_IDLE_CYCLES:-0}"
-  AUTONOMY_LAST_PHASE="${AUTONOMY_LAST_PHASE:-none}"
-  AUTONOMY_LAST_ACTION="${AUTONOMY_LAST_ACTION:-none}"
-  AUTONOMY_LAST_RESULT="${AUTONOMY_LAST_RESULT:-none}"
-  AUTONOMY_LAST_PROGRESS_AT="${AUTONOMY_LAST_PROGRESS_AT:-none}"
+  AUTONOMY_CYCLE_COUNT="0"
+  AUTONOMY_IDLE_CYCLES="0"
+  AUTONOMY_LAST_PHASE="none"
+  AUTONOMY_LAST_ACTION="none"
+  AUTONOMY_LAST_RESULT="none"
+  AUTONOMY_LAST_PROGRESS_AT="none"
+  UI_POLISH_PASS_COUNT="0"
+  UI_POLISH_LAST_PHASE="none"
+  UI_POLISH_LAST_TASK="none"
   if [[ -f "$path" ]]; then
     # shellcheck disable=SC1090
     source "$path"
   fi
+}
+
+write_autonomy_state() {
+  local project="$1"
+  local path
+  path="$(autonomy_path "$project")"
+  mkdir -p "$(dirname "$path")"
+  {
+    printf 'AUTONOMY_CYCLE_COUNT=%q\n' "${AUTONOMY_CYCLE_COUNT:-0}"
+    printf 'AUTONOMY_IDLE_CYCLES=%q\n' "${AUTONOMY_IDLE_CYCLES:-0}"
+    printf 'AUTONOMY_LAST_PHASE=%q\n' "${AUTONOMY_LAST_PHASE:-none}"
+    printf 'AUTONOMY_LAST_ACTION=%q\n' "${AUTONOMY_LAST_ACTION:-none}"
+    printf 'AUTONOMY_LAST_RESULT=%q\n' "${AUTONOMY_LAST_RESULT:-none}"
+    printf 'AUTONOMY_LAST_PROGRESS_AT=%q\n' "${AUTONOMY_LAST_PROGRESS_AT:-none}"
+    printf 'UI_POLISH_PASS_COUNT=%q\n' "${UI_POLISH_PASS_COUNT:-0}"
+    printf 'UI_POLISH_LAST_PHASE=%q\n' "${UI_POLISH_LAST_PHASE:-none}"
+    printf 'UI_POLISH_LAST_TASK=%q\n' "${UI_POLISH_LAST_TASK:-none}"
+  } > "$path"
 }
 
 phase_verified_loaded() {
@@ -639,6 +662,51 @@ current_task_is_high_risk_loaded() {
   esac
 }
 
+current_task_is_polish_loaded() {
+  local lower_task
+  lower_task="$(printf '%s' "${CURRENT_TASK:-}" | tr '[:upper:]' '[:lower:]')"
+  case "$lower_task" in
+    *polish*|*visual*|*screenshot*|*simulator*|*fine-tune*|*打磨*|*视觉*|*截图*|*模拟机*)
+      return 0
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
+ui_polish_budget_loaded() {
+  case "${UI_POLISH_BUDGET:-1}" in
+    ''|*[!0-9]*) echo 1 ;;
+    *) echo "$UI_POLISH_BUDGET" ;;
+  esac
+}
+
+ui_polish_count_loaded() {
+  if [[ "${UI_POLISH_LAST_PHASE:-none}" == "${CURRENT_PHASE:-}" ]]; then
+    case "${UI_POLISH_PASS_COUNT:-0}" in
+      ''|*[!0-9]*) echo 0 ;;
+      *) echo "$UI_POLISH_PASS_COUNT" ;;
+    esac
+    return 0
+  fi
+  echo 0
+}
+
+ui_polish_applies_loaded() {
+  local project="$1"
+  local phase="$2"
+  [[ "$phase" == "build" ]] || return 1
+  phase_is_applicable "$project" design
+}
+
+ui_polish_budget_exhausted_loaded() {
+  local used budget
+  used="$(ui_polish_count_loaded)"
+  budget="$(ui_polish_budget_loaded)"
+  [[ "$used" -ge "$budget" ]]
+}
+
 autonomy_stop_reason_loaded() {
   local project="$1"
   local phase="$2"
@@ -654,6 +722,10 @@ autonomy_stop_reason_loaded() {
   fi
   if current_task_is_high_risk_loaded; then
     echo "approval required for high-risk action"
+    return 0
+  fi
+  if ui_polish_applies_loaded "$project" "$phase" && ui_polish_budget_exhausted_loaded && current_task_is_polish_loaded; then
+    echo "polish loop requires explicit user approval"
     return 0
   fi
   case "$phase" in
@@ -696,7 +768,9 @@ autonomy_heartbeat_label_loaded() {
 }
 
 autonomy_next_action_for_phase() {
-  case "${1:-}" in
+  local project="${1:-}"
+  local phase="${2:-}"
+  case "$phase" in
     idea)
       echo "refine ideas/idea-brief.md, capture assumptions, then run verify-phase idea"
       ;;
@@ -707,7 +781,11 @@ autonomy_next_action_for_phase() {
       echo "complete design handoff and visual system, then run design-check"
       ;;
     build)
-      echo "implement the next build slice, update verification evidence, then run verify-phase build and check"
+      if ui_polish_applies_loaded "$project" "$phase" && ui_polish_budget_exhausted_loaded; then
+        echo "advance to the next task; record P2/P3 UI debt in reviews/UI_DEBT.md and only block on P0/P1"
+      else
+        echo "implement the next build slice, update verification evidence, then run verify-phase build and check"
+      fi
       ;;
     qa)
       echo "run required QA evidence, then run verify-phase qa and qa-check when applicable"
@@ -741,7 +819,7 @@ autonomy_decision_for_phase() {
   case "$reason" in
     approval*) approval="yes" ;;
   esac
-  action="$(autonomy_next_action_for_phase "$phase")"
+  action="$(autonomy_next_action_for_phase "$project" "$phase")"
   echo "Autonomy:"
   echo "- Mode: $AUTONOMY_LOOP"
   echo "- Continue: $continue"
@@ -751,9 +829,66 @@ autonomy_decision_for_phase() {
   echo "- Max idle cycles: $AUTONOMY_MAX_IDLE_CYCLES"
   echo "- Stop on: $AUTONOMY_STOP_ON"
   echo "- Cycle count: $AUTONOMY_CYCLE_COUNT"
+  if ui_polish_applies_loaded "$project" "$phase"; then
+    echo "- UI polish budget: $(ui_polish_count_loaded)/$(ui_polish_budget_loaded) used"
+    echo "- UI debt policy: $UI_DEBT_POLICY"
+    if ui_polish_budget_exhausted_loaded; then
+      echo "- Runtime visual pass: budget used; only P0/P1 blocks, record P2/P3 in reviews/UI_DEBT.md"
+    else
+      echo "- Runtime visual pass: optional; record only one pass before moving P2/P3 issues to UI debt"
+    fi
+  fi
   echo "- Next autonomous action: $action"
   echo "- Requires user approval: $approval"
   echo "- Reason: $reason"
+}
+
+record_ui_polish_pass_impl() {
+  local project="$1"
+  local dir used budget now
+  require_project "$project"
+  load_project_state "$project"
+  load_project_schema "$project"
+  load_project_applicability "$project"
+  load_autonomy_state "$project"
+  dir="$(project_path "$project")"
+  if ! ui_polish_applies_loaded "$project" "$CURRENT_PHASE"; then
+    echo "UI polish pass not applicable for $project at phase: $CURRENT_PHASE."
+    echo "UI polish budget is only tracked for UI build work."
+    return 0
+  fi
+  if [[ "${UI_POLISH_LAST_PHASE:-none}" != "$CURRENT_PHASE" ]]; then
+    UI_POLISH_PASS_COUNT="0"
+  fi
+  used="$(ui_polish_count_loaded)"
+  UI_POLISH_PASS_COUNT="$((used + 1))"
+  UI_POLISH_LAST_PHASE="$CURRENT_PHASE"
+  UI_POLISH_LAST_TASK="$CURRENT_TASK"
+  AUTONOMY_LAST_PHASE="$CURRENT_PHASE"
+  AUTONOMY_LAST_ACTION="ui-polish"
+  AUTONOMY_LAST_RESULT="recorded"
+  AUTONOMY_LAST_PROGRESS_AT="$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
+  write_autonomy_state "$project"
+  mkdir -p "$dir/reviews"
+  write_project_template "$dir" "reviews/UI_DEBT.md" "ui-debt.md" "$project" "$PROJECT_TYPE"
+  now="$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
+  {
+    echo
+    echo "## Runtime Visual Pass $now"
+    echo "- Phase: $CURRENT_PHASE"
+    echo "- Task: $CURRENT_TASK"
+    echo "- Count: $UI_POLISH_PASS_COUNT/$(ui_polish_budget_loaded)"
+    echo "- Policy: $UI_DEBT_POLICY"
+    echo "- P0/P1 issues block the current task."
+    echo "- P2/P3 issues are non-blocking; record them in the debt table and advance."
+  } >> "$dir/reviews/UI_DEBT.md"
+  budget="$(ui_polish_budget_loaded)"
+  echo "Recorded UI polish pass for $project."
+  echo "Count: $UI_POLISH_PASS_COUNT/$budget"
+  echo "Policy: $UI_DEBT_POLICY"
+  if [[ "$UI_POLISH_PASS_COUNT" -ge "$budget" ]]; then
+    echo "Budget used: record P2/P3 issues in reviews/UI_DEBT.md and advance unless P0/P1 remains."
+  fi
 }
 
 delegation_recommendation_for_phase() {
@@ -1310,6 +1445,20 @@ is_ai_generated_design_source_type() {
   esac
 }
 
+is_identity_asset_row() {
+  local raw="$*"
+  local lower
+  lower="$(printf '%s' "$raw" | tr '[:upper:]' '[:lower:]')"
+  case "$lower" in
+    *logo*|*app\ icon*|*app-icon*|*adaptive\ icon*|*adaptive-icon*|*splash\ icon*|*splash-icon*|*launcher\ icon*|*brand\ mark*|*brand\ kv*|*brand/key\ visual*|*key\ visual*|*应用图标*|*启动图标*|*品牌标识*|*品牌kv*)
+      return 0
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
 html_description_path_from_notes() {
   local raw="$1"
   printf '%s\n' "$raw" \
@@ -1631,6 +1780,10 @@ check_design_artifact_contract() {
     fi
     if ! is_valid_formal_design_source_ref "$source_type" "$source_ref"; then
       echo "Invalid design source reference for screen: $screen (record a formal producer reference such as imagegen://, gpt-image-2://, figma:// or Figma URL, upload://, designer-upload://, design-system://, external-design://, html-design://, design/sources/html/, or design/sources/approved/. Do not use SVG renders, screenshots, browser captures, simulator captures, local app output, or prototype paths as development-ready design sources)." >&2
+      failures=$((failures + 1))
+    fi
+    if is_identity_asset_row "$screen" "$source_ref" "$asset_path" "$resolution" "$notes" && ! is_ai_generated_design_source_type "$source_type"; then
+      echo "Identity assets require Image Gen provenance for screen: $screen (use Source type imagegen, gpt-image, or gpt-image-2; do not create SVG/HTML/canvas locally and render PNG for logo, app icon, brand mark, or brand KV assets)." >&2
       failures=$((failures + 1))
     fi
     if [[ ! "$status" =~ [Aa]pproved|[Ff]inal|正式|批准|通过 ]]; then
@@ -2127,6 +2280,8 @@ load_project_applicability() {
   SUBAGENTS="auto"
   MAX_PARALLEL_SUBAGENTS="3"
   SUBAGENT_MODE="sidecar"
+  UI_POLISH_BUDGET="1"
+  UI_DEBT_POLICY="record-and-advance"
   case "$PROJECT_TYPE" in
     agent)
       AGENT_CONTRACT="required"
@@ -3525,6 +3680,10 @@ case "$cmd" in
     require_project "$project"
     load_project_state "$project"
     delegation_recommendation_for_phase "$project" "$CURRENT_PHASE"
+    ;;
+  ui-polish)
+    project="${2:-}"
+    record_ui_polish_pass_impl "$project"
     ;;
   reference-check)
     project="${2:-}"

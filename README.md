@@ -80,6 +80,7 @@ bin/dev-flow status <project-name>
 bin/dev-flow next <project-name>
 bin/dev-flow autonomy <project-name>
 bin/dev-flow delegate <project-name>
+bin/dev-flow ui-polish <project-name>
 bin/dev-flow phase <project-name> spec "Write PRD and SPEC"
 bin/dev-flow phase <project-name> build "Build the first slice"
 ```
@@ -115,6 +116,7 @@ bin/dev-flow install claude-code --scope user
 - **环境边界**：宿主机 SDK、模拟器、MCP、凭证和系统服务记录在 `HOST_REQUIREMENTS.md`，不混入项目 runtime。
 - **自主循环**：`AUTONOMY_LOOP` 默认给出 heartbeat 建议；遇到 blocker、高风险审批或最终阶段已验证时停止。
 - **Subagent 并行**：`SUBAGENTS` 默认给出可并行任务包；host 支持时可把 explorer、worker、verifier 等侧线任务交给子 agent。
+- **UI 打磨预算**：runtime visual pass 默认一次；P0/P1 阻塞当前任务，P2/P3 记录到 `UI_DEBT.md` 后继续推进。
 - **QA 开关**：`AUTOMATED_QA="required"` 开启功能/monkey QA；`VISUAL_QA="required"` 开启视觉 QA。
 
 ### 发布日志
@@ -176,6 +178,7 @@ bin/dev-flow status <project-name>
 bin/dev-flow next <project-name>
 bin/dev-flow autonomy <project-name>
 bin/dev-flow delegate <project-name>
+bin/dev-flow ui-polish <project-name>
 bin/dev-flow phase <project-name> spec "Write PRD and SPEC"
 bin/dev-flow phase <project-name> build "Build the first slice"
 ```
@@ -211,6 +214,7 @@ bin/dev-flow install claude-code --scope user
 - **Environment boundary**: host SDKs, simulators, MCP servers, credentials, and services are recorded in `HOST_REQUIREMENTS.md` instead of project runtime output.
 - **Autonomy loop**: `AUTONOMY_LOOP` suggests heartbeat continuation by default, and stops on blockers, high-risk approval, or verified final phases.
 - **Subagent parallelism**: `SUBAGENTS` suggests optional task packets so host clients can delegate explorer, worker, and verifier work when supported.
+- **UI polish budget**: runtime visual passes default to one; P0/P1 blocks the task, while P2/P3 goes to `UI_DEBT.md` and work advances.
 - **QA switches**: `AUTOMATED_QA="required"` enables functional/monkey QA; `VISUAL_QA="required"` enables visual QA.
 
 ### Release Notes

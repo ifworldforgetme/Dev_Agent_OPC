@@ -13,6 +13,7 @@ SVG_ONLY="$ROOT/__${RUN_ID}_svg_only"
 SVG_LEAK="$ROOT/__${RUN_ID}_svg_leak"
 SVG_CUT_ALLOWED="$ROOT/__${RUN_ID}_svg_cut_allowed"
 SELF_RENDERED_PNG="$ROOT/__${RUN_ID}_self_rendered_png"
+IDENTITY_BAD_SOURCE="$ROOT/__${RUN_ID}_identity_bad_source"
 MISSING_COVERAGE="$ROOT/__${RUN_ID}_missing_coverage"
 SCREENSHOT_SWAP="$ROOT/__${RUN_ID}_screenshot_swap"
 DRAFT_PATH="$ROOT/__${RUN_ID}_draft_path"
@@ -35,6 +36,9 @@ INSTALL_DEST="/private/tmp/dev-agent-${RUN_ID}-install"
 INSTALL_WORKSPACE="/private/tmp/dev-agent-${RUN_ID}-workspace"
 UI_BLOCK_OUT="/private/tmp/dev-flow-${RUN_ID}-ui-block.out"
 LIGHT_UI_NEXT_OUT="/private/tmp/dev-flow-${RUN_ID}-light-ui-next.out"
+LIGHT_UI_POLISH_OUT="/private/tmp/dev-flow-${RUN_ID}-light-ui-polish.out"
+LIGHT_UI_POLISH_NEXT_OUT="/private/tmp/dev-flow-${RUN_ID}-light-ui-polish-next.out"
+LIGHT_UI_POLISH_STOP_OUT="/private/tmp/dev-flow-${RUN_ID}-light-ui-polish-stop.out"
 SPEC_GAP_OUT="/private/tmp/dev-flow-${RUN_ID}-spec-gap.out"
 INVALID_OUT="/private/tmp/dev-flow-${RUN_ID}-invalid.out"
 EXCEPTION_OUT="/private/tmp/dev-flow-${RUN_ID}-exception.out"
@@ -42,6 +46,7 @@ SVG_ONLY_OUT="/private/tmp/dev-flow-${RUN_ID}-svg-only.out"
 SVG_LEAK_OUT="/private/tmp/dev-flow-${RUN_ID}-svg-leak.out"
 SVG_CUT_ALLOWED_OUT="/private/tmp/dev-flow-${RUN_ID}-svg-cut-allowed.out"
 SELF_RENDERED_PNG_OUT="/private/tmp/dev-flow-${RUN_ID}-self-rendered-png.out"
+IDENTITY_BAD_SOURCE_OUT="/private/tmp/dev-flow-${RUN_ID}-identity-bad-source.out"
 MISSING_COVERAGE_OUT="/private/tmp/dev-flow-${RUN_ID}-missing-coverage.out"
 SCREENSHOT_SWAP_OUT="/private/tmp/dev-flow-${RUN_ID}-screenshot-swap.out"
 DRAFT_PATH_OUT="/private/tmp/dev-flow-${RUN_ID}-draft-path.out"
@@ -74,7 +79,7 @@ cleanup_path() {
 }
 
 cleanup() {
-  cleanup_path "$LAZY_PROJECT" "$UI_BLOCK" "$LIGHT_UI" "$SPEC_GAP" "$DELEGATED" "$INVALID" "$SVG_ONLY" "$SVG_LEAK" "$SVG_CUT_ALLOWED" "$SELF_RENDERED_PNG" "$MISSING_COVERAGE" "$SCREENSHOT_SWAP" "$DRAFT_PATH" "$NO_CUTS" "$HTML_ONLY" "$HTML_MISSING_CSS" "$AI_MISSING_HTML" "$FIGMA_GOOD" "$FIGMA_SECTION_BOUNDARY" "$FIGMA_MISSING_SOURCE" "$FIGMA_BAD_EXPORT" "$API_PROJECT" "$AGENT_PROJECT" "$ENV_PROJECT" "$BAD_ENV" "$LEGACY_PROJECT" "$BAD_VISUAL" "$ADAPTER_OUT" "$INSTALL_DEST" "$INSTALL_WORKSPACE" "$UI_BLOCK_OUT" "$LIGHT_UI_NEXT_OUT" "$SPEC_GAP_OUT" "$INVALID_OUT" "$EXCEPTION_OUT" "$SVG_ONLY_OUT" "$SVG_LEAK_OUT" "$SVG_CUT_ALLOWED_OUT" "$SELF_RENDERED_PNG_OUT" "$MISSING_COVERAGE_OUT" "$SCREENSHOT_SWAP_OUT" "$DRAFT_PATH_OUT" "$AI_MISSING_HTML_OUT" "$HTML_MISSING_CSS_OUT" "$FIGMA_MISSING_SOURCE_OUT" "$FIGMA_BAD_EXPORT_OUT" "$API_OUT" "$API_NEXT_OUT" "$API_AUTONOMY_OUT" "$API_DELEGATE_OUT" "$API_DELEGATE_DISABLED_OUT" "$AGENT_OUT" "$ENV_OUT" "$BAD_ENV_OUT" "$DOCTOR_OUT" "$BAD_VISUAL_OUT" "$TRACE_MISSING_HTML_OUT" "$NEXT_UI_OUT"
+  cleanup_path "$LAZY_PROJECT" "$UI_BLOCK" "$LIGHT_UI" "$SPEC_GAP" "$DELEGATED" "$INVALID" "$SVG_ONLY" "$SVG_LEAK" "$SVG_CUT_ALLOWED" "$SELF_RENDERED_PNG" "$IDENTITY_BAD_SOURCE" "$MISSING_COVERAGE" "$SCREENSHOT_SWAP" "$DRAFT_PATH" "$NO_CUTS" "$HTML_ONLY" "$HTML_MISSING_CSS" "$AI_MISSING_HTML" "$FIGMA_GOOD" "$FIGMA_SECTION_BOUNDARY" "$FIGMA_MISSING_SOURCE" "$FIGMA_BAD_EXPORT" "$API_PROJECT" "$AGENT_PROJECT" "$ENV_PROJECT" "$BAD_ENV" "$LEGACY_PROJECT" "$BAD_VISUAL" "$ADAPTER_OUT" "$INSTALL_DEST" "$INSTALL_WORKSPACE" "$UI_BLOCK_OUT" "$LIGHT_UI_NEXT_OUT" "$LIGHT_UI_POLISH_OUT" "$LIGHT_UI_POLISH_NEXT_OUT" "$LIGHT_UI_POLISH_STOP_OUT" "$SPEC_GAP_OUT" "$INVALID_OUT" "$EXCEPTION_OUT" "$SVG_ONLY_OUT" "$SVG_LEAK_OUT" "$SVG_CUT_ALLOWED_OUT" "$SELF_RENDERED_PNG_OUT" "$IDENTITY_BAD_SOURCE_OUT" "$MISSING_COVERAGE_OUT" "$SCREENSHOT_SWAP_OUT" "$DRAFT_PATH_OUT" "$AI_MISSING_HTML_OUT" "$HTML_MISSING_CSS_OUT" "$FIGMA_MISSING_SOURCE_OUT" "$FIGMA_BAD_EXPORT_OUT" "$API_OUT" "$API_NEXT_OUT" "$API_AUTONOMY_OUT" "$API_DELEGATE_OUT" "$API_DELEGATE_DISABLED_OUT" "$AGENT_OUT" "$ENV_OUT" "$BAD_ENV_OUT" "$DOCTOR_OUT" "$BAD_VISUAL_OUT" "$TRACE_MISSING_HTML_OUT" "$NEXT_UI_OUT"
 }
 trap cleanup EXIT
 
@@ -405,6 +410,8 @@ grep -q 'UI_FLOW="required"' "$UI_BLOCK/.dev-flow/applicability.env"
 grep -q 'UI_DESIGN_ASSETS="auto"' "$UI_BLOCK/.dev-flow/applicability.env"
 grep -q 'AUTONOMY_LOOP="suggest"' "$UI_BLOCK/.dev-flow/applicability.env"
 grep -q 'SUBAGENTS="auto"' "$UI_BLOCK/.dev-flow/applicability.env"
+grep -q 'UI_POLISH_BUDGET="1"' "$UI_BLOCK/.dev-flow/applicability.env"
+grep -q 'UI_DEBT_POLICY="record-and-advance"' "$UI_BLOCK/.dev-flow/applicability.env"
 grep -q 'SHIP_FLOW="auto"' "$UI_BLOCK/.dev-flow/applicability.env"
 bin/dev-flow phase "$(basename "$UI_BLOCK")" design "Prepare design execution brief" --force >/dev/null
 bin/dev-flow next "$(basename "$UI_BLOCK")" >"$NEXT_UI_OUT"
@@ -496,6 +503,23 @@ write_file "$LIGHT_UI/apps/web/index.html" \
   "<html lang=\"en\"><head><meta charset=\"utf-8\"><title>Status</title></head><body><main><h1>Status</h1><button>Refresh</button></main></body></html>"
 write_file "$LIGHT_UI/reviews/VERIFICATION.md" \
   "# Verification" "" "## Result" "Static status page source exists." "Lightweight UI build does not require formal design assets."
+bin/dev-flow phase "$(basename "$LIGHT_UI")" build "Implement lightweight UI without formal assets" >/dev/null
+bin/dev-flow next "$(basename "$LIGHT_UI")" >"$LIGHT_UI_NEXT_OUT"
+grep -q "Workflow is at the final applicable phase" "$LIGHT_UI_NEXT_OUT"
+grep -q "UI polish budget: 0/1 used" "$LIGHT_UI_NEXT_OUT"
+grep -q "Runtime visual pass: optional; record only one pass before moving P2/P3 issues to UI debt" "$LIGHT_UI_NEXT_OUT"
+bin/dev-flow ui-polish "$(basename "$LIGHT_UI")" >"$LIGHT_UI_POLISH_OUT"
+grep -q "Recorded UI polish pass" "$LIGHT_UI_POLISH_OUT"
+grep -q "Count: 1/1" "$LIGHT_UI_POLISH_OUT"
+test -f "$LIGHT_UI/reviews/UI_DEBT.md"
+grep -q "P2/P3 issues are non-blocking" "$LIGHT_UI/reviews/UI_DEBT.md"
+bin/dev-flow next "$(basename "$LIGHT_UI")" >"$LIGHT_UI_POLISH_NEXT_OUT"
+grep -q "UI polish budget: 1/1 used" "$LIGHT_UI_POLISH_NEXT_OUT"
+grep -q "advance to the next task; record P2/P3 UI debt" "$LIGHT_UI_POLISH_NEXT_OUT"
+bin/dev-flow phase "$(basename "$LIGHT_UI")" build "Polish UI screenshot details" >/dev/null
+bin/dev-flow next "$(basename "$LIGHT_UI")" >"$LIGHT_UI_POLISH_STOP_OUT"
+grep -q "Continue: no" "$LIGHT_UI_POLISH_STOP_OUT"
+grep -q "Reason: polish loop requires explicit user approval" "$LIGHT_UI_POLISH_STOP_OUT"
 bin/dev-flow phase "$(basename "$LIGHT_UI")" build "Implement lightweight UI without formal assets" >/dev/null
 bin/dev-flow verify-phase "$(basename "$LIGHT_UI")" build >/dev/null
 bin/dev-flow next "$(basename "$LIGHT_UI")" >"$LIGHT_UI_NEXT_OUT"
@@ -618,6 +642,32 @@ if bin/dev-flow design-check "$(basename "$SELF_RENDERED_PNG")" --allow-no-refer
   exit 1
 fi
 grep -q "Invalid formal design source" "$SELF_RENDERED_PNG_OUT"
+
+bin/dev-flow init "$(basename "$IDENTITY_BAD_SOURCE")" >/dev/null
+write_file "$IDENTITY_BAD_SOURCE/ideas/idea-brief.md" \
+  "# Idea Brief" "" "Build a mobile app identity." "Generate app icons for store upload and in-app use." "Do not accept local SVG renders as final identity assets."
+write_file "$IDENTITY_BAD_SOURCE/specs/SPEC.md" \
+  "# Spec" "" "Create app icon assets." "Require formal image-generation provenance for identity assets." "This is an audit fixture."
+write_file "$IDENTITY_BAD_SOURCE/design/DESIGN.md" \
+  "# Design" "" "## UX Problem" "The app needs a production identity asset." "## Recommended Direction" "Use a generated app icon asset with platform sizes." "## Alternatives Considered" "- Local SVG rendered to PNG: not acceptable for final identity assets." "## Information Architecture" "Identity assets only." "## Interaction Model" "No runtime interaction." "## Visual System" "Brand mark, app icon, and store icon rules." "## Design Artifacts" "App icon must use Image Gen or GPT Image provenance." "## Build Implications" "Use generated PNG assets, not self-rendered vector placeholders."
+write_file "$IDENTITY_BAD_SOURCE/design/VISUAL_SYSTEM.md" \
+  "# Visual System" "" "## Reference Influence" "Delegated visual direction." "## Palette" "High-contrast app icon mark." "## Typography" "No text in app icon." "## Spacing and Layout" "Centered mark with safe padding." "## Components and Motion" "Static identity asset." "## Forbidden Patterns" "No local vector render as final icon."
+write_file "$IDENTITY_BAD_SOURCE/design/SCREEN_ACCEPTANCE.md" \
+  "# Screen Acceptance" "" "## App Icon" "- Requirement source: specs/SPEC.md." "- Required content: production app icon." "- Required states: default." "- Breakpoints: 1024, 512, 180." "- Required design assets: design/approved/app-icon.png." "- Visual acceptance: platform-safe identity asset." "- Accessibility acceptance: recognizable at small sizes."
+write_file "$IDENTITY_BAD_SOURCE/design/DESIGN_ARTIFACTS.md" \
+  "# Design Artifacts" "" "## Required Coverage" "- App icon." "## Screen Coverage" "| Screen | State | Source type | Source reference | Approved asset path | Resolution / export | Status | Implementation notes |" "|---|---|---|---|---|---|---|---|" "| App Icon | Default | designer-upload | designer-upload://app-icon-final | design/approved/app-icon.png | 1024x1024 png | approved | Should fail because generated identity assets require Image Gen provenance. HTML: design/approved/html/app-icon.html |"
+write_file "$IDENTITY_BAD_SOURCE/design/REFERENCE_BOARD.md" \
+  "# Reference Board" "" "## Delegated Direction" "Use a production app icon with high-quality generated imagery." "## Patterns" "- Strong silhouette." "- No SVG placeholder."
+write_file "$IDENTITY_BAD_SOURCE/design/cut-assets/ASSET_MANIFEST.md" \
+  "# Cut Assets" "" "## Decision" "- CUT_ASSETS_REQUIRED: no" "- Rationale: app icon row covers the identity asset."
+write_valid_png "$IDENTITY_BAD_SOURCE/design/approved/app-icon.png"
+write_html_description "$IDENTITY_BAD_SOURCE/design/approved/html/app-icon.html" "App Icon"
+if bin/dev-flow design-check "$(basename "$IDENTITY_BAD_SOURCE")" --allow-no-reference >"$IDENTITY_BAD_SOURCE_OUT" 2>&1; then
+  cat "$IDENTITY_BAD_SOURCE_OUT" >&2
+  echo "Expected generated identity asset without Image Gen provenance to fail." >&2
+  exit 1
+fi
+grep -q "Identity assets require Image Gen provenance" "$IDENTITY_BAD_SOURCE_OUT"
 
 bin/dev-flow init "$(basename "$MISSING_COVERAGE")" >/dev/null
 write_file "$MISSING_COVERAGE/ideas/idea-brief.md" \
@@ -960,6 +1010,7 @@ test -d "$ADAPTER_OUT/runtime/dev-agent/templates/project"
 test -f "$ADAPTER_OUT/runtime/dev-agent/templates/project/host-requirements.md"
 test -f "$ADAPTER_OUT/runtime/dev-agent/templates/project/autonomy.md"
 test -f "$ADAPTER_OUT/runtime/dev-agent/templates/project/delegation.md"
+test -f "$ADAPTER_OUT/runtime/dev-agent/templates/project/ui-debt.md"
 ! test -f "$ADAPTER_OUT/runtime/dev-agent/templates/project/pdca.md"
 ! find "$ADAPTER_OUT" -path '*/work/*' -o -path '*/dist/*' | grep -q .
 

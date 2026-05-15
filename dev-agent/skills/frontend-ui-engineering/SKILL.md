@@ -95,6 +95,10 @@ confirmed, stop and return to design instead of implementing around a guess.
      runtime screenshot capture wait until the batch is implemented.
    - Mid-batch screenshots are only for blocked flows, exception evidence,
      regressions that need proof, or explicit user request.
+   - Runtime visual inspection has a default one-pass budget. Record it with
+     `bin/dev-flow ui-polish <project-name>` when it happens.
+   - After that pass, only P0/P1 defects block the current task. Record P2/P3
+     polish in `reviews/UI_DEBT.md` and advance to the next implementation task.
 
 ## UI Standards
 
@@ -137,7 +141,7 @@ Use `references/accessibility-checklist.md` for detail. Minimum bar:
 
 QA is optional unless `AUTOMATED_QA` or `VISUAL_QA` is required by
 `.dev-flow/applicability.env` or the user asks for it. After implementing the
-current customer-facing UI batch:
+overall requested customer-facing UI scope:
 
 1. Confirm every screen/state in the batch is implemented or marked blocked in
    `tasks/IMPLEMENTATION_TRACE.md`.
@@ -160,6 +164,9 @@ current customer-facing UI batch:
    blocked flow, or when the user explicitly asks for screenshots.
 9. Run `bin/dev-flow qa-check <project-name>` when QA is required.
 
+Do not enter QA automatically after each build slice. Keep building until the
+requested implementation is complete, then run QA only when required or requested.
+
 Use `references/visual-qa-rubric.md` for detailed scoring.
 
 ## Red Flags
@@ -171,6 +178,8 @@ Use `references/visual-qa-rubric.md` for detailed scoring.
 - Keyboard or screen-reader access is broken.
 - UI ignores approved asset hierarchy, imagery, or icon direction.
 - Visual comparison misses screens or scores below 90/100 for high-fidelity work.
+- The agent keeps taking screenshots or using device/simulator time to tune P2/P3
+  details after the UI polish budget is used.
 
 ## Verification
 

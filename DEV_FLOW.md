@@ -101,6 +101,9 @@ It tells a host whether to continue now, suggest a heartbeat interval, or stop
 for a blocker/approval. `bin/dev-flow delegate <project-name>` is the standalone
 subagent planner. It emits optional task packets for host clients that support
 parallel agents; the main host remains responsible for integration and gates.
+For UI build work, `bin/dev-flow ui-polish <project-name>` records the single
+runtime visual pass budget. After that pass, P2/P3 polish is debt and only P0/P1
+defects block the current task.
 
 ## Host Environment Contract
 
@@ -134,6 +137,9 @@ Before UI build, run `bin/dev-flow design-check <project-name>`. During build,
 think before coding: confirm the spec is clear, choose the simplest source
 architecture, check design readiness, record host needs, and route blockers back
 to spec/design/debug/security instead of coding around missing decisions.
+Runtime visual inspection is a one-pass budget by default. Use it to catch P0/P1
+issues, then record remaining P2/P3 details in `reviews/UI_DEBT.md` and advance
+to the next implementation task.
 
 ## QA And Ship
 
@@ -150,6 +156,10 @@ asks. Automated QA records `reviews/FUNCTIONAL_TEST.md` and
 `Overall score: N/100`. Runtime screenshots are required only for exceptions,
 blocked flows, or explicit user requests.
 
+Do not enter QA automatically after each build slice. Run QA after the overall
+requested implementation is complete, when these flags require it, or when the
+user explicitly asks for QA evidence.
+
 Ship is optional and centered on launch evidence, rollback, and go/no-go.
 
 ## Artifact Summary
@@ -159,7 +169,7 @@ Ship is optional and centered on launch evidence, rollback, and go/no-go.
 | Idea | `ideas/idea-brief.md` |
 | Spec | `product/PRD.md`, `specs/SPEC.md` |
 | Design, when UI applies | `design/DESIGN.md`, `VISUAL_SYSTEM.md`, `SCREEN_ACCEPTANCE.md`, `DESIGN_ARTIFACTS.md`, design contract inputs when required |
-| Build | source under `apps/` or `packages/`, `reviews/VERIFICATION.md` or `reviews/BLOCKED_BUILD.md`, UI implementation trace when UI applies, optional autonomy/delegation logs |
+| Build | source under `apps/` or `packages/`, `reviews/VERIFICATION.md` or `reviews/BLOCKED_BUILD.md`, UI implementation trace when UI applies, optional autonomy/delegation logs, `reviews/UI_DEBT.md` when polish remains |
 | QA, when required | `reviews/FUNCTIONAL_TEST.md`, `MONKEY_TEST.md`, `VISUAL_COMPARISON.md` as applicable |
 | Ship, when requested | `ship/LAUNCH.md` with risk, rollback, and GO/NO-GO |
 

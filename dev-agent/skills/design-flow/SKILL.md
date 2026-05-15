@@ -25,6 +25,9 @@ when the spec or project applicability clearly marks UI/design as not needed.
   evidence only. They cannot be the build target.
 - Prefer high-fidelity HTML/CSS design packages for implementation handoff.
   Use JS or Lottie assets when motion must be reproduced.
+- Generate new logo, app-icon, brand/KV, and high-quality bitmap assets only
+  through the `imagegen` skill or an explicit Codex CLI image-generation path.
+  Do not author SVG/HTML/canvas locally and render PNG for final identity assets.
 
 ## Outputs
 
@@ -108,6 +111,10 @@ Use `dev-agent/templates/project/` for file templates. Use
      to generation: visual-system and brand/KV direction, required screen
      images, HTML/CSS packages, CSS/JS or Lottie motion files when needed, and
      logo/app-icon sizes when product identity is in scope.
+   - For logo, app-icon, brand/KV, and high-quality bitmap asset generation,
+     load `imagegen` or use the Codex CLI image-generation path explicitly. Save
+     the resulting raster assets and record `imagegen://`, `gpt-image://`, or
+     `gpt-image-2://` provenance.
    - Do not create sketches or prototypes just to satisfy process.
    - Satisfy `dev-agent/references/design-artifacts.md` when formal assets,
      AI-image design, runtime cut assets, or visual QA are in scope.
@@ -122,7 +129,8 @@ Use `dev-agent/templates/project/` for file templates. Use
     - Use generated or uploaded images as visual targets and asset sources, but
       keep the HTML/CSS package as the implementation-readable handoff.
     - When identity assets are required, provide logo or app-icon variants sized
-      for the target platform and list them in the cut-asset manifest.
+      for the target platform from Image Gen/GPT Image outputs. Local SVG
+      renders are drafts only and must not be treated as final PNG assets.
 
 10. **Record artifact coverage**
     - Update `DESIGN_ARTIFACTS.md`, `DESIGN_IMAGE_DESCRIPTIONS.md`,

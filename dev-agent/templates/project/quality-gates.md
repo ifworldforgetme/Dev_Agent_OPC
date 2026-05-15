@@ -21,6 +21,8 @@ Project-specific verification belongs here. Keep commands runnable from this pro
 - [ ] Unit tests
 - [ ] Build
 - [ ] Browser or device smoke test, when user-facing
+- [ ] `bin/dev-flow ui-polish {{PROJECT}}` recorded if a runtime visual pass was used
+- [ ] P2/P3 UI polish is recorded in `reviews/UI_DEBT.md` and does not block the current build task
 - [ ] Functional flow test, when `AUTOMATED_QA` is required
 - [ ] Monkey or exploratory stress test, when `AUTOMATED_QA` is required
 - [ ] Visual comparison score is at least 90/100 against required design contract inputs, when `VISUAL_QA` is required

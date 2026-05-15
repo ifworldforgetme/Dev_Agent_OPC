@@ -57,6 +57,7 @@ bin/dev-flow status <project-name>
 bin/dev-flow next <project-name>
 bin/dev-flow autonomy <project-name>
 bin/dev-flow delegate <project-name>
+bin/dev-flow ui-polish <project-name>
 bin/dev-flow phase <project-name> <idea|spec|design|build|qa|ship> [task] [--force]
 bin/dev-flow verify-phase <project-name> <idea|spec|design|build|qa|ship>
 bin/dev-flow env-check <project-name>
@@ -89,6 +90,11 @@ autonomously or schedule a heartbeat; `bin/dev-flow delegate <project-name>`
 reports optional subagent task packets. These modules are independent, but the
 Autonomy section in `next` may surface parallelizable work when host subagents
 are available.
+
+For UI build work, runtime visual inspection has a default one-pass budget.
+Record that pass with `bin/dev-flow ui-polish <project-name>`. After the budget
+is used, only P0/P1 defects block the current task; P2/P3 polish belongs in
+`reviews/UI_DEBT.md`, and Autonomy should advance instead of looping on details.
 
 Host SDKs, CLIs, simulators, MCP servers, credentials, and system services are
 host-machine capabilities, not project runtime files. Record them in
@@ -128,6 +134,10 @@ run it when the user asks. Automated QA records `reviews/FUNCTIONAL_TEST.md` and
 `Overall score: N/100`. Runtime screenshots are required only for exceptions,
 blocked flows, or explicit user requests.
 
+Do not enter QA automatically after each build slice. Use QA only after the
+overall requested implementation is complete, the project flags require QA, or
+the user explicitly asks for it.
+
 Ship is optional. Use `ship-check` only when preparing release evidence,
 rollback, and go/no-go decisions.
 
@@ -144,7 +154,7 @@ workspace root.
 - Product/spec: `product/PRD.md`, `specs/SPEC.md`
 - Optional agent notes: `agent/` for legacy/imported material; canonical agent runtime contract belongs in `specs/SPEC.md`
 - Design: `design/DESIGN.md`, `VISUAL_SYSTEM.md`, `SCREEN_ACCEPTANCE.md`, `DESIGN_ARTIFACTS.md`, `DESIGN_IMAGE_DESCRIPTIONS.md`, `FIGMA_HANDOFF.md`, `design/approved/`, `design/cut-assets/`
-- Build planning/evidence: `tasks/status.md`, `tasks/quality-gates.md`, `tasks/IMPLEMENTATION_TRACE.md`, `tasks/AUTONOMY.md`, `tasks/DELEGATION.md`, `tasks/subagents/TEMPLATE.md`, `reviews/VERIFICATION.md`, `reviews/BLOCKED_BUILD.md`
+- Build planning/evidence: `tasks/status.md`, `tasks/quality-gates.md`, `tasks/IMPLEMENTATION_TRACE.md`, `tasks/AUTONOMY.md`, `tasks/DELEGATION.md`, `tasks/subagents/TEMPLATE.md`, `reviews/VERIFICATION.md`, `reviews/BLOCKED_BUILD.md`, `reviews/UI_DEBT.md`
 - Optional QA: `reviews/FUNCTIONAL_TEST.md`, `reviews/MONKEY_TEST.md`, `reviews/VISUAL_COMPARISON.md`, `reviews/visual-screenshots/`
 - Optional ship: `ship/LAUNCH.md`
 - Source roots: `apps/`, `packages/`, or another project-local source directory

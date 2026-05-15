@@ -21,6 +21,8 @@ Treat `next` as the execution brief and load only the command, skill,
 references, and project files it names. Use `bin/dev-flow autonomy <project-name>`
 for the standalone heartbeat/continue decision and
 `bin/dev-flow delegate <project-name>` for optional host subagent task packets.
+Use `bin/dev-flow ui-polish <project-name>` to record the single UI runtime
+visual pass before moving P2/P3 details to UI debt.
 
 Prefer the visible entry:
 
