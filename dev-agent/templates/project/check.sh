@@ -1,22 +1,23 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+CONTROL_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+PROJECT_ROOT="$(cd "$CONTROL_ROOT/.." && pwd)"
 
-required_dirs=(.dev-flow bin)
+required_dirs=(state bin)
 for d in "${required_dirs[@]}"; do
-  [[ -d "$ROOT/$d" ]] || { echo "Missing directory: $d" >&2; exit 1; }
+  [[ -d "$CONTROL_ROOT/$d" ]] || { echo "Missing directory: .dev-agent/$d" >&2; exit 1; }
 done
 
-required_files=(.dev-flow/state.env .dev-flow/schema.env .dev-flow/applicability.env .dev-flow/context.md .dev-flow/HOST_REQUIREMENTS.md bin/check)
+required_files=(state/state.env state/schema.env state/applicability.env context.md HOST_REQUIREMENTS.md bin/check)
 for f in "${required_files[@]}"; do
-  [[ -f "$ROOT/$f" ]] || { echo "Missing file: $f" >&2; exit 1; }
+  [[ -f "$CONTROL_ROOT/$f" ]] || { echo "Missing file: .dev-agent/$f" >&2; exit 1; }
 done
 
-if [[ -d "$ROOT/design" ]]; then
+if [[ -d "$CONTROL_ROOT/design" ]]; then
   for f in design/DESIGN.md design/VISUAL_SYSTEM.md design/SCREEN_ACCEPTANCE.md; do
-    [[ -f "$ROOT/$f" ]] || { echo "Missing design file: $f" >&2; exit 1; }
+    [[ -f "$CONTROL_ROOT/$f" ]] || { echo "Missing design file: .dev-agent/$f" >&2; exit 1; }
   done
 fi
 
-echo "Default workflow gate passed for $(basename "$ROOT")."
+echo "Default workflow gate passed for $(basename "$PROJECT_ROOT")."

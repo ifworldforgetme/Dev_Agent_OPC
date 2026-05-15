@@ -17,7 +17,8 @@ when the spec or project applicability clearly marks UI/design as not needed.
   trade-offs before choosing a direction.
 - Keep it simple: produce only the artifacts needed for the current product
   scope, but do not skip required design gates.
-- Modify precisely: keep artifacts project-local under `<project-name>/`.
+- Modify precisely: keep process artifacts under `<project-name>/.dev-agent/`
+  and source output under the project root.
 - Work toward a verifiable target: every key screen must have acceptance
   criteria before build. Delegate formal visual-source rules to the design
   artifact reference and executable gates.
@@ -31,7 +32,7 @@ when the spec or project applicability clearly marks UI/design as not needed.
 
 ## Outputs
 
-Save design artifacts under `<project-name>/design/`:
+Save design artifacts under `<project-name>/.dev-agent/design/`:
 
 - `DESIGN.md`
 - `VISUAL_SYSTEM.md`
@@ -123,7 +124,7 @@ Use `dev-agent/templates/project/` for file templates. Use
 
 9. **Produce design packages**
     - For each accepted screen and important state, create or collect a separate
-      HTML file under `design/approved/html/` with CSS resources that encode the
+      HTML file under `.dev-agent/design/approved/html/` with CSS resources that encode the
       visual system and responsive layout. Add JS or Lottie files only when
       motion is part of acceptance.
     - Use generated or uploaded images as visual targets and asset sources, but
@@ -136,7 +137,7 @@ Use `dev-agent/templates/project/` for file templates. Use
     - Update `DESIGN_ARTIFACTS.md`, `DESIGN_IMAGE_DESCRIPTIONS.md`,
       `FIGMA_HANDOFF.md`, and `ASSET_MANIFEST.md` only when the referenced
       contracts require them.
-    - Keep `tasks/IMPLEMENTATION_TRACE.md` aligned with the screens and states
+    - Keep `.dev-agent/tasks/IMPLEMENTATION_TRACE.md` aligned with the screens and states
       that build will implement.
 
 11. **Gate before build**

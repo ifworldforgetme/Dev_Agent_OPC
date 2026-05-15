@@ -94,11 +94,11 @@ are available.
 For UI build work, runtime visual inspection has a default one-pass budget.
 Record that pass with `bin/dev-flow ui-polish <project-name>`. After the budget
 is used, only P0/P1 defects block the current task; P2/P3 polish belongs in
-`reviews/UI_DEBT.md`, and Autonomy should advance instead of looping on details.
+`.dev-agent/reviews/UI_DEBT.md`, and Autonomy should advance instead of looping on details.
 
 Host SDKs, CLIs, simulators, MCP servers, credentials, and system services are
 host-machine capabilities, not project runtime files. Record them in
-`<project-name>/.dev-flow/HOST_REQUIREMENTS.md`. Run `env-check` only before
+`<project-name>/.dev-agent/HOST_REQUIREMENTS.md`. Run `env-check` only before
 the current build slice or ship scope uses that host capability.
 
 ## UI Design And Build
@@ -107,7 +107,7 @@ For customer-facing apps, ask whether the user has reference images, screenshots
 Figma exports, apps, websites, or competitor products. If references exist, use
 them. If no reference is present and the user has not delegated visual direction,
 ask for examples before UI build. If visual direction is delegated, create
-`<project-name>/design/REFERENCE_BOARD.md` and run
+`<project-name>/.dev-agent/design/REFERENCE_BOARD.md` and run
 `bin/dev-flow design-check <project-name> --allow-no-reference`.
 
 Do not require sketches or prototypes. The design phase should produce the
@@ -128,9 +128,9 @@ missing, return to design/spec instead of guessing.
 ## QA And Ship
 
 QA is optional by default. Enable it by setting `AUTOMATED_QA="required"` or
-`VISUAL_QA="required"` in `<project-name>/.dev-flow/applicability.env`, or
-run it when the user asks. Automated QA records `reviews/FUNCTIONAL_TEST.md` and
-`reviews/MONKEY_TEST.md`; visual QA records `reviews/VISUAL_COMPARISON.md` with
+`VISUAL_QA="required"` in `<project-name>/.dev-agent/state/applicability.env`, or
+run it when the user asks. Automated QA records `.dev-agent/reviews/FUNCTIONAL_TEST.md` and
+`.dev-agent/reviews/MONKEY_TEST.md`; visual QA records `.dev-agent/reviews/VISUAL_COMPARISON.md` with
 `Overall score: N/100`. Runtime screenshots are required only for exceptions,
 blocked flows, or explicit user requests.
 
@@ -144,20 +144,22 @@ rollback, and go/no-go decisions.
 ## Artifacts
 
 Keep every project self-contained under `<project-name>/`. Project-specific
-source code and runtime apps belong inside that project folder, not at the
-workspace root.
-`init` creates only the control layer; lifecycle folders below are created when
-`next`, `phase`, or a gate needs that phase.
+source code and runtime apps belong in the project root. Process-management
+artifacts belong under `<project-name>/.dev-agent/`, not as root-level project
+folders.
+`init` creates only the `.dev-agent/` control layer; lifecycle folders below are
+created inside `.dev-agent/` when `next`, `phase`, or a gate needs that phase.
 
-- State: `.dev-flow/state.env`, `.dev-flow/schema.env`, `.dev-flow/context.md`, `.dev-flow/HOST_REQUIREMENTS.md`, `.dev-flow/autonomy.env`
-- Ideas: `ideas/idea-brief.md`
-- Product/spec: `product/PRD.md`, `specs/SPEC.md`
-- Optional agent notes: `agent/` for legacy/imported material; canonical agent runtime contract belongs in `specs/SPEC.md`
-- Design: `design/DESIGN.md`, `VISUAL_SYSTEM.md`, `SCREEN_ACCEPTANCE.md`, `DESIGN_ARTIFACTS.md`, `DESIGN_IMAGE_DESCRIPTIONS.md`, `FIGMA_HANDOFF.md`, `design/approved/`, `design/cut-assets/`
-- Build planning/evidence: `tasks/status.md`, `tasks/quality-gates.md`, `tasks/IMPLEMENTATION_TRACE.md`, `tasks/AUTONOMY.md`, `tasks/DELEGATION.md`, `tasks/subagents/TEMPLATE.md`, `reviews/VERIFICATION.md`, `reviews/BLOCKED_BUILD.md`, `reviews/UI_DEBT.md`
-- Optional QA: `reviews/FUNCTIONAL_TEST.md`, `reviews/MONKEY_TEST.md`, `reviews/VISUAL_COMPARISON.md`, `reviews/visual-screenshots/`
-- Optional ship: `ship/LAUNCH.md`
-- Source roots: `apps/`, `packages/`, or another project-local source directory
+- State: `.dev-agent/state/state.env`, `.dev-agent/state/schema.env`, `.dev-agent/state/applicability.env`, `.dev-agent/state/autonomy.env`
+- Context/host: `.dev-agent/context.md`, `.dev-agent/HOST_REQUIREMENTS.md`, `.dev-agent/bin/check`
+- Ideas: `.dev-agent/ideas/idea-brief.md`
+- Product/spec: `.dev-agent/product/PRD.md`, `.dev-agent/specs/SPEC.md`
+- Optional agent notes: `.dev-agent/agent/` for legacy/imported material; canonical agent runtime contract belongs in `.dev-agent/specs/SPEC.md`
+- Design: `.dev-agent/design/DESIGN.md`, `VISUAL_SYSTEM.md`, `SCREEN_ACCEPTANCE.md`, `DESIGN_ARTIFACTS.md`, `DESIGN_IMAGE_DESCRIPTIONS.md`, `FIGMA_HANDOFF.md`, `.dev-agent/design/approved/`, `.dev-agent/design/cut-assets/`
+- Build planning/evidence: `.dev-agent/tasks/status.md`, `.dev-agent/tasks/quality-gates.md`, `.dev-agent/tasks/IMPLEMENTATION_TRACE.md`, `.dev-agent/tasks/AUTONOMY.md`, `.dev-agent/tasks/DELEGATION.md`, `.dev-agent/tasks/subagents/TEMPLATE.md`, `.dev-agent/reviews/VERIFICATION.md`, `.dev-agent/reviews/BLOCKED_BUILD.md`, `.dev-agent/reviews/UI_DEBT.md`
+- Optional QA: `.dev-agent/reviews/FUNCTIONAL_TEST.md`, `.dev-agent/reviews/MONKEY_TEST.md`, `.dev-agent/reviews/VISUAL_COMPARISON.md`, `.dev-agent/reviews/visual-screenshots/`
+- Optional ship: `.dev-agent/ship/LAUNCH.md`
+- Source roots: project-root `src/`, `app/`, `apps/`, `packages/`, or another project-local source directory
 
 Only require human review for requirement confirmation, customer-facing visual
 direction when no reference is available, high-risk architecture decisions,
@@ -165,10 +167,10 @@ security/payment/permission/data-deletion behavior, and production launch
 approval. Routine implementation, tests, and local documentation should continue
 automatically when the current spec, design, and build gate are clear.
 
-Do not create project-specific `./apps`, `./packages`, `./server`, `./src`, or
-similar root-level directories unless the user explicitly says the code is shared
-across multiple projects. When running commands, use the project-local path, for
-example `cd <project-name>/apps/mobile`.
+Create development output in the project root using the simplest layout that fits
+the stack, for example `src/`, `app/`, `apps/`, `packages/`, `server/`, or stack
+manifest files. When running commands, use the project-local path, for example
+`cd <project-name>` or `cd <project-name>/apps/mobile`.
 
 Do not create root-level `skills/`, `agents/`, or checked-in `dist/` directories.
 Skills and personas belong under `dev-agent/`; generated adapter packages belong
