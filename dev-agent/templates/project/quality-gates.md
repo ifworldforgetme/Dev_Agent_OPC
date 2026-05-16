@@ -21,6 +21,7 @@ Project-specific verification belongs here. Keep commands runnable from this pro
 - [ ] Unit tests
 - [ ] Build
 - [ ] Browser or device smoke test, when user-facing
+- [ ] Production/formal verification is read-only or rejection-only; write-path smoke ran only in test/staging and has cleanup evidence
 - [ ] `bin/dev-flow ui-polish {{PROJECT}}` recorded if a runtime visual pass was used
 - [ ] P2/P3 UI polish is recorded in `reviews/UI_DEBT.md` and does not block the current build task
 - [ ] Functional flow test, when `AUTOMATED_QA` is required

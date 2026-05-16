@@ -65,6 +65,8 @@ Ship with confidence. The goal is not just to deploy — it's to deploy safely, 
 - [ ] CDN configured for static assets
 - [ ] Logging and error reporting configured
 - [ ] Health check endpoint exists and responds
+- [ ] Production verification is read-only or rejection-only; any write-path
+      smoke ran in test/staging and has cleanup evidence
 
 ### Documentation
 
@@ -230,10 +232,16 @@ In the first hour after launch:
 1. Check health endpoint returns 200
 2. Check error monitoring dashboard (no new error types)
 3. Check latency dashboard (no regression)
-4. Test the critical user flow manually
+4. Verify critical production surfaces with read-only/rejection-only checks
 5. Verify logs are flowing and readable
 6. Confirm rollback mechanism works (dry run if possible)
 ```
+
+Do not run write smoke tests in production or formal environments. A smoke that
+logs in, creates users or sessions, accepts a webhook, syncs billing, uploads
+files, or writes business records belongs in test/staging. If a canary write is
+unavoidable, require explicit user approval, a named canary account, and a
+cleanup/retention plan before execution.
 
 ## Rollback Strategy
 

@@ -32,6 +32,8 @@ For UI work, also load `dev-agent/skills/frontend-ui-engineering/SKILL.md`.
 For APIs or public module boundaries, also load
 `dev-agent/skills/api-and-interface-design/SKILL.md`. For security-sensitive
 work, also load `dev-agent/skills/security-and-hardening/SKILL.md`.
+For production release, remote smoke, or data reset work, also load
+`dev-agent/references/production-data-safety.md`.
 
 Do not bury problems in code. If requirements, design assets, host permissions,
 SDKs, or risk boundaries are insufficient, return the issue to the owning flow
@@ -133,6 +135,14 @@ run it when the user asks. Automated QA records `.dev-agent/reviews/FUNCTIONAL_T
 `.dev-agent/reviews/MONKEY_TEST.md`; visual QA records `.dev-agent/reviews/VISUAL_COMPARISON.md` with
 `Overall score: N/100`. Runtime screenshots are required only for exceptions,
 blocked flows, or explicit user requests.
+
+Production or formal environments must not run write smoke tests. Treat
+production verification as read-only/rejection-only evidence: health checks,
+config reads, auth-required rejection, bad-secret rejection, and similar checks
+that cannot create users, sessions, orders, files, or business records. Any
+smoke that logs in, creates records, syncs billing, accepts a webhook, uploads
+files, or mutates state belongs in test/staging only and must include a cleanup
+path.
 
 Do not enter QA automatically after each build slice. Use QA only after the
 overall requested implementation is complete, the project flags require QA, or

@@ -10,6 +10,8 @@ personas, references, templates, and native install metadata.
 - Workflow skills live in `skills/<name>/SKILL.md`.
 - Specialist personas live in `agents/<role>.md`.
 - Shared gates, checklists, and orchestration notes live in `references/`.
+- Production/formal data safety rules live in
+  `references/production-data-safety.md`.
 - Project scaffolding lives in `templates/project/`.
 - Native user-facing entry metadata lives in `dev-agent.manifest.json` and `native/skills/dev-agent/SKILL.md`.
 
@@ -69,6 +71,10 @@ review across code, security, and test perspectives.
   needs during idea/spec/design, run `env-check` before current-slice
   host-dependent build/test work or before ship.
 - Preserve project runtime folders as output rather than reusable workflow source.
+- Preserve production data safety: production/formal verification must be
+  read-only or rejection-only. Write-path smoke that creates users, sessions,
+  orders, files, accepted webhooks, billing syncs, or business records belongs
+  in test/staging and must include cleanup evidence.
 
 After command, installer, or runtime changes, run `tests/dev-flow-smoke.sh` from
 the repository root.

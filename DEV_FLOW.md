@@ -165,6 +165,13 @@ requested implementation is complete, when these flags require it, or when the
 user explicitly asks for QA evidence.
 
 Ship is optional and centered on launch evidence, rollback, and go/no-go.
+For production or any formal environment, ship evidence must use read-only or
+rejection-only smoke checks unless the user explicitly approves a canary data
+plan. Do not run smoke tests that create users, sessions, orders, files,
+webhooks, billing syncs, or business records in production. Write-path smoke
+belongs in test/staging and must have a cleanup command or documented cleanup
+owner. Use `dev-agent/references/production-data-safety.md` as the governing
+reference for release verification and destructive data reset decisions.
 
 ## Artifact Summary
 
